@@ -16,12 +16,13 @@ services:
       PLUGINS: |
         https://cdn.modrinth.com/data/Lu3KuzdV/versions/Kma0kBsY/CoreProtect-CE-24.0.jar
         https://download.luckperms.net/1658/bukkit/loader/LuckPerms-Bukkit-5.5.71.jar
-        https://cdn.modrinth.com/data/9js4IEHC/versions/Kpko24V8/AuthMe-6.0.0-Paper.jar
+        https://repo.nickuc.com/files/latest/nLogin.jar
         https://cdn.modrinth.com/data/HYKaKraK/versions/h0ncTpUP/packetevents-spigot-2.13.0.jar
         https://github.com/EssentialsX/Essentials/releases/download/2.22.0/EssentialsX-2.22.0.jar
         https://github.com/EssentialsX/Essentials/releases/download/2.22.0/EssentialsXChat-2.22.0.jar
         https://github.com/EssentialsX/Essentials/releases/download/2.22.0/EssentialsXSpawn-2.22.0.jar
-        https://cdn.modrinth.com/data/DKY9btbd/versions/btHBavWa/worldguard-bukkit-7.0.18.jar?mr_download_reason=standalone
+        https://cdn.modrinth.com/data/1u6JkXh5/versions/F5ea2ov3/worldedit-bukkit-7.4.5.jar
+        https://cdn.modrinth.com/data/DKY9btbd/versions/btHBavWa/worldguard-bukkit-7.0.18.jar
     volumes:
       # attach the relative directory 'data' to the container's /data path
       - ./data:/data
