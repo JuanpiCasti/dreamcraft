@@ -1,0 +1,1 @@
+por ahora para levantarlo en tu compu solo con `docker compose up` funca. 
