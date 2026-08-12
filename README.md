@@ -32,3 +32,25 @@ Al levantar el server, un servicio (`config-sync`) copia automáticamente todo l
 
 - **Se trackea**: `docker-compose.yml`, `plugin-configs/` (configs a mano de los plugins).
 - **No se trackea** (`data/` está en `.gitignore`): mundos, logs, bases de datos de los plugins (ej. CoreProtect, LuckPerms, playerdata de nLogin), datos de jugadores (`userdata/` de Essentials), regiones de WorldGuard. Todo eso es estado del server o se regenera solo, no es config a mano.
+
+## Pregeneración de mundo con Chunky
+
+El plugin [Chunky](https://modrinth.com/plugin/chunky) ya está agregado en `docker-compose.yml` y su config trackeada en `plugin-configs/Chunky/` (con `continue-on-restart: true`, así retoma la tarea sola después de un restart o de que se actualice la imagen).
+
+Lo único manual es arrancar la pregeneración una vez, desde la consola del server:
+
+```
+chunky start world square 0 0 6000
+chunky start world_nether square 0 0 750
+chunky start world_the_end square 0 0 1000
+```
+
+Para mandar estos comandos desde afuera del contenedor:
+
+```
+docker compose exec mc rcon-cli "chunky start world square 0 0 6000"
+```
+
+Para ver el progreso: `docker compose exec mc rcon-cli "chunky progress"`.
+
+Esto genera el mundo (12000×12000), el nether (1500×1500) y el end (2000×2000), todo centrado en el spawn. No hace falta repetir los comandos después de un restart — `continue-on-restart` se encarga.
