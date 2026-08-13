@@ -4,7 +4,7 @@ services:
     volumes:
       - ./plugin-configs:/src:ro
       - ./data/plugins:/dest
-    command: sh -c "mkdir -p /dest && cp -rf /src/. /dest/"
+    command: sh -c "mkdir -p /dest && cp -rf /src/. /dest/ && chown -R 1000:1000 /dest"
 
   mc:
     image: itzg/minecraft-server:stable-java25
@@ -34,6 +34,7 @@ services:
         https://github.com/EssentialsX/Essentials/releases/download/2.22.0/EssentialsXSpawn-2.22.0.jar
         https://cdn.modrinth.com/data/1u6JkXh5/versions/F5ea2ov3/worldedit-bukkit-7.4.5.jar
         https://cdn.modrinth.com/data/DKY9btbd/versions/btHBavWa/worldguard-bukkit-7.0.18.jar
+        https://cdn.modrinth.com/data/fALzjamp/versions/MdY6JATr/Chunky-Bukkit-1.5.3.jar
         https://cdn.modrinth.com/data/TsLS8Py5/versions/wXS6bHiC/SkinsRestorer.jar
         https://cdn.modrinth.com/data/P1OZGk5p/versions/ZH8459B6/ViaVersion-5.11.0.jar
         https://cdn.modrinth.com/data/NpvuJQoq/versions/hYhg2QBT/ViaBackwards-5.11.0.jar
