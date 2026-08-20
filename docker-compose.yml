@@ -16,6 +16,7 @@ services:
         condition: service_completed_successfully
     ports:
       - "25565:25565"
+      - "19132:19132/udp"
     environment:
       MEMORY: 6G
       EULA: TRUE
@@ -23,7 +24,13 @@ services:
       VERSION: 26.1.2
       PAPER_BUILD: 74
       ONLINE_MODE: false
+      DEBUG: true
+      DEBUG_EXEC: true
+      DEBUG_MEMORY: true
       SEED: 6006216005338798975
+      MOTD: '\u00A7f\u00A7l>> \u00A75\u00A7lDREAM\u00A71\u00A7lCRAFT \u00A7f\u00A7l<<\n\u00A7oExplora, construye tu ciudad y combate'
+      ICON: /data/server-icon.png
+      OVERRIDE_ICON: TRUE
       PLUGINS: |
         https://cdn.modrinth.com/data/Lu3KuzdV/versions/Kma0kBsY/CoreProtect-CE-24.0.jar
         https://download.luckperms.net/1658/bukkit/loader/LuckPerms-Bukkit-5.5.71.jar
@@ -38,6 +45,8 @@ services:
         https://cdn.modrinth.com/data/TsLS8Py5/versions/wXS6bHiC/SkinsRestorer.jar
         https://cdn.modrinth.com/data/P1OZGk5p/versions/ZH8459B6/ViaVersion-5.11.0.jar
         https://cdn.modrinth.com/data/NpvuJQoq/versions/hYhg2QBT/ViaBackwards-5.11.0.jar
+        https://download.geysermc.org/v2/projects/geyser/versions/2.11.1/builds/1219/downloads/spigot
+        https://cdn.modrinth.com/data/DsxKmIdB/versions/oMsqzDSV/worldguard-extraflagsplus-4.4.3.jar
     volumes:
       # attach the relative directory 'data' to the container's /data path
       - ./data:/data
