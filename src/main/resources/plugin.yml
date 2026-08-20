@@ -1,0 +1,69 @@
+name: DreamCraftProtection
+version: ${version}
+main: dev.dreamcraft.protection.DreamCraftProtectionPlugin
+api-version: '1.21'
+description: DreamCraft domain system — claims, upkeep, Ward/City/Estate domain, integration layer
+authors: [DreamCraft]
+
+# Hard dependencies (must be present)
+# none — all integrations are optional and detected at startup
+
+# Optional soft-dependencies (loaded before DreamCraftProtection when present)
+softdepend:
+  - WorldGuard
+  - WorldEdit
+  - LuckPerms
+  - CoreProtect
+  - Essentials
+  - Chunky
+  - packetevents
+  - DeluxeMenus
+  - Oraxen
+
+commands:
+  protection:
+    description: Gestiona las protecciones de base
+    aliases: [prot, claim]
+    usage: /protection [claim|status|upkeep|members|transfer|abandon|give|reload|recalculate]
+    permission: dreamcraft.protection.use
+  ward:
+    description: Gestiona tu Ward (territorio DreamCraft)
+    aliases: [w]
+    usage: /ward [create|info|delete|score|upkeep|transfer|permissions|city]
+    permission: dreamcraft.ward.use
+  city:
+    description: Gestiona tu Ciudad
+    aliases: [ciudad]
+    usage: /city [create|info|invite|kick|role|treasury|policy|delete|transfer]
+    permission: dreamcraft.city.use
+  estate:
+    description: Gestiona tu Estate (grupo de aventura)
+    aliases: [grupo]
+    usage: /estate [create|info|invite|kick|transfer|delete]
+    permission: dreamcraft.estate.use
+
+permissions:
+  dreamcraft.protection.use:
+    description: Acceso a los comandos de protección
+    default: true
+  dreamcraft.protection.admin:
+    description: Comandos administrativos de protección (give, reload, recalculate)
+    default: op
+  dreamcraft.ward.use:
+    description: Acceso a comandos de Ward
+    default: true
+  dreamcraft.ward.admin:
+    description: Administración de Wards (crear/borrar para otros)
+    default: op
+  dreamcraft.city.use:
+    description: Acceso a comandos de Ciudad
+    default: true
+  dreamcraft.city.admin:
+    description: Administración de Ciudades
+    default: op
+  dreamcraft.estate.use:
+    description: Acceso a comandos de Estate
+    default: true
+  dreamcraft.integrations.status:
+    description: Ver estado del Integration Registry
+    default: op

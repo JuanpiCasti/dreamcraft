@@ -29,7 +29,6 @@ services:
       DEBUG_MEMORY: true
       SEED: 6006216005338798975
       MOTD: '\u00A7f\u00A7l>> \u00A75\u00A7lDREAM\u00A71\u00A7lCRAFT \u00A7f\u00A7l<<\n\u00A7oExplora, construye tu ciudad y combate'
-      ICON: /data/server-icon.png
       OVERRIDE_ICON: TRUE
       PLUGINS: |
         https://cdn.modrinth.com/data/Lu3KuzdV/versions/Kma0kBsY/CoreProtect-CE-24.0.jar
@@ -50,3 +49,6 @@ services:
     volumes:
       # attach the relative directory 'data' to the container's /data path
       - ./data:/data
+      # mount the locally built plugin JAR directly so it is picked up on each compose up
+      # build first: ./gradlew shadowJar  (or: ./gradlew build)
+      - ./build/libs/dreamcraft-protection-0.1.0-SNAPSHOT.jar:/data/plugins/DreamCraftProtection.jar:ro

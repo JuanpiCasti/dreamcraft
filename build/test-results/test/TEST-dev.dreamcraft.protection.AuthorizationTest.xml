@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.dreamcraft.protection.AuthorizationTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-08-20T20:56:56.472Z" hostname="DESKTOP-VBG37J7" time="0.047">
+  <properties/>
+  <testcase name="outsiderIsDeniedAll()" classname="dev.dreamcraft.protection.AuthorizationTest" time="0.028"/>
+  <testcase name="memberCannotManageOrTransfer()" classname="dev.dreamcraft.protection.AuthorizationTest" time="0.001"/>
+  <testcase name="transferOwnerChangesOwner()" classname="dev.dreamcraft.protection.AuthorizationTest" time="0.004"/>
+  <testcase name="addMemberExceedsLimit()" classname="dev.dreamcraft.protection.AuthorizationTest" time="0.002"/>
+  <testcase name="outsideClaimGetsNotProtected()" classname="dev.dreamcraft.protection.AuthorizationTest" time="0.001"/>
+  <testcase name="memberIsAllowedBuildAndInteract()" classname="dev.dreamcraft.protection.AuthorizationTest" time="0.001"/>
+  <testcase name="ownerGetsAllowedResult()" classname="dev.dreamcraft.protection.AuthorizationTest" time="0.001"/>
+  <testcase name="ownerIsAllowedAllActions()" classname="dev.dreamcraft.protection.AuthorizationTest" time="0.001"/>
+  <testcase name="transferOwnerDisabledByConfig()" classname="dev.dreamcraft.protection.AuthorizationTest" time="0.0"/>
+  <testcase name="outsiderGetsDeniedResult()" classname="dev.dreamcraft.protection.AuthorizationTest" time="0.0"/>
+  <testcase name="addMemberWithinLimit()" classname="dev.dreamcraft.protection.AuthorizationTest" time="0.0"/>
+  <testcase name="removeMemberRemovesFromSet()" classname="dev.dreamcraft.protection.AuthorizationTest" time="0.001"/>
+  <testcase name="disabledProtectionAlwaysAllows()" classname="dev.dreamcraft.protection.AuthorizationTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

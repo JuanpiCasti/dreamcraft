@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.dreamcraft.protection.ClaimRepositoryTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-08-20T20:56:56.537Z" hostname="DESKTOP-VBG37J7" time="0.118">
+  <properties/>
+  <testcase name="saveThenLoadProducesSameClaim()" classname="dev.dreamcraft.protection.ClaimRepositoryTest" time="0.076"/>
+  <testcase name="emptyRepositoryReturnsEmptyList()" classname="dev.dreamcraft.protection.ClaimRepositoryTest" time="0.002"/>
+  <testcase name="multipleClaimsSavedAndLoaded()" classname="dev.dreamcraft.protection.ClaimRepositoryTest" time="0.019"/>
+  <testcase name="lastActivityAtIsPersistedAndRestored()" classname="dev.dreamcraft.protection.ClaimRepositoryTest" time="0.007"/>
+  <testcase name="upkeepStorageRoundTrip()" classname="dev.dreamcraft.protection.ClaimRepositoryTest" time="0.013"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

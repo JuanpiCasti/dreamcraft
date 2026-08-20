@@ -1,0 +1,73 @@
+protection:
+  enabled: true
+  default-radius: 16
+  default-build-radius: 16
+  allow-overlap: false
+  vertical-mode: full
+  require-wardrobe: true
+  wardrobe-material: LODESTONE
+  inventory-size: 27
+
+upkeep:
+  interval: 24h
+  warning-threshold: 24h
+  expiring-threshold: 6h
+  grace-period: 24h
+  destruction-delay: 48h
+  resource-material: DIAMOND
+  units-per-item: 64
+
+members:
+  default-max: 8
+
+claim:
+  owner-transfer: true
+  abandoned-after: 7d
+
+resource-pack:
+  enabled: true
+  optional: true
+  fallback-vanilla: true
+  custom-model-data: 41001
+  item-id: dreamcraft:protection_wardrobe
+
+tiers:
+  basic:
+    radius: 12
+    build-radius: 12
+    max-members: 4
+  advanced:
+    radius: 16
+    build-radius: 16
+    max-members: 8
+  fortress:
+    radius: 24
+    build-radius: 24
+    max-members: 12
+  clan:
+    radius: 32
+    build-radius: 24
+    max-members: 20
+  domain:
+    radius: 48
+    build-radius: 32
+    max-members: 30
+
+building-cost:
+  categories:
+    light:
+      base-cost: 1
+    basic:
+      base-cost: 1
+    reinforced:
+      base-cost: 3
+    advanced:
+      base-cost: 10
+    special:
+      base-cost: 15
+  overrides:
+    OBSIDIAN: reinforced
+    CRYING_OBSIDIAN: advanced
+    IRON_BLOCK: advanced
+    DIAMOND_BLOCK: special
+    NETHERITE_BLOCK: special
