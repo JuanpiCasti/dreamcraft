@@ -39,7 +39,7 @@ class ClaimRepositoryTest {
         storage.deposit("maintenance", 128);
 
         ProtectionClaim original = new ProtectionClaim(
-                claimId, "world", ownerId,
+                claimId, "Claim Principal", "world", ownerId,
                 10, 64, 20, 16, 14,
                 ProtectionState.WARNING, "advanced",
                 now, now, now.plusSeconds(86400), now,
@@ -55,6 +55,7 @@ class ClaimRepositoryTest {
         ProtectionClaim loaded1 = loaded.get(0);
 
         assertEquals(claimId, loaded1.id());
+        assertEquals("Claim Principal", loaded1.name());
         assertEquals("world", loaded1.world());
         assertEquals(ownerId, loaded1.ownerUuid());
         assertEquals(10, loaded1.centerX());
@@ -120,7 +121,7 @@ class ClaimRepositoryTest {
         Instant activity = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
         Instant now = activity;
         ProtectionClaim claim = new ProtectionClaim(
-                UUID.randomUUID(), "world", UUID.randomUUID(),
+                UUID.randomUUID(), "Test Claim", "world", UUID.randomUUID(),
                 0, 64, 0, 16, 16,
                 ProtectionState.ACTIVE, "basic",
                 now, now, now, activity,
@@ -140,7 +141,7 @@ class ClaimRepositoryTest {
     private ProtectionClaim minimalClaim(UUID id, int x, int z, String tier) {
         Instant now = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
         return new ProtectionClaim(
-                id, "world", UUID.randomUUID(),
+                id, "Test Claim", "world", UUID.randomUUID(),
                 x, 64, z, 16, 16,
                 ProtectionState.ACTIVE, tier,
                 now, now, now, now,
@@ -153,7 +154,7 @@ class ClaimRepositoryTest {
     private ProtectionClaim minimalClaimWithStorage(UpkeepStorage storage) {
         Instant now = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
         return new ProtectionClaim(
-                UUID.randomUUID(), "world", UUID.randomUUID(),
+                UUID.randomUUID(), "Test Claim", "world", UUID.randomUUID(),
                 0, 64, 0, 16, 16,
                 ProtectionState.ACTIVE, "basic",
                 now, now, now, now,

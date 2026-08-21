@@ -24,6 +24,31 @@ claim:
   owner-transfer: true
   abandoned-after: 7d
 
+# Bloque especial que crea un Ward al colocarlo.
+# La protección del Ward es un radio alrededor de este bloque (su centro).
+ward:
+  material: BEACON
+  item-id: dreamcraft:ward_beacon
+  custom-model-data: 41002
+  # Puntos de score que suma cada mejora desde el menú del Ward
+  score-per-upgrade: 100
+
+# Costo en ítems para mejorar el Ward a cada tier destino.
+# La clave es el tier DESTINO de la mejora. Si un tier no está listado, mejorarlo a ese tier es gratis.
+ward-upgrade-costs:
+  reinforced:
+    - material: IRON_INGOT
+      amount: 32
+    - material: DIAMOND
+      amount: 8
+  advanced:
+    - material: DIAMOND
+      amount: 24
+    - material: EMERALD
+      amount: 16
+    - material: NETHERITE_INGOT
+      amount: 1
+
 resource-pack:
   enabled: true
   optional: true

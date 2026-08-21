@@ -23,6 +23,9 @@ public interface WardRepository {
     /** Find the Ward whose center is in the given world at or near (x, z) within radius. */
     Optional<Ward> findAtLocation(String worldName, int x, int z);
 
+    /** Find the Ward whose special center block sits exactly at the given position. */
+    Optional<Ward> findByCenter(String worldName, int x, int y, int z);
+
     Collection<Ward> findAll();
 
     void save(Ward ward);

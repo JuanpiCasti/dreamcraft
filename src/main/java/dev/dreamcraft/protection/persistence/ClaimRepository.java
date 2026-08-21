@@ -104,6 +104,7 @@ public final class ClaimRepository {
 
         ProtectionClaim claim = new ProtectionClaim(
                 UUID.fromString(section.getName()),
+                section.getString("name", "Protección"),
                 section.getString("world", "world"),
                 UUID.fromString(section.getString("owner")),
                 section.getInt("center.x"),
@@ -138,6 +139,7 @@ public final class ClaimRepository {
     }
 
     private void writeClaim(ConfigurationSection section, ProtectionClaim claim) {
+        section.set("name", claim.name());
         section.set("world", claim.world());
         section.set("owner", claim.ownerUuid().toString());
         section.set("center.x", claim.centerX());

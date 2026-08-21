@@ -4,6 +4,7 @@ import dev.dreamcraft.protection.domain.model.Ward;
 import dev.dreamcraft.protection.domain.port.WardTierProvider;
 
 import java.util.UUID;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -17,10 +18,33 @@ public final class WardViewModelBuilder {
 
     private final WardTierProvider tierProvider;
     private final Function<UUID, String> nameResolver;
+    private final Function<UUID, String> cityNameResolver;
+    /** Optional: computes the upgrade preview (needs Bukkit inventory access upstream). */
+    private final BiFunction<Ward, UUID, WardUpgradePreview> upgradePreviewResolver;
 
     public WardViewModelBuilder(WardTierProvider tierProvider, Function<UUID, String> nameResolver) {
+        this(tierProvider, nameResolver, id -> null);
+    }
+
+    public WardViewModelBuilder(WardTierProvider tierProvider,
+                                Function<UUID, String> nameResolver,
+                                Function<UUID, String> cityNameResolver) {
+        this(tierProvider, nameResolver, cityNameResolver, null);
+    }
+
+    /**
+     * @param nameResolver           resolves player UUIDs to display names
+     * @param cityNameResolver       resolves city UUIDs to city names (null when unknown)
+     * @param upgradePreviewResolver computes the upgrade preview; null → unavailable preview
+     */
+    public WardViewModelBuilder(WardTierProvider tierProvider,
+                                Function<UUID, String> nameResolver,
+                                Function<UUID, String> cityNameResolver,
+                                BiFunction<Ward, UUID, WardUpgradePreview> upgradePreviewResolver) {
         this.tierProvider = tierProvider;
         this.nameResolver = nameResolver;
+        this.cityNameResolver = cityNameResolver;
+        this.upgradePreviewResolver = upgradePreviewResolver;
     }
 
     /**
@@ -35,16 +59,18 @@ public final class WardViewModelBuilder {
         boolean hasCity = ward.hasCityMembership();
         String cityName = null;
         if (hasCity && ward.cityId() != null) {
-            // City name is not stored on the ward; caller may override via nameResolver
-            String resolved = nameResolver.apply(ward.cityId());
-            cityName = resolved != null ? resolved : "Ciudad";
+            cityName = cityNameResolver.apply(ward.cityId());
         }
 
         // Determine if an upgrade is available: check the next tier above current
         boolean canUpgrade = isOwner && hasNextTier(ward.baseScore(), ward.tier());
+        WardUpgradePreview preview = upgradePreviewResolver != null
+                ? upgradePreviewResolver.apply(ward, viewerId)
+                : WardUpgradePreview.unavailable();
 
         return new WardViewModel(
                 ward.id(),
+                ward.name(),
                 ward.worldName(),
                 ward.ownerId(),
                 nameResolver.apply(ward.ownerId()),
@@ -61,6 +87,7 @@ public final class WardViewModelBuilder {
                 ward.centerZ(),
                 ward.permissions(),
                 hasCity,
+                preview,
                 canUpgrade,
                 true,            // canDeposit — anyone can deposit upkeep
                 isOwner,         // canManage

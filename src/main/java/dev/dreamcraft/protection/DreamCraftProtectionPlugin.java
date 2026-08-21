@@ -28,6 +28,7 @@ import dev.dreamcraft.protection.listener.HopperProtectionListener;
 import dev.dreamcraft.protection.listener.PhysicsProtectionListener;
 import dev.dreamcraft.protection.listener.ProtectionListener;
 import dev.dreamcraft.protection.listener.RedstoneProtectionListener;
+import dev.dreamcraft.protection.listener.WardItemListener;
 import dev.dreamcraft.protection.persistence.ConfigWardTierProvider;
 import dev.dreamcraft.protection.persistence.ClaimRepository;
 import dev.dreamcraft.protection.persistence.YamlCityRepository;
@@ -37,6 +38,7 @@ import dev.dreamcraft.protection.presentation.MenuActionDispatcher;
 import dev.dreamcraft.protection.presentation.VanillaMenuProvider;
 import dev.dreamcraft.protection.service.*;
 import dev.dreamcraft.protection.ui.ProtectionMenu;
+import dev.dreamcraft.protection.ui.WardItems;
 import dev.dreamcraft.protection.ui.WardrobeItems;
 import org.bukkit.Material;
 import org.bukkit.command.PluginCommand;
@@ -56,6 +58,7 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
     private UpkeepCalculator upkeepCalculator;
     private UpkeepManager upkeepManager;
     private WardrobeItems wardrobeItems;
+    private WardItems wardItems;
     private ProtectionChecker protectionChecker;
     private ProtectionMenu protectionMenu;
 
@@ -141,21 +144,24 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         if (command != null) {
             ProtectionCommand executor = new ProtectionCommand(
                     claimManager, wardrobeItems(), menu, this::reloadPluginConfig,
-                    upkeepManager(), protectionConfig);
+                    upkeepManager(), protectionConfig, cityService);
             command.setExecutor(executor);
             command.setTabCompleter(executor);
         }
 
         // 8a. Wire the menu action dispatcher to the vanilla menu provider
+        WardTierProvider tierProvider = new ConfigWardTierProvider(getConfig());
+        dev.dreamcraft.protection.service.WardUpgradeService upgradeService =
+                new dev.dreamcraft.protection.service.WardUpgradeService(tierProvider, protectionConfig);
         menuProvider.setActionHandler(new MenuActionDispatcher(
-                wardService, cityService, estateService, worldGuardAdapter));
+                wardService, cityService, estateService, worldGuardAdapter, upgradeService));
 
         // 8b. Domain commands: /ward, /city, /estate
-        WardTierProvider tierProvider = new ConfigWardTierProvider(getConfig());
+        WardCommand wardExecutor = new WardCommand(
+                wardService, cityService, worldGuardAdapter, tierProvider, menuProvider,
+                wardItems(), upgradeService);
         PluginCommand wardCmd = getCommand("ward");
         if (wardCmd != null) {
-            WardCommand wardExecutor = new WardCommand(
-                    wardService, cityService, worldGuardAdapter, tierProvider, menuProvider);
             wardCmd.setExecutor(wardExecutor);
             wardCmd.setTabCompleter(wardExecutor);
         }
@@ -171,6 +177,17 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
             estateCmd.setExecutor(estateExecutor);
             estateCmd.setTabCompleter(estateExecutor);
         }
+
+        // 8c. Ward block listener — placing the ward item founds a Ward centered on it
+        pm.registerEvents(new WardItemListener(
+                wardItems(),
+                wardService,
+                claimManager,
+                worldGuardAdapter,
+                wardExecutor::openWardMenu,
+                wardExecutor::canOpenWardMenu,
+                this::saveDomainData
+        ), this);
 
         getLogger().info("[DreamCraft] Domain layer active — Ward/City/Estate ready.");
     }
@@ -203,6 +220,7 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                 buildingCostService
         );
         this.wardrobeItems = new WardrobeItems(this, protectionConfig);
+        this.wardItems = new WardItems(this, protectionConfig);
         this.protectionChecker = new ProtectionChecker(protectionConfig, claimManager.claimIndex());
         Material depositMat = protectionConfig.upkeepResourceMaterial() != null
                 ? protectionConfig.upkeepResourceMaterial() : Material.DIAMOND;
@@ -243,6 +261,11 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         } catch (IOException e) {
             getLogger().severe("[DreamCraft] Failed to save domain data: " + e.getMessage());
         }
+    }
+
+    /** Public save hook for listeners (e.g. ward block placement). */
+    public void saveDomainData() {
+        flushDomainData();
     }
 
     private void reloadPluginConfig() {
@@ -297,6 +320,7 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
     }
 
     private WardrobeItems wardrobeItems()   { return wardrobeItems; }
+    private WardItems wardItems()           { return wardItems; }
     private ProtectionChecker protectionChecker() { return protectionChecker; }
     private ProtectionMenu protectionMenu() { return protectionMenu; }
     private UpkeepManager upkeepManager()   { return upkeepManager; }

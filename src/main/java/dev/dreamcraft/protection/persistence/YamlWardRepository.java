@@ -79,6 +79,14 @@ public final class YamlWardRepository implements WardRepository {
     }
 
     @Override
+    public Optional<Ward> findByCenter(String worldName, int x, int y, int z) {
+        return cache.values().stream()
+                .filter(w -> w.worldName().equals(worldName))
+                .filter(w -> w.centerX() == x && w.centerY() == y && w.centerZ() == z)
+                .findFirst();
+    }
+
+    @Override
     public Collection<Ward> findAll() {
         return Collections.unmodifiableCollection(cache.values());
     }
@@ -122,6 +130,7 @@ public final class YamlWardRepository implements WardRepository {
         String cityIdRaw = s.getString("city-id");
         return new Ward(
                 UUID.fromString(key),
+                s.getString("name", "Ward"),
                 s.getString("world", "world"),
                 UUID.fromString(s.getString("owner-id")),
                 OwnerType.valueOf(s.getString("owner-type", "PLAYER")),
@@ -142,6 +151,7 @@ public final class YamlWardRepository implements WardRepository {
     }
 
     private void writeWard(ConfigurationSection s, Ward w) {
+        s.set("name", w.name());
         s.set("world", w.worldName());
         s.set("owner-id", w.ownerId().toString());
         s.set("owner-type", w.ownerType().name());

@@ -16,6 +16,7 @@ import java.util.UUID;
  */
 public record WardViewModel(
         UUID id,
+        String name,
         String worldName,
         UUID ownerId,
         String ownerName,
@@ -32,6 +33,7 @@ public record WardViewModel(
         int centerZ,
         Set<WardPermission> permissions,
         boolean hasCityMembership,
+        WardUpgradePreview upgradePreview,
         // Pre-computed validation flags for menu rendering
         boolean canUpgrade,
         boolean canDeposit,

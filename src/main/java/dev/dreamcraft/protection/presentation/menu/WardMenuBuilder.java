@@ -34,9 +34,10 @@ public final class WardMenuBuilder {
         // Slot 4 — Ward status display
         String wardIcon = vm.hasCityMembership() ? "icon.ward.active" : "icon.ward.inactive";
         items.add(MenuItem.display(4, wardIcon,
-                "&b&lWard: " + vm.tier(),
+                "&b&l" + vm.name(),
                 List.of(
                         "&7Owner: &f" + vm.ownerName(),
+                        "&7Tier: &b" + vm.tier(),
                         "&7Score: &f" + vm.baseScore(),
                         "&7Radio: &f" + vm.radius() + " bloques",
                         "&7Upkeep: &f" + vm.upkeepBalance(),
@@ -58,9 +59,34 @@ public final class WardMenuBuilder {
         // Slot 12 — Score / upgrade
         List<String> scoreLore = new ArrayList<>();
         scoreLore.add("&7Score base: &f" + vm.baseScore());
-        scoreLore.add("&7Tier: &b" + vm.tier());
+        scoreLore.add("&7Tier actual: &b" + vm.tier());
+        var preview = vm.upgradePreview();
         if (vm.canUpgrade()) {
-            scoreLore.add("&aClic para mejorar tier");
+            if (preview.available()) {
+                scoreLore.add("");
+                scoreLore.add("&7Mejora al tier &b" + preview.targetTier() + "&7:");
+                scoreLore.add("&8- &7Radio de protección: &f" + preview.radiusAfter() + " bloques");
+                scoreLore.add("&8- &7Upkeep: &f" + preview.upkeepPerInterval() + " unidades/intervalo");
+                scoreLore.add("&8- &7Score: &f+" + preview.scoreGain());
+                if (!preview.costs().isEmpty()) {
+                    scoreLore.add("");
+                    scoreLore.add("&7Costo (se descuenta al mejorar):");
+                    for (var cost : preview.costs()) {
+                        scoreLore.add((cost.affordable() ? "&a✔ " : "&c✖ ")
+                                + "&f" + cost.amount() + "x " + cost.materialDisplay());
+                    }
+                }
+                scoreLore.add("");
+                if (preview.canAfford()) {
+                    scoreLore.add("&aClic para mejorar");
+                } else {
+                    scoreLore.add("&cTe faltan ítems marcados con ✖");
+                }
+            } else {
+                scoreLore.add("");
+                scoreLore.add("&7Mejora disponible al siguiente tier");
+                scoreLore.add("&aClic para mejorar");
+            }
             items.add(MenuItem.button(12, "icon.ward.active", "&a&lMejorar Ward", scoreLore,
                     MenuAction.of("ward.upgrade")));
         } else {
@@ -119,6 +145,6 @@ public final class WardMenuBuilder {
                 List.of("&7Cerrar menú"),
                 MenuAction.of("menu.close")));
 
-        return new MenuDefinition(MENU_ID, "&8Ward &f" + vm.tier(), 27, items);
+        return new MenuDefinition(MENU_ID, "&8Ward &f" + vm.name(), 27, items);
     }
 }

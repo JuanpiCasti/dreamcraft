@@ -25,6 +25,7 @@ import java.util.UUID;
 public final class Ward {
 
     private final UUID id;
+    private String name;
     private final String worldName;
     private UUID ownerId;
     private OwnerType ownerType;
@@ -45,6 +46,7 @@ public final class Ward {
 
     public Ward(
             UUID id,
+            String name,
             String worldName,
             UUID ownerId,
             OwnerType ownerType,
@@ -63,6 +65,7 @@ public final class Ward {
             Set<WardPermission> permissions
     ) {
         this.id = id;
+        this.name = name != null && !name.isBlank() ? name : "Ward";
         this.worldName = worldName;
         this.ownerId = ownerId;
         this.ownerType = ownerType;
@@ -86,6 +89,8 @@ public final class Ward {
     // ── Accessors ─────────────────────────────────────────────────────────────
 
     public UUID id() { return id; }
+    public String name() { return name; }
+    public void name(String name) { this.name = name != null && !name.isBlank() ? name : this.name; }
     public String worldName() { return worldName; }
     public UUID ownerId() { return ownerId; }
     public OwnerType ownerType() { return ownerType; }

@@ -103,7 +103,8 @@ class AuthorizationTest {
                 Duration.ofHours(24), Duration.ofHours(48),
                 null, 64, 8, true, Duration.ofDays(7),
                 true, true, true, 41001, "dreamcraft:protection_wardrobe",
-                Map.of(), Map.of(), Map.of()
+                null, null, 0, 100,
+                Map.of(), Map.of(), Map.of(), Map.of()
         );
         ProtectionChecker disabledChecker = new ProtectionChecker(disabled, claimIndex);
         assertEquals(ProtectionCheckResult.PROTECTION_DISABLED,
@@ -170,7 +171,8 @@ class AuthorizationTest {
                 Duration.ofHours(24), Duration.ofHours(48),
                 null, 64, 8, false, Duration.ofDays(7), // ownerTransfer=false
                 true, true, true, 41001, "dreamcraft:protection_wardrobe",
-                Map.of("advanced", new TierDefinition("advanced", 16, 16, 8)), Map.of(), Map.of()
+                null, null, 0, 100,
+                Map.of("advanced", new TierDefinition("advanced", 16, 16, 8)), Map.of(), Map.of(), Map.of()
         );
         ClaimManager mgr = new ClaimManager(cfg, new ClaimIndex(), null, null);
         ProtectionClaim c = makeClaim(ownerUuid, 0, 0, 16, "advanced", new HashSet<>());
@@ -193,7 +195,7 @@ class AuthorizationTest {
     private ProtectionClaim makeClaim(UUID owner, int x, int z, int radius, String tier, Set<UUID> members) {
         Instant now = Instant.now();
         return new ProtectionClaim(
-                UUID.randomUUID(), "world", owner,
+                UUID.randomUUID(), "Test Claim", "world", owner,
                 x, 64, z, radius, radius,
                 ProtectionState.ACTIVE, tier,
                 now, now, now, now,
@@ -212,8 +214,10 @@ class AuthorizationTest {
                 Duration.ofHours(24), Duration.ofHours(48),
                 null, 64, maxMembers, true, Duration.ofDays(7),
                 true, true, true, 41001, "dreamcraft:protection_wardrobe",
+                null, null, 0, 100,
                 tiers,
                 Map.of("basic", 1, "reinforced", 3, "advanced", 10, "special", 15, "light", 1),
+                Map.of(),
                 Map.of()
         );
     }

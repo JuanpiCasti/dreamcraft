@@ -411,8 +411,7 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
     }
 
     private String resolveName(UUID uuid) {
-        Player p = Bukkit.getPlayer(uuid);
-        return p != null ? p.getName() : uuid.toString().substring(0, 8);
+        return CommandMessages.resolveName(uuid);
     }
 
     private int wardCountOf(City city) {

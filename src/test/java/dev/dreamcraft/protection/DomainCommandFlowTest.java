@@ -4,6 +4,7 @@ import dev.dreamcraft.protection.domain.model.*;
 import dev.dreamcraft.protection.domain.port.EstateRepository;
 import dev.dreamcraft.protection.domain.port.WardRepository;
 import dev.dreamcraft.protection.domain.port.CityRepository;
+import dev.dreamcraft.protection.domain.port.WardTierProvider;
 import dev.dreamcraft.protection.domain.service.CityService;
 import dev.dreamcraft.protection.domain.service.EstateService;
 import dev.dreamcraft.protection.domain.service.WardService;
@@ -199,12 +200,16 @@ class DomainCommandFlowTest {
     // ── Estate service flow ─────────────────────────────────────────────────
 
     @Test
-    void estateCreationIncludesOwnerAsMember() {
+    void estateCreationDoesNotAutoJoinOwner() {
         Estate estate = estateService.createEstate(ownerId, "Fellowship", null, null, false);
-        assertTrue(estate.isMember(ownerId));
+        assertFalse(estate.isMember(ownerId)); // membership is explicit
         assertEquals(ownerId, estate.ownerId());
         assertFalse(estate.persistent());
         assertFalse(estate.isInstanced());
+
+        // Player-facing flows add the creator explicitly
+        assertTrue(estateService.addMember(estate, ownerId));
+        assertTrue(estate.isMember(ownerId));
     }
 
     @Test
@@ -327,7 +332,7 @@ class DomainCommandFlowTest {
         assertTrue(vmOwner.isOwner());
         assertTrue(vmOwner.canInvite());
         assertTrue(vmOwner.canStart());
-        assertFalse(vmOwner.canJoin()); // owner is member
+        assertFalse(vmOwner.canJoin()); // owner manages, doesn't join
 
         EstateViewModel vmNonMember = builder.build(estate, otherId);
         assertFalse(vmNonMember.isOwner());
@@ -348,7 +353,7 @@ class DomainCommandFlowTest {
 
         assertEquals("ward_status", def.menuId());
         assertEquals(27, def.size());
-        assertEquals(9, def.items().size()); // 9 items defined
+        assertEquals(8, def.items().size()); // 8 items defined
         // Slot 4 is display, slot 22 is close button
         assertNotNull(def.itemAt(4));
         assertNotNull(def.itemAt(22));
@@ -454,6 +459,12 @@ class DomainCommandFlowTest {
             return cache.values().stream()
                     .filter(w -> w.worldName().equals(worldName))
                     .filter(w -> Math.abs(w.centerX() - x) <= w.radius() && Math.abs(w.centerZ() - z) <= w.radius())
+                    .findFirst();
+        }
+        @Override public Optional<Ward> findByCenter(String worldName, int x, int y, int z) {
+            return cache.values().stream()
+                    .filter(w -> w.worldName().equals(worldName))
+                    .filter(w -> w.centerX() == x && w.centerY() == y && w.centerZ() == z)
                     .findFirst();
         }
         @Override public Collection<Ward> findAll() { return new ArrayList<>(cache.values()); }

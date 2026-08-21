@@ -151,6 +151,7 @@ class ClaimIndexTest {
         Instant now = Instant.now();
         return new ProtectionClaim(
                 UUID.randomUUID(),
+                "Test Claim",
                 "world",
                 UUID.randomUUID(),
                 x, 64, z,

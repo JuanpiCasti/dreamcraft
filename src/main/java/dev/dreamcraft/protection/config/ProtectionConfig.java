@@ -6,7 +6,9 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -32,9 +34,14 @@ public record ProtectionConfig(
         boolean resourcePackFallbackVanilla,
         int customModelData,
         String resourceItemId,
+        Material wardMaterial,
+        String wardItemId,
+        int wardCustomModelData,
+        int wardScorePerUpgrade,
         Map<String, TierDefinition> tiers,
         Map<String, Integer> categoryBaseCosts,
-        Map<Material, String> materialOverrides
+        Map<Material, String> materialOverrides,
+        Map<String, List<WardUpgradeCost>> wardUpgradeCosts
 ) {
     public static ProtectionConfig load(FileConfiguration config) {
         ConfigurationSection protection = config.getConfigurationSection("protection");
@@ -42,6 +49,7 @@ public record ProtectionConfig(
         ConfigurationSection members = config.getConfigurationSection("members");
         ConfigurationSection claim = config.getConfigurationSection("claim");
         ConfigurationSection resourcePack = config.getConfigurationSection("resource-pack");
+        ConfigurationSection ward = config.getConfigurationSection("ward");
         ConfigurationSection tiersSection = config.getConfigurationSection("tiers");
         ConfigurationSection buildingCost = config.getConfigurationSection("building-cost");
         ConfigurationSection categorySection = buildingCost == null ? null : buildingCost.getConfigurationSection("categories");
@@ -84,6 +92,25 @@ public record ProtectionConfig(
             }
         }
 
+        Map<String, List<WardUpgradeCost>> wardUpgradeCosts = new HashMap<>();
+        ConfigurationSection upgradeCostsSection = config.getConfigurationSection("ward-upgrade-costs");
+        if (upgradeCostsSection != null) {
+            for (String tierKey : upgradeCostsSection.getKeys(false)) {
+                List<WardUpgradeCost> costs = new ArrayList<>();
+                for (Map<?, ?> entry : upgradeCostsSection.getMapList(tierKey)) {
+                    Object matObj = entry.get("material");
+                    if (matObj == null) continue;
+                    Material material = Material.matchMaterial(String.valueOf(matObj));
+                    Object amtObj = entry.get("amount");
+                    int amount = amtObj instanceof Number n ? n.intValue() : 1;
+                    if (material != null && amount > 0) {
+                        costs.add(new WardUpgradeCost(material, amount));
+                    }
+                }
+                wardUpgradeCosts.put(tierKey.toLowerCase(Locale.ROOT), List.copyOf(costs));
+            }
+        }
+
         return new ProtectionConfig(
                 protection != null && protection.getBoolean("enabled", true),
                 protection == null ? 16 : protection.getInt("default-radius", 16),
@@ -106,9 +133,14 @@ public record ProtectionConfig(
                 resourcePack == null || resourcePack.getBoolean("fallback-vanilla", true),
                 resourcePack == null ? 41001 : resourcePack.getInt("custom-model-data", 41001),
                 resourcePack == null ? "dreamcraft:protection_wardrobe" : resourcePack.getString("item-id", "dreamcraft:protection_wardrobe"),
+                Material.matchMaterial(ward == null ? "BEACON" : ward.getString("material", "BEACON")),
+                ward == null ? "dreamcraft:ward_beacon" : ward.getString("item-id", "dreamcraft:ward_beacon"),
+                ward == null ? 41002 : ward.getInt("custom-model-data", 41002),
+                ward == null ? 100 : ward.getInt("score-per-upgrade", 100),
                 tiers,
                 categoryBaseCosts,
-                materialOverrides
+                materialOverrides,
+                wardUpgradeCosts
         );
     }
 }

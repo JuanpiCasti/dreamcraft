@@ -37,15 +37,25 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     private final CityService cityService;
     private final EstateService estateService;
     private final WorldGuardAdapter worldGuardAdapter;
+    private final dev.dreamcraft.protection.service.WardUpgradeService upgradeService;
 
     public MenuActionDispatcher(WardService wardService,
                                 CityService cityService,
                                 EstateService estateService,
                                 WorldGuardAdapter worldGuardAdapter) {
+        this(wardService, cityService, estateService, worldGuardAdapter, null);
+    }
+
+    public MenuActionDispatcher(WardService wardService,
+                                CityService cityService,
+                                EstateService estateService,
+                                WorldGuardAdapter worldGuardAdapter,
+                                dev.dreamcraft.protection.service.WardUpgradeService upgradeService) {
         this.wardService = wardService;
         this.cityService = cityService;
         this.estateService = estateService;
         this.worldGuardAdapter = worldGuardAdapter;
+        this.upgradeService = upgradeService;
     }
 
     @Override
@@ -88,13 +98,48 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         if (ward == null) return;
         if (!ward.ownerId().equals(player.getUniqueId())) {
             feedback(player, "Solo el owner puede mejorar el Ward.", NamedTextColor.RED);
+            playError(player);
             return;
         }
-        // Add score to push into next tier; domain service recalculates tier + radius
-        wardService.addBaseScore(ward, 100);
-        // Sync WorldGuard region to new radius
+        if (upgradeService == null) {
+            // Fallback: no cost service wired — behave as before
+            wardService.addBaseScore(ward, 100);
+            worldGuardAdapter.resizeRegion(ward, -64, 320);
+            feedback(player, "Ward mejorado a " + ward.tier() + " (radio " + ward.radius() + ")", NamedTextColor.GREEN);
+            playSuccess(player);
+            return;
+        }
+
+        // 1. Quote the next tier
+        var quoteOpt = upgradeService.quoteNext(ward);
+        if (quoteOpt.isEmpty()) {
+            feedback(player, "El Ward ya está en el tier máximo (" + ward.tier() + ").", NamedTextColor.YELLOW);
+            playError(player);
+            return;
+        }
+        var quote = quoteOpt.get();
+
+        // 2. Verify the player can pay the item cost
+        var missing = upgradeService.missingItems(player, quote);
+        if (!missing.isEmpty()) {
+            player.sendMessage(Component.text("[Ward] Te faltan ítems para mejorar al tier "
+                    + quote.targetTierKey() + ":", NamedTextColor.RED));
+            missing.forEach(player::sendMessage);
+            playError(player);
+            return;
+        }
+
+        // 3. Charge, apply score gain and sync the region
+        upgradeService.charge(player, quote);
+        wardService.addBaseScore(ward, quote.scoreGain());
         worldGuardAdapter.resizeRegion(ward, -64, 320);
-        feedback(player, "Ward mejorado a " + ward.tier() + " (radio " + ward.radius() + ")", NamedTextColor.GREEN);
+
+        player.sendMessage(Component.text("[Ward] ", NamedTextColor.DARK_AQUA)
+                .append(Component.text("Mejorado a ", NamedTextColor.GREEN))
+                .append(Component.text(ward.tier(), NamedTextColor.AQUA))
+                .append(Component.text(" — radio " + ward.radius()
+                        + " bloques, upkeep " + quote.upkeepPerInterval()
+                        + " unidades/intervalo. Ítems descontados.", NamedTextColor.GREEN)));
         playSuccess(player);
     }
 
@@ -207,6 +252,10 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     private void handleEstateJoin(Player player, MenuContext ctx) {
         Estate estate = resolveEstate(player, ctx);
         if (estate == null) return;
+        if (estate.isOwner(player.getUniqueId())) {
+            feedback(player, "Ya eres el owner de este Estate.", NamedTextColor.YELLOW);
+            return;
+        }
         if (estate.isMember(player.getUniqueId())) {
             feedback(player, "Ya eres miembro del Estate.", NamedTextColor.YELLOW);
             return;
@@ -219,12 +268,12 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     private void handleEstateLeave(Player player, MenuContext ctx) {
         Estate estate = resolveEstate(player, ctx);
         if (estate == null) return;
-        if (!estate.isMember(player.getUniqueId())) {
-            feedback(player, "No eres miembro del Estate.", NamedTextColor.RED);
-            return;
-        }
         if (estate.isOwner(player.getUniqueId())) {
             feedback(player, "El owner no puede salir; transfiere o disuelve el Estate.", NamedTextColor.RED);
+            return;
+        }
+        if (!estate.isMember(player.getUniqueId())) {
+            feedback(player, "No eres miembro del Estate.", NamedTextColor.RED);
             return;
         }
         estateService.removeMember(estate, player.getUniqueId());
@@ -246,7 +295,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
             feedback(player, "El Estate ya tiene una instancia activa.", NamedTextColor.YELLOW);
             return;
         }
-        feedback(player, "Instancia " + instanceId + " iniciada.", NamedTextColor.GREEN);
+        feedback(player, "Instancia de " + estate.name() + " iniciada.", NamedTextColor.GREEN);
         playSuccess(player);
     }
 

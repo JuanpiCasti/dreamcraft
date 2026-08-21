@@ -7,7 +7,7 @@ version = providers.gradleProperty("version").get()
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(24))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
@@ -49,7 +49,7 @@ dependencies {
     compileOnly("net.coreprotect:coreprotect:24.0")
 
     // EssentialsX (compileOnly — resolves from essentialsx maven)
-    compileOnly("net.essentialsx:EssentialsX:2.22.0")
+    compileOnly("net.essentialsx:EssentialsX:2.21.2")
 
     // PacketEvents (compileOnly)
     compileOnly("com.github.retrooper:packetevents-spigot:2.13.0")

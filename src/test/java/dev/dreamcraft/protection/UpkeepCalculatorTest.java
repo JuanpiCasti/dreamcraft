@@ -112,8 +112,10 @@ class UpkeepCalculatorTest {
                 Duration.ofHours(24), Duration.ofHours(48),
                 null, 64, 8, true, Duration.ofDays(7),
                 true, true, true, 41001, "dreamcraft:protection_wardrobe",
+                null, null, 0, 100,
                 Map.of(),
                 Map.of("basic", 1),
+                Map.of(),
                 Map.of()
         );
         // daily cost=1, stored=30 → timeRemaining=30*86400=720h, which is > warning(48h)
@@ -144,7 +146,7 @@ class UpkeepCalculatorTest {
         Instant nextUpkeep = Instant.now().minus(Duration.ofHours(1));
         Instant past = Instant.now().minus(Duration.ofHours(25));
         ProtectionClaim claim = new ProtectionClaim(
-                UUID.randomUUID(), "world", UUID.randomUUID(),
+                UUID.randomUUID(), "Test Claim", "world", UUID.randomUUID(),
                 0, 64, 0, 16, 16,
                 ProtectionState.ACTIVE, "advanced",
                 past, past, nextUpkeep, past,
@@ -165,7 +167,7 @@ class UpkeepCalculatorTest {
         Instant nextUpkeep = Instant.now().minus(Duration.ofHours(25));
         Instant past = Instant.now().minus(Duration.ofHours(48));
         ProtectionClaim claim = new ProtectionClaim(
-                UUID.randomUUID(), "world", UUID.randomUUID(),
+                UUID.randomUUID(), "Test Claim", "world", UUID.randomUUID(),
                 0, 64, 0, 16, 16,
                 ProtectionState.ACTIVE, "advanced",
                 past, past, nextUpkeep, past,
@@ -192,7 +194,7 @@ class UpkeepCalculatorTest {
     private ProtectionClaim makeClaim(ClaimStats stats, UpkeepStorage storage) {
         Instant now = Instant.now();
         return new ProtectionClaim(
-                UUID.randomUUID(), "world", UUID.randomUUID(),
+                UUID.randomUUID(), "Test Claim", "world", UUID.randomUUID(),
                 0, 64, 0, 16, 16,
                 ProtectionState.ACTIVE, "advanced",
                 now, now, now, now,
@@ -210,8 +212,10 @@ class UpkeepCalculatorTest {
                 Duration.ofHours(24), Duration.ofHours(48),
                 null, 64, 8, true, Duration.ofDays(7),
                 true, true, true, 41001, "dreamcraft:protection_wardrobe",
+                null, null, 0, 100,
                 Map.of(),
                 Map.of("basic", 1, "reinforced", 3, "advanced", 10, "special", 15, "light", 1),
+                Map.of(),
                 Map.of()
         );
     }

@@ -64,12 +64,18 @@ public final class ProtectionChecker {
             return true;
         }
         boolean member = claim.members().contains(uuid);
-        if (!member) {
-            return false;
+        if (member) {
+            return action != ProtectionAction.MANAGE_MEMBERS
+                    && action != ProtectionAction.TRANSFER
+                    && action != ProtectionAction.REMOVE_WARDROBE;
         }
-        return action != ProtectionAction.MANAGE_MEMBERS
-                && action != ProtectionAction.TRANSFER
-                && action != ProtectionAction.REMOVE_WARDROBE;
+        // Non-members: only the public permission flags explicitly granted on the claim
+        return switch (action) {
+            case BUILD -> claim.hasPublicPermission("PUBLIC_BUILD");
+            case BREAK -> claim.hasPublicPermission("PUBLIC_BREAK");
+            case INTERACT -> claim.hasPublicPermission("PUBLIC_INTERACT");
+            default -> false;
+        };
     }
 
     public ClaimRole role(UUID uuid, ProtectionClaim claim) {

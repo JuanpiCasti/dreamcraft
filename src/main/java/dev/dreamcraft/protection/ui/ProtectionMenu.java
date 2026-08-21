@@ -18,7 +18,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -59,6 +61,8 @@ public final class ProtectionMenu implements Listener {
     private final ClaimManager claimManager;
     private final Material depositMaterial;
     private final int unitsPerItem;
+    /** Viewer UUID → open claim id (titles now show friendly names, not UUIDs). */
+    private final Map<UUID, UUID> openClaimByViewer = new HashMap<>();
 
     public ProtectionMenu(UpkeepCalculator upkeepCalculator, ClaimManager claimManager,
                           Material depositMaterial, int unitsPerItem) {
@@ -71,9 +75,10 @@ public final class ProtectionMenu implements Listener {
     // ── Opening ──────────────────────────────────────────────────────────────
 
     public void open(Player player, ProtectionClaim claim) {
-        // Encode claim UUID in title so click events can identify it
+        // Track which claim this viewer has open (title shows the friendly name)
+        openClaimByViewer.put(player.getUniqueId(), claim.id());
         Inventory inventory = Bukkit.createInventory(null, INVENTORY_SIZE,
-                TITLE_PREFIX + " §8[" + claim.id() + "]");
+                TITLE_PREFIX + " §f" + claim.name());
         refresh(inventory, claim);
         player.openInventory(inventory);
     }
@@ -137,7 +142,7 @@ public final class ProtectionMenu implements Listener {
         // Cancel by default to block extracting visual items.
         event.setCancelled(true);
 
-        UUID claimId = extractClaimId(event.getView().getTitle());
+        UUID claimId = resolveClaimId(player.getUniqueId(), event.getView().getTitle());
         if (claimId == null) return;
         ProtectionClaim claim = claimManager.claimIndex().byId(claimId).orElse(null);
         if (claim == null) return;
@@ -205,10 +210,13 @@ public final class ProtectionMenu implements Listener {
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private boolean isProtectionMenu(String title) {
-        return title != null && title.startsWith(TITLE_PREFIX + " §8[");
+        return title != null && title.startsWith(TITLE_PREFIX);
     }
 
-    private UUID extractClaimId(String title) {
+    /** Resolves the open claim: viewer map first, legacy UUID-in-title as fallback. */
+    private UUID resolveClaimId(UUID viewerId, String title) {
+        UUID mapped = openClaimByViewer.get(viewerId);
+        if (mapped != null) return mapped;
         try {
             int start = title.indexOf('[') + 1;
             int end = title.indexOf(']');
@@ -216,6 +224,13 @@ public final class ProtectionMenu implements Listener {
             return UUID.fromString(title.substring(start, end));
         } catch (IllegalArgumentException e) {
             return null;
+        }
+    }
+
+    @EventHandler(priority = EventPriority.NORMAL)
+    public void onInventoryClose(org.bukkit.event.inventory.InventoryCloseEvent event) {
+        if (event.getPlayer() instanceof Player player) {
+            openClaimByViewer.remove(player.getUniqueId());
         }
     }
 
@@ -257,7 +272,8 @@ public final class ProtectionMenu implements Listener {
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName("§fMiembros");
         List<String> lore = new ArrayList<>();
-        lore.add("§7Owner: §e" + claim.ownerUuid());
+        String ownerName = Bukkit.getOfflinePlayer(claim.ownerUuid()).getName();
+        lore.add("§7Owner: §e" + (ownerName != null ? ownerName : claim.ownerUuid()));
         lore.add("§7Miembros: §f" + claim.members().size());
         lore.add(" ");
         lore.add("§7Usa §f/protection members §7para gestionar.");

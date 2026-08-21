@@ -49,6 +49,21 @@ public final class WardService {
             String worldName,
             int cx, int cy, int cz
     ) {
+        return createWard(ownerId, ownerType, cityId, worldName, cx, cy, cz, null);
+    }
+
+    /**
+     * Creates a new Ward with an explicit display name. When {@code name} is null
+     * or blank a unique friendly name is generated (never a raw UUID fragment).
+     */
+    public Ward createWard(
+            UUID ownerId,
+            OwnerType ownerType,
+            UUID cityId,
+            String worldName,
+            int cx, int cy, int cz,
+            String name
+    ) {
         int baseScore = 0;
         WardTier tier = tierProvider.resolveForScore(baseScore);
         int radius = tier.computeRadius(baseScore);
@@ -56,6 +71,7 @@ public final class WardService {
 
         Ward ward = new Ward(
                 UUID.randomUUID(),
+                resolveUniqueName(name),
                 worldName,
                 ownerId,
                 ownerType,
@@ -155,6 +171,10 @@ public final class WardService {
         return wardRepository.findAtLocation(worldName, x, z);
     }
 
+    public Optional<Ward> findByCenter(String worldName, int x, int y, int z) {
+        return wardRepository.findByCenter(worldName, x, y, z);
+    }
+
     public Collection<Ward> findByOwner(UUID ownerId) {
         return wardRepository.findByOwnerId(ownerId);
     }
@@ -165,5 +185,21 @@ public final class WardService {
 
     public Collection<Ward> findAll() {
         return wardRepository.findAll();
+    }
+
+    /** Resolves a display name: uses the given one if unique, otherwise generates a friendly unique name. */
+    private String resolveUniqueName(String requested) {
+        if (requested != null && !requested.isBlank()) {
+            String trimmed = requested.trim();
+            boolean taken = wardRepository.findAll().stream()
+                    .anyMatch(w -> w.name().equalsIgnoreCase(trimmed));
+            return taken ? dev.dreamcraft.protection.util.NameGenerator.unique(this::nameTaken) : trimmed;
+        }
+        return dev.dreamcraft.protection.util.NameGenerator.unique(this::nameTaken);
+    }
+
+    private boolean nameTaken(String candidate) {
+        return wardRepository.findAll().stream()
+                .anyMatch(w -> w.name().equalsIgnoreCase(candidate));
     }
 }

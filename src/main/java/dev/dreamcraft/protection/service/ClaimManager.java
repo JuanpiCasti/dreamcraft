@@ -64,6 +64,7 @@ public final class ClaimManager {
         Instant now = Instant.now();
         ProtectionClaim claim = new ProtectionClaim(
                 UUID.randomUUID(),
+                uniqueClaimName(),
                 wardrobeBlock.getWorld().getName(),
                 owner.getUniqueId(),
                 wardrobeBlock.getX(),
@@ -94,6 +95,35 @@ public final class ClaimManager {
 
     public Optional<ProtectionClaim> findByLocation(Location location) {
         return claimIndex.findClaim(location.getWorld().getName(), location.getBlockX(), location.getBlockZ());
+    }
+
+    /**
+     * Upgrades the claim to the given tier key, updating radius and build radius.
+     * Returns false when the tier key is unknown.
+     */
+    public boolean upgradeTier(ProtectionClaim claim, String tierKey) {
+        TierDefinition tier = config.tiers().get(tierKey.toLowerCase(Locale.ROOT));
+        if (tier == null) {
+            return false;
+        }
+        claim.tier(tier.key());
+        claim.radius(tier.radius());
+        claim.buildRadius(tier.buildRadius());
+        return true;
+    }
+
+    /** @return tier keys ordered by protection radius (ascending), for upgrade paths. */
+    public List<String> orderedTierKeys() {
+        return config.tiers().values().stream()
+                .sorted(Comparator.comparingInt(TierDefinition::radius))
+                .map(TierDefinition::key)
+                .toList();
+    }
+
+    /** Generates a unique friendly display name for a new claim. */
+    private String uniqueClaimName() {
+        return dev.dreamcraft.protection.util.NameGenerator.unique(candidate ->
+                claimIndex.allClaims().stream().anyMatch(c -> c.name().equalsIgnoreCase(candidate)));
     }
 
     public Collection<ProtectionClaim> allClaims() {

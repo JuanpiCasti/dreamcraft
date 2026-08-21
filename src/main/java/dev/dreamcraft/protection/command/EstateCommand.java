@@ -94,6 +94,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         }
         String name = args[1];
         Estate estate = estateService.createEstate(player.getUniqueId(), name, null, null, false);
+        estateService.addMember(estate, player.getUniqueId());
         ok(player, ESTATE_PREFIX, "Estate '" + estate.name() + "' creado.");
         return true;
     }
@@ -104,11 +105,28 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         String adventureType = args[1];
-        // Discover creates an adventure-linked, non-persistent estate
         String adventureId = "adv-" + adventureType.toLowerCase(Locale.ROOT);
-        Estate estate = estateService.createEstate(
-                player.getUniqueId(), "Aventura: " + adventureType, adventureId, null, false);
-        ok(player, ESTATE_PREFIX, "Estate de aventura '" + estate.name() + "' descubierto.");
+        // Find an existing estate for this adventure before creating a new one,
+        // preferring one the player already belongs to.
+        var existing = estateService.findByAdventure(adventureId);
+        Estate estate;
+        if (existing.isEmpty()) {
+            estate = estateService.createEstate(
+                    player.getUniqueId(), "Aventura: " + adventureType, adventureId, null, false);
+            estateService.addMember(estate, player.getUniqueId());
+            ok(player, ESTATE_PREFIX, "Estate de aventura '" + estate.name() + "' descubierto.");
+        } else {
+            estate = existing.stream()
+                    .filter(e -> e.isMember(player.getUniqueId()))
+                    .findFirst()
+                    .orElse(existing.iterator().next());
+            if (!estate.isMember(player.getUniqueId())) {
+                estateService.addMember(estate, player.getUniqueId());
+                ok(player, ESTATE_PREFIX, "Te uniste al Estate de aventura '" + estate.name() + "'.");
+            } else {
+                ok(player, ESTATE_PREFIX, "Estate de aventura '" + estate.name() + "' encontrado.");
+            }
+        }
         openEstateMenu(player, estate);
         return true;
     }
@@ -187,12 +205,12 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
     private boolean handleLeave(Player player, String[] args) {
         Estate estate = resolveEstate(player, args);
         if (estate == null) return true;
-        if (!estate.isMember(player.getUniqueId())) {
-            error(player, ESTATE_PREFIX, "No eres miembro del Estate.");
-            return true;
-        }
         if (estate.isOwner(player.getUniqueId())) {
             error(player, ESTATE_PREFIX, "El owner no puede salir. Usa /estate disband o /estate transfer.");
+            return true;
+        }
+        if (!estate.isMember(player.getUniqueId())) {
+            error(player, ESTATE_PREFIX, "No eres miembro del Estate.");
             return true;
         }
         estateService.removeMember(estate, player.getUniqueId());
@@ -222,7 +240,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         String instanceId = "inst-" + estate.id().toString().substring(0, 8);
         boolean started = estateService.startInstance(estate, instanceId);
         if (started) {
-            ok(player, ESTATE_PREFIX, "Instancia " + instanceId + " iniciada.");
+            ok(player, ESTATE_PREFIX, "Instancia de §f" + estate.name() + "§a iniciada.");
             title(player, "Instancia Iniciada", estate.name(), NamedTextColor.LIGHT_PURPLE);
         } else {
             warn(player, ESTATE_PREFIX, "El Estate ya tiene una instancia activa.");
@@ -310,8 +328,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
     }
 
     private String resolveName(UUID uuid) {
-        Player p = Bukkit.getPlayer(uuid);
-        return p != null ? p.getName() : uuid.toString().substring(0, 8);
+        return CommandMessages.resolveName(uuid);
     }
 
     // ── Help ──────────────────────────────────────────────────────────────────

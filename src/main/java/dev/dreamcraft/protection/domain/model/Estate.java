@@ -47,8 +47,8 @@ public final class Estate {
         this.createdAt = createdAt;
         this.persistent = persistent;
         this.name = name;
-        // owner always included
-        this.members.add(ownerId);
+        // Membership is explicit: the owner is NOT auto-added, so an admin can
+        // provision an estate without becoming part of the adventuring group.
     }
 
     // ── Accessors ─────────────────────────────────────────────────────────────

@@ -24,12 +24,12 @@ commands:
   protection:
     description: Gestiona las protecciones de base
     aliases: [prot, claim]
-    usage: /protection [claim|status|upkeep|members|transfer|abandon|give|reload|recalculate]
+    usage: /protection [claim|status|upkeep|members|permissions|upgrade|transfer|dissolve|give|reload|recalculate]
     permission: dreamcraft.protection.use
   ward:
     description: Gestiona tu Ward (territorio DreamCraft)
     aliases: [w]
-    usage: /ward [create|info|delete|score|upkeep|transfer|permissions|city|menu]
+    usage: /ward [create|info|delete|score|upkeep|transfer|permissions|city|menu|give]
     permission: dreamcraft.ward.use
   city:
     description: Gestiona tu Ciudad
@@ -49,12 +49,18 @@ permissions:
   dreamcraft.protection.admin:
     description: Comandos administrativos de protección (give, reload, recalculate)
     default: op
+  dreamcraft.protection.menu:
+    description: Abrir el menú del claim con /protection claim. Conceder al grupo VIP (los gobernadores siempre pueden).
+    default: false
   dreamcraft.ward.use:
     description: Acceso a comandos de Ward
     default: true
   dreamcraft.ward.admin:
     description: Administración de Wards (crear/borrar para otros)
     default: op
+  dreamcraft.ward.menu:
+    description: Abrir el menú del Ward (/ward menu y clic derecho en la baliza). Conceder al grupo VIP.
+    default: false
   dreamcraft.city.use:
     description: Acceso a comandos de Ciudad
     default: true

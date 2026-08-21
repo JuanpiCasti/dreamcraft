@@ -43,7 +43,7 @@ public final class EstateViewModelBuilder {
                 estate.isAdventureLinked(),
                 isOwner,
                 isOwner,           // canInvite
-                !isMember,         // canJoin — only non-members
+                !isMember && !isOwner, // canJoin — non-members only (owner manages, doesn't join)
                 isMember,          // canLeave
                 isOwner,           // canStart
                 isOwner,           // canDisband

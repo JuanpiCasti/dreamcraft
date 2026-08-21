@@ -8,15 +8,16 @@ import java.util.UUID;
 
 public final class ProtectionClaim {
     private final UUID id;
+    private String name;
     private final String world;
     private UUID ownerUuid;
     private final int centerX;
     private final int centerY;
     private final int centerZ;
-    private final int radius;
-    private final int buildRadius;
+    private int radius;
+    private int buildRadius;
     private ProtectionState status;
-    private final String tier;
+    private String tier;
     private final Instant createdAt;
     private Instant lastUpkeepAt;
     private Instant nextUpkeepAt;
@@ -37,6 +38,7 @@ public final class ProtectionClaim {
 
     public ProtectionClaim(
             UUID id,
+            String name,
             String world,
             UUID ownerUuid,
             int centerX,
@@ -59,6 +61,7 @@ public final class ProtectionClaim {
             int wardrobeZ
     ) {
         this.id = id;
+        this.name = name != null && !name.isBlank() ? name : "Protección";
         this.world = world;
         this.ownerUuid = ownerUuid;
         this.centerX = centerX;
@@ -83,6 +86,8 @@ public final class ProtectionClaim {
     }
 
     public UUID id() { return id; }
+    public String name() { return name; }
+    public void name(String name) { this.name = name != null && !name.isBlank() ? name : this.name; }
     public String world() { return world; }
     public UUID ownerUuid() { return ownerUuid; }
     public void ownerUuid(UUID ownerUuid) { this.ownerUuid = ownerUuid; }
@@ -90,10 +95,13 @@ public final class ProtectionClaim {
     public int centerY() { return centerY; }
     public int centerZ() { return centerZ; }
     public int radius() { return radius; }
+    public void radius(int radius) { this.radius = radius; }
     public int buildRadius() { return buildRadius; }
+    public void buildRadius(int buildRadius) { this.buildRadius = buildRadius; }
     public ProtectionState status() { return status; }
     public void status(ProtectionState status) { this.status = status; }
     public String tier() { return tier; }
+    public void tier(String tier) { this.tier = tier; }
     public Instant createdAt() { return createdAt; }
     public Instant lastUpkeepAt() { return lastUpkeepAt; }
     public void lastUpkeepAt(Instant lastUpkeepAt) { this.lastUpkeepAt = lastUpkeepAt; }
@@ -121,6 +129,36 @@ public final class ProtectionClaim {
 
     public boolean isMember(UUID uuid) {
         return ownerUuid.equals(uuid) || members.contains(uuid);
+    }
+
+    // ── Public permissions (parity with Ward public perms) ────────────────────
+
+    /** Settings key prefix under which public permission flags are stored. */
+    public static final String PERM_PREFIX = "perm.";
+
+    /** @return true if the given public permission flag (e.g. PUBLIC_BUILD) is enabled. */
+    public boolean hasPublicPermission(String permission) {
+        return Boolean.TRUE.equals(settings().get(PERM_PREFIX + permission));
+    }
+
+    /** Enables/disables a public permission flag (e.g. PUBLIC_BUILD). */
+    public void setPublicPermission(String permission, boolean enabled) {
+        if (enabled) {
+            settings().put(PERM_PREFIX + permission, Boolean.TRUE);
+        } else {
+            settings().remove(PERM_PREFIX + permission);
+        }
+    }
+
+    /** @return names of currently enabled public permission flags. */
+    public java.util.Set<String> publicPermissions() {
+        java.util.Set<String> result = new HashSet<>();
+        settings().forEach((key, value) -> {
+            if (key.startsWith(PERM_PREFIX) && Boolean.TRUE.equals(value)) {
+                result.add(key.substring(PERM_PREFIX.length()));
+            }
+        });
+        return result;
     }
 
     public boolean isWardrobe(int x, int y, int z) {
