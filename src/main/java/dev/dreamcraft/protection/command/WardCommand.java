@@ -1,5 +1,6 @@
 package dev.dreamcraft.protection.command;
 
+import dev.dreamcraft.protection.domain.model.City;
 import dev.dreamcraft.protection.domain.model.OwnerType;
 import dev.dreamcraft.protection.domain.model.Ward;
 import dev.dreamcraft.protection.domain.model.WardPermission;
