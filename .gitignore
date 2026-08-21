@@ -1,2 +1,4 @@
 data/
 .worktrees/
+build/
+.gradle/

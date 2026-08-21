@@ -17,7 +17,7 @@ java {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
-    // WorldGuard / WorldEdit  (fallback to enginehub when online)
+    // WorldGuard / WorldEdit
     maven("https://maven.enginehub.org/repo/")
     // LuckPerms
     maven("https://oss.sonatype.org/content/repositories/snapshots/")
@@ -26,15 +26,21 @@ repositories {
     // PacketEvents
     maven("https://repo.codemc.io/repository/maven-releases/")
     maven("https://repo.codemc.io/repository/maven-snapshots/")
+    // EssentialsX
+    maven("https://repo.essentialsx.net/releases/")
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT")
 
-    // WorldGuard + WorldEdit — use the JARs already present in data/plugins
-    // (enginehub maven is unreachable in offline/CI; JARs are the ground truth)
-    compileOnly(files("data/plugins/worldguard-bukkit-7.0.18.jar"))
-    compileOnly(files("data/plugins/worldedit-bukkit-7.4.5.jar"))
+    // WorldGuard + WorldEdit (resolved from enginehub maven)
+    // Pinned to the last releases whose Gradle metadata declares
+    // org.gradle.jvm.version=21. WorldGuard 7.0.18 / WorldEdit 7.4.3+
+    // are compiled with JDK 25 and advertise jvm.version=25, which Gradle
+    // rejects for a Java 21 toolchain. These versions still support
+    // MC 1.21.5-1.21.8 (Paper recommended) and Java 21.
+    compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.17")
+    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.4.2")
 
     // LuckPerms (compileOnly — resolves from sonatype)
     compileOnly("net.luckperms:api:5.4")
@@ -42,8 +48,8 @@ dependencies {
     // CoreProtect (compileOnly — resolves from playpro maven)
     compileOnly("net.coreprotect:coreprotect:24.0")
 
-    // EssentialsX — use JAR from data/plugins
-    compileOnly(files("data/plugins/EssentialsX-2.22.0.jar"))
+    // EssentialsX (compileOnly — resolves from essentialsx maven)
+    compileOnly("net.essentialsx:EssentialsX:2.22.0")
 
     // PacketEvents (compileOnly)
     compileOnly("com.github.retrooper:packetevents-spigot:2.13.0")
