@@ -7,6 +7,8 @@ import com.sk89q.worldguard.domains.DefaultDomain;
 import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
+import dev.dreamcraft.protection.domain.model.City;
+import dev.dreamcraft.protection.domain.model.Estate;
 import dev.dreamcraft.protection.domain.model.Ward;
 import dev.dreamcraft.protection.integration.registry.CapabilityRegistry;
 import dev.dreamcraft.protection.integration.registry.IntegrationKey;
@@ -137,6 +139,57 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
             region.setOwners(ownerDomain);
         } catch (Exception e) {
             logger.warning("[WorldGuard] syncOwner failed for ward " + ward.id() + ": " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void syncCityMembership(Ward ward, City city) {
+        if (!isAvailable() || ward.worldGuardRegionId() == null) return;
+        try {
+            ProtectedRegion region = getRegion(ward);
+            if (region == null) return;
+            // Add all city members as WG region members (inheritance of city access)
+            DefaultDomain members = region.getMembers();
+            for (UUID memberId : city.members().keySet()) {
+                members.addPlayer(memberId);
+            }
+        } catch (Exception e) {
+            logger.warning("[WorldGuard] syncCityMembership failed for ward " + ward.id() + ": " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void applyEstateInstanceFlags(Ward ward, Estate estate) {
+        if (!isAvailable() || ward.worldGuardRegionId() == null) return;
+        try {
+            ProtectedRegion region = getRegion(ward);
+            if (region == null) return;
+            // Temporal access: add estate members as region members for the instance duration
+            DefaultDomain members = region.getMembers();
+            for (UUID memberId : estate.members()) {
+                members.addPlayer(memberId);
+            }
+            // Raise region priority so estate access takes effect during the instance
+            region.setPriority(Math.max(region.getPriority(), 100));
+        } catch (Exception e) {
+            logger.warning("[WorldGuard] applyEstateInstanceFlags failed for ward " + ward.id() + ": " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void clearEstateInstanceFlags(Ward ward) {
+        if (!isAvailable() || ward.worldGuardRegionId() == null) return;
+        try {
+            ProtectedRegion region = getRegion(ward);
+            if (region == null) return;
+            // Restore priority to a neutral value; members are left intact (they may
+            // have legitimate access outside the instance). The caller can removeMember
+            // for estate-only members if needed.
+            if (region.getPriority() >= 100) {
+                region.setPriority(0);
+            }
+        } catch (Exception e) {
+            logger.warning("[WorldGuard] clearEstateInstanceFlags failed for ward " + ward.id() + ": " + e.getMessage());
         }
     }
 

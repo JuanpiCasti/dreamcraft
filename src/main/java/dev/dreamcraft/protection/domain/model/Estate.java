@@ -24,7 +24,7 @@ public final class Estate {
     /** Optional: links this Estate to a DreamCraft adventure definition. Null if not adventure-linked. */
     private final String adventureId;
     /** Optional: links this Estate to a specific running instance. Null if not instanced. */
-    private final String instanceId;
+    private String instanceId;
     private final Instant createdAt;
     private boolean persistent;
     private String name;
@@ -67,6 +67,8 @@ public final class Estate {
     public void ownerId(UUID ownerId) { this.ownerId = ownerId; }
     public void persistent(boolean persistent) { this.persistent = persistent; }
     public void name(String name) { this.name = name; }
+    /** Links this Estate to a running instance, or clears it (null) when the instance ends. */
+    public void instanceId(String instanceId) { this.instanceId = instanceId; }
 
     public void addMember(UUID playerId) { members.add(playerId); }
     public boolean removeMember(UUID playerId) {

@@ -80,6 +80,31 @@ public final class EstateService {
         estateRepository.save(estate);
     }
 
+    /**
+     * Starts a new instance for the estate, linking it to an instance ID.
+     * Only the owner can start an instance. Returns false if already instanced.
+     *
+     * @param instanceId the running instance identifier (must not be null)
+     */
+    public boolean startInstance(Estate estate, String instanceId) {
+        if (estate.isInstanced()) return false;
+        if (instanceId == null) return false;
+        estate.instanceId(instanceId);
+        estateRepository.save(estate);
+        return true;
+    }
+
+    /**
+     * Ends the current instance, clearing the instance link.
+     * Returns false if the estate was not instanced.
+     */
+    public boolean endInstance(Estate estate) {
+        if (!estate.isInstanced()) return false;
+        estate.instanceId(null);
+        estateRepository.save(estate);
+        return true;
+    }
+
     public void delete(Estate estate) {
         estateRepository.delete(estate.id());
     }

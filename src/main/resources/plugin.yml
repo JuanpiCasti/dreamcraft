@@ -29,17 +29,17 @@ commands:
   ward:
     description: Gestiona tu Ward (territorio DreamCraft)
     aliases: [w]
-    usage: /ward [create|info|delete|score|upkeep|transfer|permissions|city]
+    usage: /ward [create|info|delete|score|upkeep|transfer|permissions|city|menu]
     permission: dreamcraft.ward.use
   city:
     description: Gestiona tu Ciudad
     aliases: [ciudad]
-    usage: /city [create|info|invite|kick|role|treasury|policy|delete|transfer]
+    usage: /city [create|annex|invite|kick|roles|bank|policy|menu|info|transfer|delete]
     permission: dreamcraft.city.use
   estate:
     description: Gestiona tu Estate (grupo de aventura)
     aliases: [grupo]
-    usage: /estate [create|info|invite|kick|transfer|delete]
+    usage: /estate [create|discover|admin|invite|join|leave|start|transfer|info|menu|disband]
     permission: dreamcraft.estate.use
 
 permissions:

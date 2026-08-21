@@ -1,6 +1,9 @@
 package dev.dreamcraft.protection;
 
+import dev.dreamcraft.protection.command.CityCommand;
+import dev.dreamcraft.protection.command.EstateCommand;
 import dev.dreamcraft.protection.command.ProtectionCommand;
+import dev.dreamcraft.protection.command.WardCommand;
 import dev.dreamcraft.protection.config.ProtectionConfig;
 import dev.dreamcraft.protection.domain.port.WardTierProvider;
 import dev.dreamcraft.protection.domain.service.CityService;
@@ -30,6 +33,7 @@ import dev.dreamcraft.protection.persistence.ClaimRepository;
 import dev.dreamcraft.protection.persistence.YamlCityRepository;
 import dev.dreamcraft.protection.persistence.YamlEstateRepository;
 import dev.dreamcraft.protection.persistence.YamlWardRepository;
+import dev.dreamcraft.protection.presentation.MenuActionDispatcher;
 import dev.dreamcraft.protection.presentation.VanillaMenuProvider;
 import dev.dreamcraft.protection.service.*;
 import dev.dreamcraft.protection.ui.ProtectionMenu;
@@ -140,6 +144,32 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                     upkeepManager(), protectionConfig);
             command.setExecutor(executor);
             command.setTabCompleter(executor);
+        }
+
+        // 8a. Wire the menu action dispatcher to the vanilla menu provider
+        menuProvider.setActionHandler(new MenuActionDispatcher(
+                wardService, cityService, estateService, worldGuardAdapter));
+
+        // 8b. Domain commands: /ward, /city, /estate
+        WardTierProvider tierProvider = new ConfigWardTierProvider(getConfig());
+        PluginCommand wardCmd = getCommand("ward");
+        if (wardCmd != null) {
+            WardCommand wardExecutor = new WardCommand(
+                    wardService, cityService, worldGuardAdapter, tierProvider, menuProvider);
+            wardCmd.setExecutor(wardExecutor);
+            wardCmd.setTabCompleter(wardExecutor);
+        }
+        PluginCommand cityCmd = getCommand("city");
+        if (cityCmd != null) {
+            CityCommand cityExecutor = new CityCommand(cityService, wardService, menuProvider);
+            cityCmd.setExecutor(cityExecutor);
+            cityCmd.setTabCompleter(cityExecutor);
+        }
+        PluginCommand estateCmd = getCommand("estate");
+        if (estateCmd != null) {
+            EstateCommand estateExecutor = new EstateCommand(estateService, menuProvider);
+            estateCmd.setExecutor(estateExecutor);
+            estateCmd.setTabCompleter(estateExecutor);
         }
 
         getLogger().info("[DreamCraft] Domain layer active — Ward/City/Estate ready.");

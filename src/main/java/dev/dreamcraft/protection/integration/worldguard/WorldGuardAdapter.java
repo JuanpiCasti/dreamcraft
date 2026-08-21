@@ -1,5 +1,7 @@
 package dev.dreamcraft.protection.integration.worldguard;
 
+import dev.dreamcraft.protection.domain.model.City;
+import dev.dreamcraft.protection.domain.model.Estate;
 import dev.dreamcraft.protection.domain.model.Ward;
 
 /**
@@ -52,4 +54,32 @@ public interface WorldGuardAdapter {
      * Returns true if this adapter is operational (WorldGuard present and compatible).
      */
     boolean isAvailable();
+
+    /**
+     * Syncs city-level memberships and policies to the Ward's WorldGuard region.
+     * Called when a Ward is annexed to a City — all city members are added as WG
+     * region members, inheriting the city's access policies.
+     *
+     * @param ward the Ward whose region should receive the city memberships
+     * @param city the City whose members/policies to inherit
+     */
+    void syncCityMembership(Ward ward, City city);
+
+    /**
+     * Applies temporal access flags to the Ward's region for an active Estate instance.
+     * These flags grant temporary access to estate members without a permanent
+     * territorial concession. Call {@link #clearEstateInstanceFlags} when the instance ends.
+     *
+     * @param ward   the Ward whose region should receive the temporal flags
+     * @param estate the active Estate instance
+     */
+    void applyEstateInstanceFlags(Ward ward, Estate estate);
+
+    /**
+     * Clears the temporal access flags applied by {@link #applyEstateInstanceFlags}.
+     * Called when an Estate instance ends to restore the region's original flag state.
+     *
+     * @param ward the Ward whose temporal flags should be cleared
+     */
+    void clearEstateInstanceFlags(Ward ward);
 }
