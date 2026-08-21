@@ -134,6 +134,28 @@ public final class WardService {
     }
 
     /**
+     * Renames a Ward manually. Keeps uniqueness across all Wards.
+     *
+     * @throws IllegalArgumentException when blank, longer than 32 chars, or already taken
+     */
+    public void renameWard(Ward ward, String newName) {
+        String trimmed = newName == null ? "" : newName.trim();
+        if (trimmed.isEmpty()) {
+            throw new IllegalArgumentException("El nombre no puede estar vacío.");
+        }
+        if (trimmed.length() > 32) {
+            throw new IllegalArgumentException("El nombre no puede superar 32 caracteres.");
+        }
+        boolean taken = wardRepository.findAll().stream()
+                .anyMatch(w -> !w.id().equals(ward.id()) && w.name().equalsIgnoreCase(trimmed));
+        if (taken) {
+            throw new IllegalArgumentException("Ya existe un Ward llamado " + trimmed + ".");
+        }
+        ward.name(trimmed);
+        wardRepository.save(ward);
+    }
+
+    /**
      * Associates a Ward to a City. Pass null to disassociate.
      */
     public void setCityMembership(Ward ward, UUID cityId) {

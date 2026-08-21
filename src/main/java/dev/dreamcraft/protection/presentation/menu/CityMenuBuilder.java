@@ -25,16 +25,45 @@ public final class CityMenuBuilder {
         List<MenuItem> items = new ArrayList<>();
 
         // Slot 4 — City overview display
+        List<String> overviewLore = new ArrayList<>();
+        overviewLore.add("&7Gobernador: &f" + vm.governorName());
+        overviewLore.add("&7Miembros: &f" + vm.memberCount());
+        overviewLore.add("&7Wards: &f" + vm.wardCount());
+        overviewLore.add("&7Tesoro: &a" + vm.treasury());
+        overviewLore.add("&7City Score: &f" + vm.cityScore());
+        if (vm.levelStatus() != null) {
+            overviewLore.add("&7Nivel: &b" + vm.levelStatus().levelName());
+        }
+        overviewLore.add("&7Rol: &f" + roleLabel(vm));
         items.add(MenuItem.display(4, "icon.city.overview",
-                "&6&lCiudad: " + vm.name(),
-                List.of(
-                        "&7Gobernador: &f" + vm.governorName(),
-                        "&7Miembros: &f" + vm.memberCount(),
-                        "&7Wards: &f" + vm.wardCount(),
-                        "&7Tesoro: &a" + vm.treasury(),
-                        "&7City Score: &f" + vm.cityScore(),
-                        "&7Rol: &f" + roleLabel(vm)
-                )));
+                "&6&lCiudad: " + vm.name(), overviewLore));
+
+        // Slot 6 — City level progression (computed, not purchased)
+        if (vm.levelStatus() != null) {
+            var lvl = vm.levelStatus();
+            List<String> levelLore = new ArrayList<>();
+            levelLore.add("&7Nivel actual: &b" + lvl.levelName());
+            levelLore.add("");
+            levelLore.add("&7Progreso:");
+            levelLore.add("&8- &7Wards anexados: &f" + lvl.wards());
+            levelLore.add("&8- &7Habitantes: &f" + lvl.members());
+            levelLore.add("&8- &7Riqueza (score): &f" + lvl.wealth());
+            if (lvl.maxed()) {
+                levelLore.add("");
+                levelLore.add("&6&l¡Nivel máximo alcanzado!");
+            } else {
+                levelLore.add("");
+                levelLore.add("&7Siguiente nivel: &b" + lvl.nextLevelName());
+                levelLore.add("&8- " + (lvl.needWards() == 0 ? "&a✔" : "&fFaltan " + lvl.needWards() + " wards"));
+                levelLore.add("&8- " + (lvl.needMembers() == 0 ? "&a✔" : "&fFaltan " + lvl.needMembers() + " habitantes"));
+                levelLore.add("&8- " + (lvl.needWealth() == 0 ? "&a✔" : "&fFaltan " + lvl.needWealth() + " de riqueza"));
+                levelLore.add("");
+                levelLore.add(lvl.nextReady()
+                        ? "&aEl nivel se actualiza solo — ¡ya calificás!"
+                        : "&7El nivel sube solo al cumplir los requisitos");
+            }
+            items.add(MenuItem.display(6, "icon.ward.active", "&b&lNivel de Ciudad", levelLore));
+        }
 
         // Slot 10 — Invite resident
         if (vm.canManageResidents()) {

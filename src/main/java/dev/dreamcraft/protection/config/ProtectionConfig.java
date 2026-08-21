@@ -7,7 +7,9 @@ import org.bukkit.configuration.file.FileConfiguration;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -41,8 +43,51 @@ public record ProtectionConfig(
         Map<String, TierDefinition> tiers,
         Map<String, Integer> categoryBaseCosts,
         Map<Material, String> materialOverrides,
-        Map<String, List<WardUpgradeCost>> wardUpgradeCosts
+        Map<String, List<WardUpgradeCost>> wardUpgradeCosts,
+        Map<Material, Integer> wardUpkeepMaterials,
+        Map<Material, String> wardTierGatedBlocks,
+        List<CityLevelDefinition> cityLevels
 ) {
+    /** Convenience constructor: no ward upkeep materials, no gated blocks, no city levels. */
+    public ProtectionConfig(
+            boolean enabled,
+            int defaultRadius,
+            int defaultBuildRadius,
+            boolean allowOverlap,
+            Material wardrobeMaterial,
+            int inventorySize,
+            Duration upkeepInterval,
+            Duration warningThreshold,
+            Duration expiringThreshold,
+            Duration gracePeriod,
+            Duration destructionDelay,
+            Material upkeepResourceMaterial,
+            int upkeepUnitsPerItem,
+            int defaultMaxMembers,
+            boolean ownerTransfer,
+            Duration abandonedAfter,
+            boolean resourcePackEnabled,
+            boolean resourcePackOptional,
+            boolean resourcePackFallbackVanilla,
+            int customModelData,
+            String resourceItemId,
+            Material wardMaterial,
+            String wardItemId,
+            int wardCustomModelData,
+            int wardScorePerUpgrade,
+            Map<String, TierDefinition> tiers,
+            Map<String, Integer> categoryBaseCosts,
+            Map<Material, String> materialOverrides,
+            Map<String, List<WardUpgradeCost>> wardUpgradeCosts) {
+        this(enabled, defaultRadius, defaultBuildRadius, allowOverlap, wardrobeMaterial, inventorySize,
+                upkeepInterval, warningThreshold, expiringThreshold, gracePeriod, destructionDelay,
+                upkeepResourceMaterial, upkeepUnitsPerItem, defaultMaxMembers, ownerTransfer, abandonedAfter,
+                resourcePackEnabled, resourcePackOptional, resourcePackFallbackVanilla, customModelData,
+                resourceItemId, wardMaterial, wardItemId, wardCustomModelData, wardScorePerUpgrade,
+                tiers, categoryBaseCosts, materialOverrides, wardUpgradeCosts,
+                Map.of(), Map.of(), List.of());
+    }
+
     public static ProtectionConfig load(FileConfiguration config) {
         ConfigurationSection protection = config.getConfigurationSection("protection");
         ConfigurationSection upkeep = config.getConfigurationSection("upkeep");
@@ -111,6 +156,52 @@ public record ProtectionConfig(
             }
         }
 
+        Map<Material, Integer> wardUpkeepMaterials = new LinkedHashMap<>();
+        ConfigurationSection wardUpkeepSection =
+                ward == null ? null : ward.getConfigurationSection("upkeep-materials");
+        if (wardUpkeepSection != null) {
+            for (String key : wardUpkeepSection.getKeys(false)) {
+                Material material = Material.matchMaterial(key);
+                int units = wardUpkeepSection.getInt(key, 0);
+                if (material != null && units > 0) {
+                    wardUpkeepMaterials.put(material, units);
+                }
+            }
+        }
+
+        Map<Material, String> wardTierGatedBlocks = new LinkedHashMap<>();
+        ConfigurationSection gatedSection =
+                ward == null ? null : ward.getConfigurationSection("tier-gated-blocks");
+        if (gatedSection != null) {
+            for (String key : gatedSection.getKeys(false)) {
+                Material material = Material.matchMaterial(key);
+                String tierKey = gatedSection.getString(key);
+                if (material != null && tierKey != null && !tierKey.isBlank()) {
+                    wardTierGatedBlocks.put(material, tierKey.toLowerCase(Locale.ROOT));
+                }
+            }
+        }
+
+        List<CityLevelDefinition> cityLevels = new ArrayList<>();
+        ConfigurationSection cityLevelsSection = config.getConfigurationSection("city-levels.levels");
+        if (cityLevelsSection != null) {
+            for (String key : cityLevelsSection.getKeys(false)) {
+                ConfigurationSection lvl = cityLevelsSection.getConfigurationSection(key);
+                if (lvl == null) continue;
+                cityLevels.add(new CityLevelDefinition(
+                        key.toLowerCase(Locale.ROOT),
+                        lvl.getString("display-name", key),
+                        lvl.getInt("min-wards", 0),
+                        lvl.getInt("min-members", 0),
+                        lvl.getInt("min-wealth", 0)
+                ));
+            }
+            // Lowest requirements first so level resolution can scan ascending
+            cityLevels.sort(Comparator.comparingInt(CityLevelDefinition::minWealth)
+                    .thenComparingInt(CityLevelDefinition::minWards)
+                    .thenComparingInt(CityLevelDefinition::minMembers));
+        }
+
         return new ProtectionConfig(
                 protection != null && protection.getBoolean("enabled", true),
                 protection == null ? 16 : protection.getInt("default-radius", 16),
@@ -140,7 +231,10 @@ public record ProtectionConfig(
                 tiers,
                 categoryBaseCosts,
                 materialOverrides,
-                wardUpgradeCosts
+                wardUpgradeCosts,
+                wardUpkeepMaterials,
+                wardTierGatedBlocks,
+                cityLevels
         );
     }
 }

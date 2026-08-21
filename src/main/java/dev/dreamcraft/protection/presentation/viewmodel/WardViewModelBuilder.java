@@ -21,6 +21,8 @@ public final class WardViewModelBuilder {
     private final Function<UUID, String> cityNameResolver;
     /** Optional: computes the upgrade preview (needs Bukkit inventory access upstream). */
     private final BiFunction<Ward, UUID, WardUpgradePreview> upgradePreviewResolver;
+    /** Pre-formatted lines describing accepted upkeep materials (static config). */
+    private final java.util.List<String> upkeepMaterialLines;
 
     public WardViewModelBuilder(WardTierProvider tierProvider, Function<UUID, String> nameResolver) {
         this(tierProvider, nameResolver, id -> null);
@@ -41,10 +43,19 @@ public final class WardViewModelBuilder {
                                 Function<UUID, String> nameResolver,
                                 Function<UUID, String> cityNameResolver,
                                 BiFunction<Ward, UUID, WardUpgradePreview> upgradePreviewResolver) {
+        this(tierProvider, nameResolver, cityNameResolver, upgradePreviewResolver, java.util.List.of());
+    }
+
+    public WardViewModelBuilder(WardTierProvider tierProvider,
+                                Function<UUID, String> nameResolver,
+                                Function<UUID, String> cityNameResolver,
+                                BiFunction<Ward, UUID, WardUpgradePreview> upgradePreviewResolver,
+                                java.util.List<String> upkeepMaterialLines) {
         this.tierProvider = tierProvider;
         this.nameResolver = nameResolver;
         this.cityNameResolver = cityNameResolver;
         this.upgradePreviewResolver = upgradePreviewResolver;
+        this.upkeepMaterialLines = java.util.List.copyOf(upkeepMaterialLines);
     }
 
     /**
@@ -88,6 +99,7 @@ public final class WardViewModelBuilder {
                 ward.permissions(),
                 hasCity,
                 preview,
+                upkeepMaterialLines,
                 canUpgrade,
                 true,            // canDeposit — anyone can deposit upkeep
                 isOwner,         // canManage

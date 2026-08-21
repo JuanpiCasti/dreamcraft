@@ -1,12 +1,15 @@
 package dev.dreamcraft.protection.command;
 
-import dev.dreamcraft.protection.config.ProtectionConfig;
-import dev.dreamcraft.protection.model.ProtectionClaim;
-import dev.dreamcraft.protection.model.TierDefinition;
-import dev.dreamcraft.protection.service.ClaimManager;
-import dev.dreamcraft.protection.service.UpkeepManager;
-import dev.dreamcraft.protection.ui.ProtectionMenu;
-import dev.dreamcraft.protection.ui.WardrobeItems;
+import dev.dreamcraft.protection.domain.model.OwnerType;
+import dev.dreamcraft.protection.domain.model.Ward;
+import dev.dreamcraft.protection.domain.model.WardPermission;
+import dev.dreamcraft.protection.domain.service.CityService;
+import dev.dreamcraft.protection.domain.service.WardService;
+import dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter;
+import dev.dreamcraft.protection.service.WardUpkeepService;
+import dev.dreamcraft.protection.service.WardUpgradeService;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -14,64 +17,75 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.UUID;
+
+import static dev.dreamcraft.protection.command.CommandMessages.*;
 
 /**
  * Handles all /protection (aliases: /prot, /claim) subcommands.
  *
+ * <p><b>Unified mechanic:</b> since the Ward unification, this command is a
+ * full delegate of the Ward system — same domain services, same item-based
+ * upkeep and the exact same menu as {@code /ward menu} (via {@link WardMenuFacade}).
+ * Both commands coexist for player convenience; there is no separate claim system.
+ *
  * <p>Player subcommands (perm: dreamcraft.protection.use):
  * <ul>
- *   <li>/protection            — show help
- *   <li>/protection claim      — open the wardrobe menu for the current claim
- *   <li>/protection status     — text status of current claim
- *   <li>/protection upkeep     — upkeep details of current claim
- *   <li>/protection members    — list members
- *   <li>/protection members add &lt;player&gt;    — add a member
- *   <li>/protection members remove &lt;player&gt; — remove a member
- *   <li>/protection permissions [perm grant|revoke] — manage public permission flags
- *   <li>/protection upgrade [tier]            — upgrade claim tier (radius grows)
- *   <li>/protection transfer &lt;player&gt;       — transfer ownership
- *   <li>/protection dissolve | abandon        — disband and delete current claim
+ *   <li>/protection claim | menu — open the Ward menu (VIPs/governors/admins)</li>
+ *   <li>/protection status       — text status of the current Ward</li>
+ *   <li>/protection rename &lt;nombre&gt; — rename the current Ward</li>
+ *   <li>/protection upkeep [deposit &lt;material&gt; &lt;n&gt;] — upkeep details/deposit</li>
+ *   <li>/protection permissions [perm grant|revoke] — public permission flags</li>
+ *   <li>/protection upgrade      — upgrade the Ward tier (item cost)</li>
+ *   <li>/protection transfer &lt;jugador&gt; — transfer ownership</li>
+ *   <li>/protection members      — membership info (wards use City membership)</li>
+ *   <li>/protection dissolve | abandon — disband the current Ward</li>
  * </ul>
  *
  * <p>Admin subcommands (perm: dreamcraft.protection.admin):
  * <ul>
- *   <li>/protection give          — give a wardrobe item
- *   <li>/protection reload        — reload configuration
- *   <li>/protection recalculate   — recalculate upkeep state
+ *   <li>/protection give        — receive a Ward Beacon item</li>
+ *   <li>/protection reload      — reload configuration</li>
+ *   <li>/protection recalculate — re-sync the WorldGuard region size</li>
  * </ul>
  */
 public final class ProtectionCommand implements CommandExecutor, TabCompleter {
 
-    private static final String USE_PERM  = "dreamcraft.protection.use";
+    private static final String USE_PERM   = "dreamcraft.protection.use";
     private static final String ADMIN_PERM = "dreamcraft.protection.admin";
-    /** VIP menu permission for /protection claim (governors also pass). */
-    private static final String MENU_PERM = "dreamcraft.protection.menu";
+    /** VIP menu permission (governors also pass). */
+    private static final String MENU_PERM  = "dreamcraft.protection.menu";
 
-    private final ClaimManager claimManager;
-    private final WardrobeItems wardrobeItems;
-    private final ProtectionMenu protectionMenu;
+    private static final Component WARD_PREFIX = Component.text("[Protección] ", NamedTextColor.DARK_AQUA);
+
+    private final WardService wardService;
+    private final CityService cityService;
+    private final WorldGuardAdapter worldGuardAdapter;
+    private final dev.dreamcraft.protection.ui.WardItems wardItems;
+    private final WardUpgradeService upgradeService;
+    private final WardUpkeepService upkeepService;
+    private final WardMenuFacade menuFacade;
     private final Runnable reloadAction;
-    private final UpkeepManager upkeepManager;
-    private final ProtectionConfig config;
-    private final dev.dreamcraft.protection.domain.service.CityService cityService;
 
-    public ProtectionCommand(ClaimManager claimManager, WardrobeItems wardrobeItems,
-                             ProtectionMenu protectionMenu, Runnable reloadAction,
-                             UpkeepManager upkeepManager, ProtectionConfig config,
-                             dev.dreamcraft.protection.domain.service.CityService cityService) {
-        this.claimManager = claimManager;
-        this.wardrobeItems = wardrobeItems;
-        this.protectionMenu = protectionMenu;
-        this.reloadAction = reloadAction;
-        this.upkeepManager = upkeepManager;
-        this.config = config;
+    public ProtectionCommand(WardService wardService,
+                             CityService cityService,
+                             WorldGuardAdapter worldGuardAdapter,
+                             dev.dreamcraft.protection.ui.WardItems wardItems,
+                             WardUpgradeService upgradeService,
+                             WardUpkeepService upkeepService,
+                             WardMenuFacade menuFacade,
+                             Runnable reloadAction) {
+        this.wardService = wardService;
         this.cityService = cityService;
+        this.worldGuardAdapter = worldGuardAdapter;
+        this.wardItems = wardItems;
+        this.upgradeService = upgradeService;
+        this.upkeepService = upkeepService;
+        this.menuFacade = menuFacade;
+        this.reloadAction = reloadAction;
     }
 
     @Override
@@ -81,90 +95,87 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         if (!player.hasPermission(USE_PERM)) {
-            player.sendMessage("§cNo tienes permiso para usar este comando.");
+            error(player, WARD_PREFIX, "No tienes permiso para usar este comando.");
             return true;
         }
-
         if (args.length == 0) {
             sendHelp(player);
             return true;
         }
-
-        String sub = args[0].toLowerCase(Locale.ROOT);
-        return switch (sub) {
-            case "claim"       -> handleClaim(player);
-            case "status"      -> handleStatus(player);
-            case "upkeep"      -> handleUpkeep(player);
-            case "members"     -> handleMembers(player, args);
-            case "permissions" -> handlePermissions(player, args);
-            case "upgrade"     -> handleUpgrade(player, args);
-            case "transfer"    -> handleTransfer(player, args);
-            case "abandon", "dissolve" -> handleAbandon(player);
-            case "give"        -> handleGive(player);
-            case "reload"      -> handleReload(player);
-            case "recalculate", "rebuildstats" -> handleRecalculate(player);
-            default            -> {
-                player.sendMessage("§c[Protección] Subcomando desconocido: §f" + sub);
-                sendHelp(player);
-                yield true;
+        try {
+            return switch (args[0].toLowerCase(Locale.ROOT)) {
+                case "claim", "menu" -> handleClaim(player);
+                case "status", "info" -> handleStatus(player);
+                case "rename" -> handleRename(player, args);
+                case "upkeep" -> handleUpkeep(player, args);
+                case "permissions" -> handlePermissions(player, args);
+                case "upgrade" -> handleUpgrade(player);
+                case "transfer" -> handleTransfer(player, args);
+                case "members" -> handleMembers(player);
+                case "abandon", "dissolve", "delete" -> handleAbandon(player);
+                case "give" -> handleGive(player);
+                case "reload" -> handleReload(player);
+                case "recalculate", "rebuildstats" -> handleRecalculate(player);
+                default -> {
+                    error(player, WARD_PREFIX, "Subcomando desconocido: " + args[0]);
+                    sendHelp(player);
+                    yield true;
+                }
+            };
+        } catch (RuntimeException e) {
+            if (!handleDomainException(player, WARD_PREFIX, e)) {
+                error(player, WARD_PREFIX, "Error: " + e.getMessage());
             }
-        };
+            return true;
+        }
     }
 
     // ── Help ──────────────────────────────────────────────────────────────────
 
     private void sendHelp(Player player) {
         player.sendMessage("§5§lDreamCraft Protection");
-        player.sendMessage("§7Gestiona las protecciones de tu base.");
+        player.sendMessage("§7Gestiona tu Ward — misma mecánica que §f/ward§7.");
         player.sendMessage(" ");
-        player.sendMessage("§f/protection claim       §7— Abrir el menú §8(vips/gobernadores)");
-        player.sendMessage("§f/protection status      §7— Consultar el estado del claim");
-        player.sendMessage("§f/protection upkeep      §7— Consultar el mantenimiento");
-        player.sendMessage("§f/protection members     §7— Ver/gestionar miembros");
-        player.sendMessage("§f/protection permissions §7— Ver permisos públicos");
-        player.sendMessage("§f/protection permissions <perm> <grant|revoke> §7— Gestionar permisos");
-        player.sendMessage("§f/protection upgrade [tier] §7— Mejorar el tier del claim");
-        player.sendMessage("§f/protection transfer <jugador>  §7— Transferir ownership");
-        player.sendMessage("§f/protection dissolve    §7— Disolver/eliminar el claim");
+        player.sendMessage("§f/protection claim       §7— Abrir el menú del Ward §8(vips/gobernadores)");
+        player.sendMessage("§f/protection status      §7— Consultar el estado del Ward");
+        player.sendMessage("§f/protection rename <nombre> §7— Renombrar el Ward");
+        player.sendMessage("§f/protection upkeep [deposit <material> <n>] §7— Mantenimiento");
+        player.sendMessage("§f/protection permissions [perm grant|revoke] §7— Permisos públicos");
+        player.sendMessage("§f/protection upgrade     §7— Mejorar el tier del Ward");
+        player.sendMessage("§f/protection transfer <jugador> §7— Transferir ownership");
+        player.sendMessage("§f/protection members     §7— Info de miembros (vía Ciudad)");
+        player.sendMessage("§f/protection dissolve    §7— Disolver el Ward");
         if (player.hasPermission(ADMIN_PERM)) {
             player.sendMessage(" ");
             player.sendMessage("§c§lAdmin:");
-            player.sendMessage("§f/protection give        §7— Obtener ítem Wardrobe");
+            player.sendMessage("§f/protection give        §7— Recibir Baliza de Ward");
             player.sendMessage("§f/protection reload      §7— Recargar configuración");
-            player.sendMessage("§f/protection recalculate §7— Recalcular upkeep del claim");
+            player.sendMessage("§f/protection recalculate §7— Re-sincronizar la región");
         }
     }
 
     // ── Player subcommands ────────────────────────────────────────────────────
 
-    /**
-     * /protection claim — open the wardrobe menu for the claim the player is standing in.
-     *
-     * <p>Command access is limited to VIPs and city governors; the primary way to
-     * open this menu is right-clicking the wardrobe block, which stays available
-     * to everyone with access to the claim.
-     */
+    /** /protection claim — opens the shared Ward menu for the Ward at the player's position. */
     private boolean handleClaim(Player player) {
         if (!canOpenProtectionMenu(player)) {
-            player.sendMessage("§c[Protección] El menú por comando está reservado a VIPs y Gobernadores.");
-            player.sendMessage("§7Abre el menú con §fclic derecho§7 en el armario.");
+            error(player, WARD_PREFIX, "El menú por comando está reservado a VIPs y Gobernadores.");
+            info(player, WARD_PREFIX, "Abrí el menú con clic derecho en la baliza del Ward.");
             return true;
         }
-        Optional<ProtectionClaim> opt = claimManager.findByLocation(player.getLocation());
-        if (opt.isEmpty()) {
-            player.sendMessage("§c[Protección] No hay ningún claim en esta posición.");
-            return true;
-        }
-        protectionMenu.open(player, opt.get());
+        Ward ward = resolveWard(player);
+        if (ward == null) return true;
+        menuFacade.open(player, ward);
         return true;
     }
 
     /**
-     * Menu gate shared with other callers: VIP permission or city governor.
-     * Admins always pass.
+     * Menu gate: admins, VIPs (either menu node) or city governors.
      */
     public boolean canOpenProtectionMenu(Player player) {
-        if (player.hasPermission(ADMIN_PERM) || player.hasPermission(MENU_PERM)) {
+        if (player.hasPermission(ADMIN_PERM) || player.hasPermission(MENU_PERM)
+                || player.hasPermission("dreamcraft.ward.admin")
+                || player.hasPermission("dreamcraft.ward.menu")) {
             return true;
         }
         return cityService.findByMember(player.getUniqueId())
@@ -172,375 +183,303 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
                 .orElse(false);
     }
 
-    /**
-     * /protection status — text summary of the current claim.
-     */
+    /** /protection status — text summary of the current Ward. */
     private boolean handleStatus(Player player) {
-        Optional<ProtectionClaim> opt = claimManager.findByLocation(player.getLocation());
-        if (opt.isEmpty()) {
-            player.sendMessage("§c[Protección] No hay ningún claim en esta posición.");
-            return true;
+        Ward ward = resolveWard(player);
+        if (ward == null) return true;
+        info(player, WARD_PREFIX, "Nombre: §f" + ward.name());
+        info(player, WARD_PREFIX, "ID: " + ward.id());
+        info(player, WARD_PREFIX, "Owner: " + resolveName(ward.ownerId()));
+        info(player, WARD_PREFIX, "Tier: " + ward.tier() + " | Score: " + ward.baseScore());
+        info(player, WARD_PREFIX, "Radio: " + ward.radius() + " bloques");
+        info(player, WARD_PREFIX, "Centro: " + ward.centerX() + ", " + ward.centerY() + ", " + ward.centerZ());
+        info(player, WARD_PREFIX, "Upkeep: " + ward.upkeepBalance() + " unidades");
+        if (ward.hasCityMembership()) {
+            cityService.findById(ward.cityId()).ifPresent(c ->
+                    info(player, WARD_PREFIX, "Ciudad: " + c.name()));
         }
-        ProtectionClaim claim = opt.get();
-        player.sendMessage("§5§lEstado del Claim");
-        player.sendMessage("§7Nombre: §f" + claim.name());
-        player.sendMessage("§7ID: §f" + claim.id());
-        player.sendMessage("§7Owner: §e" + Bukkit.getOfflinePlayer(claim.ownerUuid()).getName());
-        player.sendMessage("§7Estado: §f" + claim.status().name());
-        player.sendMessage("§7Tier: §b" + claim.tier());
-        player.sendMessage("§7Radio: §f" + claim.radius() + " bloques");
-        player.sendMessage("§7Wardrobe: §f" + claim.wardrobeX() + "," + claim.wardrobeY() + "," + claim.wardrobeZ());
-        player.sendMessage("§7Miembros: §f" + claim.members().size());
         return true;
     }
 
-    /**
-     * /protection upkeep — upkeep details of the current claim.
-     */
-    private boolean handleUpkeep(Player player) {
-        Optional<ProtectionClaim> opt = claimManager.findByLocation(player.getLocation());
-        if (opt.isEmpty()) {
-            player.sendMessage("§c[Protección] No hay ningún claim en esta posición.");
-            return true;
-        }
-        ProtectionClaim claim = opt.get();
-        // We need the calculator — grab it from the manager via the upkeepManager
-        // Actually we don't hold a direct calculator ref — use UpkeepManager which has it
-        upkeepManager.recalculateState(claim); // ensure state is fresh
-        player.sendMessage("§5§lMantenimiento del Claim");
-        player.sendMessage("§7Unidades almacenadas: §a" + claim.upkeepStorage().get("maintenance"));
-        player.sendMessage("§7Próximo cobro: §e" + claim.nextUpkeepAt());
-        player.sendMessage("§7Estado: §f" + claim.status().name());
-        return true;
-    }
-
-    /**
-     * /protection members [add|remove|list] [player]
-     */
-    private boolean handleMembers(Player player, String[] args) {
+    /** /protection rename <nombre...> — renames the current Ward (owner/admin only). */
+    private boolean handleRename(Player player, String[] args) {
         if (args.length < 2) {
-            // Show usage
-            player.sendMessage("§5§lGestión de Miembros");
-            player.sendMessage("§f/protection members list            §7— Ver miembros");
-            player.sendMessage("§f/protection members add <jugador>   §7— Agregar miembro");
-            player.sendMessage("§f/protection members remove <jugador>§7— Quitar miembro");
-            player.sendMessage("§7Ejemplo: §f/protection members add Steve");
+            error(player, WARD_PREFIX, "Uso: /protection rename <nombre>");
             return true;
         }
+        Ward ward = resolveWard(player);
+        if (ward == null) return true;
+        if (!ward.ownerId().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
+            error(player, WARD_PREFIX, "Solo el owner puede renombrar el Ward.");
+            return true;
+        }
+        String newName = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length)).trim();
+        String oldName = ward.name();
+        wardService.renameWard(ward, newName); // throws IllegalArgumentException → handled upstream
+        ok(player, WARD_PREFIX, "Ward §f" + oldName + "§a renombrado a §f" + ward.name() + "§a.");
+        title(player, "Ward Renombrado", ward.name(), NamedTextColor.AQUA);
+        return true;
+    }
 
-        String action = args[1].toLowerCase(Locale.ROOT);
-        return switch (action) {
-            case "list"   -> handleMembersList(player);
-            case "add"    -> handleMembersAdd(player, args);
-            case "remove" -> handleMembersRemove(player, args);
-            default       -> {
-                player.sendMessage("§c[Protección] Acción desconocida: §f" + action);
-                player.sendMessage("§7Usa: §f/protection members [list|add|remove]");
-                yield true;
+    /** /protection upkeep [deposit <material> <n>] — mirrors /ward upkeep. */
+    private boolean handleUpkeep(Player player, String[] args) {
+        Ward ward = resolveWard(player);
+        if (ward == null) return true;
+
+        if (args.length >= 2 && "deposit".equalsIgnoreCase(args[1])) {
+            if (upkeepService == null) {
+                error(player, WARD_PREFIX, "Depósitos no disponibles.");
+                return true;
             }
-        };
-    }
-
-    private boolean handleMembersList(Player player) {
-        Optional<ProtectionClaim> opt = claimManager.findByLocation(player.getLocation());
-        if (opt.isEmpty()) {
-            player.sendMessage("§c[Protección] No hay ningún claim en esta posición.");
-            return true;
-        }
-        ProtectionClaim claim = opt.get();
-        player.sendMessage("§5§lMiembros del Claim §8(" + claim.name() + "§8)");
-        player.sendMessage("§7Owner: §e" + Bukkit.getOfflinePlayer(claim.ownerUuid()).getName());
-        if (claim.members().isEmpty()) {
-            player.sendMessage("§7No hay miembros adicionales.");
-        } else {
-            claim.members().forEach(uuid -> player.sendMessage("§7- §f" +
-                    Optional.ofNullable(Bukkit.getOfflinePlayer(uuid).getName()).orElse(uuid.toString())));
-        }
-        TierDefinition tier = config.tiers().get(claim.tier());
-        int maxMembers = tier != null ? tier.maxMembers() : config.defaultMaxMembers();
-        player.sendMessage("§7Slots: §f" + claim.members().size() + "§7/§f" + maxMembers);
-        return true;
-    }
-
-    private boolean handleMembersAdd(Player player, String[] args) {
-        if (args.length < 3) {
-            player.sendMessage("§cUso: §f/protection members add <jugador>");
-            player.sendMessage("§7Ejemplo: §f/protection members add Steve");
-            return true;
-        }
-        Optional<ProtectionClaim> opt = claimManager.findByLocation(player.getLocation());
-        if (opt.isEmpty()) {
-            player.sendMessage("§c[Protección] No hay ningún claim en esta posición.");
-            return true;
-        }
-        ProtectionClaim claim = opt.get();
-        if (!claim.ownerUuid().equals(player.getUniqueId())) {
-            player.sendMessage("§c[Protección] Solo el owner puede agregar miembros.");
-            return true;
-        }
-        Player target = Bukkit.getPlayerExact(args[2]);
-        if (target == null) {
-            player.sendMessage("§c[Protección] Jugador §f" + args[2] + " §cno encontrado o no está en línea.");
-            return true;
-        }
-        if (target.getUniqueId().equals(claim.ownerUuid())) {
-            player.sendMessage("§c[Protección] El owner ya tiene acceso completo.");
-            return true;
-        }
-        if (claim.members().contains(target.getUniqueId())) {
-            player.sendMessage("§e[Protección] " + target.getName() + " ya es miembro.");
-            return true;
-        }
-        boolean added = claimManager.addMember(claim, target.getUniqueId());
-        if (!added) {
-            TierDefinition tier = config.tiers().get(claim.tier());
-            int maxMembers = tier != null ? tier.maxMembers() : config.defaultMaxMembers();
-            player.sendMessage("§c[Protección] Límite de miembros alcanzado (§f" + maxMembers + "§c).");
-        } else {
-            player.sendMessage("§a[Protección] §f" + target.getName() + " §aagregado al claim.");
-            target.sendMessage("§a[Protección] Fuiste agregado al claim de §f" + player.getName() + "§a.");
-        }
-        return true;
-    }
-
-    private boolean handleMembersRemove(Player player, String[] args) {
-        if (args.length < 3) {
-            player.sendMessage("§cUso: §f/protection members remove <jugador>");
-            return true;
-        }
-        Optional<ProtectionClaim> opt = claimManager.findByLocation(player.getLocation());
-        if (opt.isEmpty()) {
-            player.sendMessage("§c[Protección] No hay ningún claim en esta posición.");
-            return true;
-        }
-        ProtectionClaim claim = opt.get();
-        if (!claim.ownerUuid().equals(player.getUniqueId())) {
-            player.sendMessage("§c[Protección] Solo el owner puede quitar miembros.");
-            return true;
-        }
-        UUID targetUuid;
-        Player target = Bukkit.getPlayerExact(args[2]);
-        if (target != null) {
-            targetUuid = target.getUniqueId();
-        } else {
+            if (args.length < 4) {
+                error(player, WARD_PREFIX, "Uso: /protection upkeep deposit <material> <cantidad>");
+                info(player, WARD_PREFIX, "Aceptados: " + acceptedMaterialsList());
+                return true;
+            }
+            org.bukkit.Material material = org.bukkit.Material.matchMaterial(args[2].toUpperCase(Locale.ROOT));
+            if (material == null || !upkeepService.isAccepted(material)) {
+                error(player, WARD_PREFIX, "Material no aceptado: " + args[2]);
+                info(player, WARD_PREFIX, "Aceptados: " + acceptedMaterialsList());
+                return true;
+            }
+            int amount;
             try {
-                targetUuid = UUID.fromString(args[2]);
-            } catch (IllegalArgumentException e) {
-                player.sendMessage("§c[Protección] Jugador §f" + args[2] + " §cno encontrado.");
+                amount = Integer.parseInt(args[3]);
+            } catch (NumberFormatException e) {
+                error(player, WARD_PREFIX, "Cantidad inválida: " + args[3]);
                 return true;
             }
+            if (amount <= 0) {
+                error(player, WARD_PREFIX, "La cantidad debe ser mayor a 0.");
+                return true;
+            }
+            int carried = countMaterial(player, material);
+            if (carried < amount) {
+                error(player, WARD_PREFIX, "Solo tenés " + carried + "x "
+                        + upkeepService.displayName(material) + ".");
+                return true;
+            }
+            if (!upkeepService.canDeposit(player, ward)) {
+                error(player, WARD_PREFIX, "No puedes depositar upkeep en este Ward.");
+                return true;
+            }
+            upkeepService.consumeFromInventory(player, material, amount);
+            var receipt = upkeepService.deposit(ward, player, material, amount);
+            ok(player, WARD_PREFIX, "Depositaste " + receipt.amount() + "x §f"
+                    + upkeepService.displayName(receipt.material()) + "§a → +"
+                    + receipt.unitsCredited() + " unidades. Balance: §f" + receipt.newBalance());
+            return true;
         }
-        claimManager.removeMember(claim, targetUuid);
-        player.sendMessage("§a[Protección] Miembro eliminado del claim.");
+
+        info(player, WARD_PREFIX, "Upkeep: " + ward.upkeepBalance() + " unidades | Próximo cobro: " + ward.nextUpkeepAt());
+        if (upkeepService != null) {
+            info(player, WARD_PREFIX, "Depositar: /protection upkeep deposit <material> <n>");
+            info(player, WARD_PREFIX, "Aceptados: " + acceptedMaterialsList());
+        }
         return true;
     }
 
-    /**
-     * /protection permissions [perm grant|revoke] — manage public permission flags.
-     * Mirrors the Ward public-permission concept: PUBLIC_BUILD, PUBLIC_BREAK, PUBLIC_INTERACT.
-     */
-    private static final List<String> CLAIM_PUBLIC_PERMS =
-            List.of("PUBLIC_BUILD", "PUBLIC_BREAK", "PUBLIC_INTERACT");
+    private String acceptedMaterialsList() {
+        StringBuilder sb = new StringBuilder();
+        upkeepService.acceptedMaterials().forEach((mat, units) -> {
+            if (sb.length() > 0) sb.append("§7, ");
+            sb.append("§f").append(upkeepService.displayName(mat)).append(" §7(×").append(units).append(")");
+        });
+        return sb.toString();
+    }
 
-    private boolean handlePermissions(Player player, String[] args) {
-        Optional<ProtectionClaim> opt = claimManager.findByLocation(player.getLocation());
-        if (opt.isEmpty()) {
-            player.sendMessage("§c[Protección] No hay ningún claim en esta posición.");
-            return true;
+    private int countMaterial(Player player, org.bukkit.Material material) {
+        int total = 0;
+        for (org.bukkit.inventory.ItemStack item : player.getInventory().getStorageContents()) {
+            if (item != null && item.getType() == material) total += item.getAmount();
         }
-        ProtectionClaim claim = opt.get();
+        return total;
+    }
+
+    /** /protection permissions [perm grant|revoke] — Ward public permission flags. */
+    private boolean handlePermissions(Player player, String[] args) {
+        Ward ward = resolveWard(player);
+        if (ward == null) return true;
         if (args.length >= 3) {
-            if (!claim.ownerUuid().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
-                player.sendMessage("§c[Protección] Solo el owner puede cambiar permisos.");
+            if (!ward.ownerId().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
+                error(player, WARD_PREFIX, "Solo el owner puede cambiar permisos.");
                 return true;
             }
-            String perm = args[1].toUpperCase(Locale.ROOT);
-            if (!CLAIM_PUBLIC_PERMS.contains(perm)) {
-                player.sendMessage("§c[Protección] Permiso inválido: §f" + args[1]);
-                player.sendMessage("§7Válidos: §f" + String.join(", ", CLAIM_PUBLIC_PERMS));
+            WardPermission perm;
+            try {
+                perm = WardPermission.valueOf(args[1].toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                error(player, WARD_PREFIX, "Permiso inválido: " + args[1]);
+                info(player, WARD_PREFIX, "Válidos: PUBLIC_BUILD, PUBLIC_BREAK, PUBLIC_INTERACT, "
+                        + "PUBLIC_UPKEEP_DEPOSIT, PUBLIC_STATUS_VIEW");
                 return true;
             }
-            String action = args[2].toLowerCase(Locale.ROOT);
-            switch (action) {
+            switch (args[2].toLowerCase(Locale.ROOT)) {
                 case "grant" -> {
-                    claim.setPublicPermission(perm, true);
-                    saveQuietly();
-                    player.sendMessage("§a[Protección] Permiso §f" + perm + "§a concedido al público.");
+                    ward.grantPermission(perm);
+                    persistPermissions(ward);
+                    ok(player, WARD_PREFIX, "Permiso §f" + perm.name() + "§a concedido al público.");
                 }
                 case "revoke" -> {
-                    claim.setPublicPermission(perm, false);
-                    saveQuietly();
-                    player.sendMessage("§e[Protección] Permiso §f" + perm + "§e revocado.");
+                    ward.revokePermission(perm);
+                    persistPermissions(ward);
+                    warn(player, WARD_PREFIX, "Permiso §f" + perm.name() + "§e revocado.");
                 }
-                default -> {
-                    player.sendMessage("§cUso: §f/protection permissions <perm> <grant|revoke>");
-                    return true;
-                }
+                default -> error(player, WARD_PREFIX, "Uso: /protection permissions <perm> <grant|revoke>");
             }
             return true;
         }
-        player.sendMessage("§5§lPermisos públicos de §f" + claim.name());
-        var active = claim.publicPermissions();
-        for (String perm : CLAIM_PUBLIC_PERMS) {
-            player.sendMessage("§7- §f" + perm + "§7: " + (active.contains(perm) ? "§aactivado" : "§cdesactivado"));
+        info(player, WARD_PREFIX, "Permisos públicos de §f" + ward.name() + "§7:");
+        for (WardPermission perm : WardPermission.values()) {
+            player.sendMessage("§7- §f" + perm.name() + "§7: "
+                    + (ward.hasPermission(perm) ? "§aactivado" : "§cdesactivado"));
         }
-        player.sendMessage("§7Usa §f/protection permissions <perm> <grant|revoke>§7 para cambiarlos.");
+        info(player, WARD_PREFIX, "Usá /protection permissions <perm> <grant|revoke> para cambiarlos.");
         return true;
     }
 
-    /**
-     * /protection upgrade [tier] — moves the claim to the next tier (or a named one),
-     * growing radius and build radius. Owner or admin only.
-     */
-    private boolean handleUpgrade(Player player, String[] args) {
-        Optional<ProtectionClaim> opt = claimManager.findByLocation(player.getLocation());
-        if (opt.isEmpty()) {
-            player.sendMessage("§c[Protección] No hay ningún claim en esta posición.");
+    private void persistPermissions(Ward ward) {
+        wardService.assignWorldGuardRegion(ward, ward.worldGuardRegionId()); // persists via repository
+    }
+
+    /** /protection upgrade — moves the Ward to the next tier, charging item costs. */
+    private boolean handleUpgrade(Player player) {
+        Ward ward = resolveWard(player);
+        if (ward == null) return true;
+        if (!ward.ownerId().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
+            error(player, WARD_PREFIX, "Solo el owner puede mejorar el Ward.");
             return true;
         }
-        ProtectionClaim claim = opt.get();
-        if (!claim.ownerUuid().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
-            player.sendMessage("§c[Protección] Solo el owner puede mejorar el claim.");
+        var quoteOpt = upgradeService.quoteNext(ward);
+        if (quoteOpt.isEmpty()) {
+            warn(player, WARD_PREFIX, "El Ward ya está en el tier máximo (§b" + ward.tier() + "§e).");
             return true;
         }
-        List<String> ordered = claimManager.orderedTierKeys();
-        String targetTier;
-        if (args.length >= 2) {
-            targetTier = args[1].toLowerCase(Locale.ROOT);
-            if (!config.tiers().containsKey(targetTier)) {
-                player.sendMessage("§c[Protección] Tier desconocido: §f" + args[1]);
-                player.sendMessage("§7Tiers: §f" + String.join(", ", ordered));
-                return true;
-            }
-        } else {
-            int currentIndex = ordered.indexOf(claim.tier());
-            if (currentIndex < 0 || currentIndex >= ordered.size() - 1) {
-                player.sendMessage("§e[Protección] El claim ya está en el tier máximo (§b" + claim.tier() + "§e).");
-                return true;
-            }
-            targetTier = ordered.get(currentIndex + 1);
-        }
-        if (!claimManager.upgradeTier(claim, targetTier)) {
-            player.sendMessage("§c[Protección] No se pudo mejorar al tier §f" + targetTier + "§c.");
+        var quote = quoteOpt.get();
+        var missing = upgradeService.missingItems(player, quote);
+        if (!missing.isEmpty()) {
+            error(player, WARD_PREFIX, "Te faltan ítems para mejorar al tier §b" + quote.targetTierKey() + "§c:");
+            missing.forEach(player::sendMessage);
             return true;
         }
-        saveQuietly();
-        player.sendMessage("§a[Protección] Claim mejorado a tier §b" + claim.tier() +
-                "§a (radio §f" + claim.radius() + "§a).");
+        upgradeService.charge(player, quote);
+        wardService.addBaseScore(ward, quote.scoreGain());
+        worldGuardAdapter.resizeRegion(ward, -64, 320);
+        ok(player, WARD_PREFIX, "Ward mejorado a tier §b" + ward.tier()
+                + "§a (radio §f" + ward.radius() + "§a, upkeep §f" + quote.upkeepPerInterval()
+                + "§a u/intervalo). Ítems descontados.");
         return true;
     }
 
-    /** Saves claims without interrupting the command flow on IO errors. */
-    private void saveQuietly() {
-        try {
-            claimManager.save();
-        } catch (IOException ignored) {
-            // non-fatal: state will be persisted on next save/disable
-        }
-    }
-
-    /**
-     * /protection transfer <player> — transfers ownership if config allows.
-     */
+    /** /protection transfer <jugador>. */
     private boolean handleTransfer(Player player, String[] args) {
-        if (!config.ownerTransfer()) {
-            player.sendMessage("§c[Protección] La transferencia de ownership está deshabilitada.");
-            return true;
-        }
         if (args.length < 2) {
-            player.sendMessage("§cUso: §f/protection transfer <jugador>");
-            player.sendMessage("§7Ejemplo: §f/protection transfer Steve");
+            error(player, WARD_PREFIX, "Uso: /protection transfer <jugador>");
             return true;
         }
-        Optional<ProtectionClaim> opt = claimManager.findByLocation(player.getLocation());
-        if (opt.isEmpty()) {
-            player.sendMessage("§c[Protección] No hay ningún claim en esta posición.");
-            return true;
-        }
-        ProtectionClaim claim = opt.get();
-        if (!claim.ownerUuid().equals(player.getUniqueId())) {
-            player.sendMessage("§c[Protección] Solo el owner puede transferir el claim.");
+        Ward ward = resolveWard(player);
+        if (ward == null) return true;
+        if (!ward.ownerId().equals(player.getUniqueId())) {
+            error(player, WARD_PREFIX, "Solo el owner puede transferir el Ward.");
             return true;
         }
         Player target = Bukkit.getPlayerExact(args[1]);
         if (target == null) {
-            player.sendMessage("§c[Protección] Jugador §f" + args[1] + " §cno encontrado o no está en línea.");
+            error(player, WARD_PREFIX, "Jugador §f" + args[1] + "§c no encontrado o no está en línea.");
             return true;
         }
         if (target.getUniqueId().equals(player.getUniqueId())) {
-            player.sendMessage("§c[Protección] No puedes transferirte el claim a ti mismo.");
+            error(player, WARD_PREFIX, "No puedes transferirte el Ward a ti mismo.");
             return true;
         }
-        claimManager.transferOwner(claim, target.getUniqueId());
-        player.sendMessage("§a[Protección] Ownership transferido a §f" + target.getName() + "§a.");
-        target.sendMessage("§a[Protección] §f" + player.getName() + " §ate transfirió su claim.");
+        wardService.transferOwnership(ward, target.getUniqueId(), OwnerType.PLAYER);
+        worldGuardAdapter.syncOwner(ward);
+        ok(player, WARD_PREFIX, "Ownership transferido a §f" + target.getName() + "§a.");
+        target.sendMessage("§a[Protección] §f" + player.getName() + "§a te transfirió su Ward §f"
+                + ward.name() + "§a.");
         return true;
     }
 
-    /**
-     * /protection abandon — removes the claim the player is standing in.
-     * Only the owner can abandon. The wardrobe block remains; the protection is lifted.
-     */
+    /** /protection members — wards don't have member lists; they use City membership. */
+    private boolean handleMembers(Player player) {
+        Ward ward = resolveWard(player);
+        if (ward == null) return true;
+        info(player, WARD_PREFIX, "Los Wards no manejan listas de miembros propias:");
+        info(player, WARD_PREFIX, "el acceso se gestiona con permisos públicos y por Ciudad.");
+        if (ward.hasCityMembership()) {
+            cityService.findById(ward.cityId()).ifPresent(c ->
+                    info(player, WARD_PREFIX, "Este Ward pertenece a §f" + c.name()
+                            + "§7 — sus habitantes tienen acceso."));
+        } else {
+            info(player, WARD_PREFIX, "Anexalo a tu ciudad con §f/ward city annex§7 para dar acceso a sus habitantes.");
+        }
+        info(player, WARD_PREFIX, "Permisos públicos: §f/protection permissions");
+        return true;
+    }
+
+    /** /protection abandon — dissolves the current Ward (owner/admin only). */
     private boolean handleAbandon(Player player) {
-        Optional<ProtectionClaim> opt = claimManager.findByLocation(player.getLocation());
-        if (opt.isEmpty()) {
-            player.sendMessage("§c[Protección] No hay ningún claim en esta posición.");
+        Ward ward = resolveWard(player);
+        if (ward == null) return true;
+        if (!ward.ownerId().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
+            error(player, WARD_PREFIX, "Solo el owner puede disolver el Ward.");
             return true;
         }
-        ProtectionClaim claim = opt.get();
-        if (!claim.ownerUuid().equals(player.getUniqueId())) {
-            player.sendMessage("§c[Protección] Solo el owner puede abandonar el claim.");
-            return true;
-        }
-        claimManager.removeClaim(claim);
-        try {
-            claimManager.save();
-        } catch (IOException e) {
-            player.sendMessage("§e[Protección] Claim eliminado pero no se pudo guardar: " + e.getMessage());
-            return true;
-        }
-        player.sendMessage("§a[Protección] Claim §f" + claim.name() + "§a disuelto. El área ya no está protegida.");
+        worldGuardAdapter.removeRegion(ward);
+        wardService.delete(ward);
+        ok(player, WARD_PREFIX, "Ward §f" + ward.name() + "§a disuelto. El área ya no está protegida.");
         return true;
     }
 
     // ── Admin subcommands ─────────────────────────────────────────────────────
 
-    /**
-     * /protection give — gives the executing admin a Wardrobe item.
-     */
+    /** /protection give — hands the executing admin a Ward Beacon item. */
     private boolean handleGive(Player player) {
         if (!player.hasPermission(ADMIN_PERM)) {
-            player.sendMessage("§c[Protección] No tienes permiso para este comando.");
+            error(player, WARD_PREFIX, "No tienes permiso para este comando.");
             return true;
         }
-        player.getInventory().addItem(wardrobeItems.createWardrobeItem());
-        player.sendMessage("§a[Protección] Armario entregado.");
+        player.getInventory().addItem(wardItems.createWardItem());
+        ok(player, WARD_PREFIX, "Baliza de Ward entregada. Colocala para fundar un Ward.");
         return true;
     }
 
     private boolean handleReload(Player player) {
         if (!player.hasPermission(ADMIN_PERM)) {
-            player.sendMessage("§c[Protección] No tienes permiso para este comando.");
+            error(player, WARD_PREFIX, "No tienes permiso para este comando.");
             return true;
         }
         reloadAction.run();
-        player.sendMessage("§a[Protección] Configuración recargada.");
+        ok(player, WARD_PREFIX, "Configuración recargada.");
         return true;
     }
 
+    /** /protection recalculate — re-syncs the WG region to the Ward's stored radius. */
     private boolean handleRecalculate(Player player) {
         if (!player.hasPermission(ADMIN_PERM)) {
-            player.sendMessage("§c[Protección] No tienes permiso para este comando.");
+            error(player, WARD_PREFIX, "No tienes permiso para este comando.");
             return true;
         }
-        Optional<ProtectionClaim> opt = claimManager.findByLocation(player.getLocation());
-        if (opt.isEmpty()) {
-            player.sendMessage("§c[Protección] No hay ningún claim en esta posición.");
-            return true;
-        }
-        upkeepManager.recalculateState(opt.get());
-        player.sendMessage("§a[Protección] Claim recalculado.");
+        Ward ward = resolveWard(player);
+        if (ward == null) return true;
+        worldGuardAdapter.resizeRegion(ward, -64, 320);
+        ok(player, WARD_PREFIX, "Región re-sincronizada (radio §f" + ward.radius() + "§a).");
         return true;
+    }
+
+    // ── Ward resolution ───────────────────────────────────────────────────────
+
+    /** Resolves the ward: explicit UUID arg → ward at location → owner's first ward. */
+    private Ward resolveWard(Player player) {
+        var atLocation = wardService.findAtLocation(
+                player.getWorld().getName(),
+                player.getLocation().getBlockX(),
+                player.getLocation().getBlockZ());
+        if (atLocation.isPresent()) return atLocation.get();
+        var byOwner = wardService.findByOwner(player.getUniqueId());
+        if (!byOwner.isEmpty()) return byOwner.iterator().next();
+        error(player, WARD_PREFIX, "No hay ningún Ward en esta posición. Fundá uno con §f/ward create§c.");
+        return null;
     }
 
     // ── Tab completion ────────────────────────────────────────────────────────
@@ -551,42 +490,40 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
 
         List<String> completions = new ArrayList<>();
         if (args.length == 1) {
-            List<String> subs = new ArrayList<>(List.of("claim", "status", "upkeep", "members",
-                    "permissions", "upgrade", "transfer", "abandon", "dissolve"));
+            List<String> subs = new ArrayList<>(List.of("claim", "menu", "status", "rename", "upkeep",
+                    "permissions", "upgrade", "transfer", "members", "abandon", "dissolve"));
             if (player.hasPermission(ADMIN_PERM)) {
                 subs.addAll(List.of("give", "reload", "recalculate"));
             }
-            String input = args[0].toLowerCase(Locale.ROOT);
-            subs.stream().filter(s -> s.startsWith(input)).forEach(completions::add);
+            filter(subs, args[0]).forEach(completions::add);
             return completions;
         }
         if (args.length == 2) {
             String sub = args[0].toLowerCase(Locale.ROOT);
-            if ("members".equals(sub)) {
-                return List.of("list", "add", "remove");
+            switch (sub) {
+                case "transfer" -> filter(onlinePlayers(args[1]), args[1]).forEach(completions::add);
+                case "permissions" -> {
+                    for (WardPermission p : WardPermission.values()) completions.add(p.name().toLowerCase(Locale.ROOT));
+                    filter(completions, args[1]).forEach(completions::add);
+                }
+                case "upkeep" -> filter(List.of("deposit"), args[1]).forEach(completions::add);
+                default -> { }
             }
-            if ("transfer".equals(sub)) {
-                return onlinePlayers(args[1]);
-            }
-            if ("permissions".equals(sub)) {
-                return CLAIM_PUBLIC_PERMS.stream()
-                        .filter(p -> p.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT)))
-                        .toList();
-            }
-            if ("upgrade".equals(sub)) {
-                return claimManager.orderedTierKeys().stream()
-                        .filter(t -> t.startsWith(args[1].toLowerCase(Locale.ROOT)))
-                        .toList();
-            }
+            return completions;
         }
         if (args.length == 3) {
             String sub = args[0].toLowerCase(Locale.ROOT);
-            String action = args[1].toLowerCase(Locale.ROOT);
-            if ("members".equals(sub) && ("add".equals(action) || "remove".equals(action))) {
-                return onlinePlayers(args[2]);
+            if ("upkeep".equals(sub) && "deposit".equalsIgnoreCase(args[1]) && upkeepService != null) {
+                upkeepService.acceptedMaterials().keySet().stream()
+                        .map(Enum::name)
+                        .map(String::toLowerCase)
+                        .filter(m -> m.startsWith(args[2].toLowerCase(Locale.ROOT)))
+                        .forEach(completions::add);
+                return completions;
             }
             if ("permissions".equals(sub)) {
-                return List.of("grant", "revoke");
+                filter(List.of("grant", "revoke"), args[2]).forEach(completions::add);
+                return completions;
             }
         }
         return List.of();
@@ -599,5 +536,11 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
                 .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(prefix.toLowerCase(Locale.ROOT)))
                 .forEach(names::add);
         return names;
+    }
+
+    private List<String> filter(List<String> options, String prefix) {
+        return options.stream()
+                .filter(s -> s.toLowerCase(Locale.ROOT).startsWith(prefix.toLowerCase(Locale.ROOT)))
+                .toList();
     }
 }

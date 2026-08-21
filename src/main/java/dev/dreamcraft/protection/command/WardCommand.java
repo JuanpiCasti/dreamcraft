@@ -4,15 +4,9 @@ import dev.dreamcraft.protection.domain.model.City;
 import dev.dreamcraft.protection.domain.model.OwnerType;
 import dev.dreamcraft.protection.domain.model.Ward;
 import dev.dreamcraft.protection.domain.model.WardPermission;
-import dev.dreamcraft.protection.domain.port.WardTierProvider;
 import dev.dreamcraft.protection.domain.service.CityService;
 import dev.dreamcraft.protection.domain.service.WardService;
 import dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter;
-import dev.dreamcraft.protection.presentation.MenuContext;
-import dev.dreamcraft.protection.presentation.MenuProvider;
-import dev.dreamcraft.protection.presentation.menu.WardMenuBuilder;
-import dev.dreamcraft.protection.presentation.viewmodel.WardViewModel;
-import dev.dreamcraft.protection.presentation.viewmodel.WardViewModelBuilder;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -24,7 +18,6 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 
 import static dev.dreamcraft.protection.command.CommandMessages.*;
@@ -32,8 +25,8 @@ import static dev.dreamcraft.protection.command.CommandMessages.*;
 /**
  * Handles all /ward (alias: /w) subcommands.
  *
- * <p>Delegates all business logic to {@link WardService} and opens menus via
- * {@link MenuProvider} using pre-computed {@link WardViewModel}s.
+ * <p>Delegates all business logic to {@link WardService} and opens menus through
+ * the shared {@link WardMenuFacade} — the exact same menu as /protection claim.
  */
 public final class WardCommand implements CommandExecutor, TabCompleter {
 
@@ -45,52 +38,24 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
     private final WardService wardService;
     private final CityService cityService;
     private final WorldGuardAdapter worldGuardAdapter;
-    private final WardTierProvider tierProvider;
-    private final MenuProvider menuProvider;
-    private final WardViewModelBuilder viewModelBuilder;
     private final dev.dreamcraft.protection.ui.WardItems wardItems;
-    private final dev.dreamcraft.protection.service.WardUpgradeService upgradeService;
+    /** Shared menu façade — same menu as /protection claim. */
+    private final WardMenuFacade menuFacade;
+    /** Optional: item-based upkeep deposits. */
+    private final dev.dreamcraft.protection.service.WardUpkeepService upkeepService;
 
     public WardCommand(WardService wardService,
                        CityService cityService,
                        WorldGuardAdapter worldGuardAdapter,
-                       WardTierProvider tierProvider,
-                       MenuProvider menuProvider,
                        dev.dreamcraft.protection.ui.WardItems wardItems,
-                       dev.dreamcraft.protection.service.WardUpgradeService upgradeService) {
+                       WardMenuFacade menuFacade,
+                       dev.dreamcraft.protection.service.WardUpkeepService upkeepService) {
         this.wardService = wardService;
         this.cityService = cityService;
         this.worldGuardAdapter = worldGuardAdapter;
-        this.tierProvider = tierProvider;
-        this.menuProvider = menuProvider;
         this.wardItems = wardItems;
-        this.upgradeService = upgradeService;
-        this.viewModelBuilder = new WardViewModelBuilder(tierProvider,
-                CommandMessages::resolveName,
-                id -> cityService.findById(id).map(City::name).orElse(null),
-                this::buildUpgradePreview);
-    }
-
-    /** Computes the upgrade preview shown in the menu (cost lines + affordability). */
-    private dev.dreamcraft.protection.presentation.viewmodel.WardUpgradePreview buildUpgradePreview(
-            Ward ward, UUID viewerId) {
-        var quoteOpt = upgradeService.quoteNext(ward);
-        if (quoteOpt.isEmpty()) {
-            return dev.dreamcraft.protection.presentation.viewmodel.WardUpgradePreview.unavailable();
-        }
-        var quote = quoteOpt.get();
-        Player viewer = Bukkit.getPlayer(viewerId);
-        boolean canAfford = viewer != null && upgradeService.canAfford(viewer, quote);
-        var costLines = quote.costs().stream()
-                .map(c -> new dev.dreamcraft.protection.presentation.viewmodel.WardUpgradePreview.CostLine(
-                        c.amount(),
-                        upgradeService.displayName(c.material()),
-                        viewer != null && upgradeService.countItem(viewer, c.material()) >= c.amount()))
-                .toList();
-        return new dev.dreamcraft.protection.presentation.viewmodel.WardUpgradePreview(
-                true, canAfford, quote.targetTierKey(),
-                quote.scoreGain(), quote.radiusAfter(), quote.upkeepPerInterval(),
-                costLines);
+        this.menuFacade = menuFacade;
+        this.upkeepService = upkeepService;
     }
 
     @Override
@@ -110,6 +75,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         try {
             return switch (args[0].toLowerCase(Locale.ROOT)) {
                 case "create" -> handleCreate(player);
+                case "rename" -> handleRename(player, args);
                 case "info" -> handleInfo(player, args);
                 case "delete" -> handleDelete(player, args);
                 case "score" -> handleScore(player, args);
@@ -167,6 +133,34 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /**
+     * /ward rename <nombre...> — renames the resolved Ward (owner or admin only).
+     * Accepts multi-word names; uniqueness is enforced by the domain service.
+     */
+    private boolean handleRename(Player player, String[] args) {
+        if (args.length < 2) {
+            error(player, WARD_PREFIX, "Uso: /ward rename <nombre>");
+            return true;
+        }
+        Ward ward = resolveWard(player, args);
+        if (ward == null) return true;
+        if (!ward.ownerId().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
+            error(player, WARD_PREFIX, "Solo el owner puede renombrar el Ward.");
+            return true;
+        }
+        String newName = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length)).trim();
+        String oldName = ward.name();
+        try {
+            wardService.renameWard(ward, newName);
+        } catch (IllegalArgumentException e) {
+            error(player, WARD_PREFIX, e.getMessage());
+            return true;
+        }
+        ok(player, WARD_PREFIX, "Ward §f" + oldName + "§a renombrado a §f" + ward.name() + "§a.");
+        title(player, "Ward Renombrado", ward.name(), NamedTextColor.AQUA);
+        return true;
+    }
+
     private boolean handleInfo(Player player, String[] args) {
         Ward ward = resolveWard(player, args);
         if (ward == null) return true;
@@ -218,21 +212,94 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /**
+     * /ward upkeep                          — shows balance and next charge
+     * /ward upkeep deposit <material> <n>   — consumes n items, credits units
+     * /ward upkeep credit <n>               — (admin/debug) credits raw units
+     */
     private boolean handleUpkeep(Player player, String[] args) {
         Ward ward = resolveWard(player, args);
         if (ward == null) return true;
-        if (args.length >= 3 && "deposit".equalsIgnoreCase(args[1])) {
+
+        if (args.length >= 2 && "deposit".equalsIgnoreCase(args[1])) {
+            if (upkeepService == null) {
+                error(player, WARD_PREFIX, "Depósitos no disponibles.");
+                return true;
+            }
+            if (args.length < 4) {
+                error(player, WARD_PREFIX, "Uso: /ward upkeep deposit <material> <cantidad>");
+                info(player, WARD_PREFIX, "Aceptados: " + acceptedMaterialsList());
+                return true;
+            }
+            org.bukkit.Material material = org.bukkit.Material.matchMaterial(args[2].toUpperCase(Locale.ROOT));
+            if (material == null || !upkeepService.isAccepted(material)) {
+                error(player, WARD_PREFIX, "Material no aceptado: " + args[2]);
+                info(player, WARD_PREFIX, "Aceptados: " + acceptedMaterialsList());
+                return true;
+            }
+            int amount;
+            try {
+                amount = Integer.parseInt(args[3]);
+            } catch (NumberFormatException e) {
+                error(player, WARD_PREFIX, "Cantidad inválida: " + args[3]);
+                return true;
+            }
+            if (amount <= 0) {
+                error(player, WARD_PREFIX, "La cantidad debe ser mayor a 0.");
+                return true;
+            }
+            int carried = countMaterial(player, material);
+            if (carried < amount) {
+                error(player, WARD_PREFIX, "Solo tenés " + carried + "x "
+                        + upkeepService.displayName(material) + ".");
+                return true;
+            }
+            upkeepService.consumeFromInventory(player, material, amount);
+            var receipt = upkeepService.deposit(ward, player, material, amount);
+            ok(player, WARD_PREFIX, "Depositaste " + receipt.amount() + "x §f"
+                    + upkeepService.displayName(receipt.material()) + "§a → +"
+                    + receipt.unitsCredited() + " unidades. Balance: §f" + receipt.newBalance());
+            return true;
+        }
+
+        if (args.length >= 2 && "credit".equalsIgnoreCase(args[1])) {
+            if (!player.hasPermission(ADMIN_PERM)) {
+                error(player, WARD_PREFIX, "Solo admins puede acreditar unidades directas.");
+                return true;
+            }
             try {
                 int units = Integer.parseInt(args[2]);
                 wardService.depositUpkeep(ward, units);
-                ok(player, WARD_PREFIX, "Depositadas " + units + " unidades. Balance: " + ward.upkeepBalance());
+                ok(player, WARD_PREFIX, "Acreditadas " + units + " unidades. Balance: " + ward.upkeepBalance());
             } catch (NumberFormatException e) {
                 error(player, WARD_PREFIX, "Cantidad inválida: " + args[2]);
             }
             return true;
         }
+
         info(player, WARD_PREFIX, "Upkeep: " + ward.upkeepBalance() + " | Próximo cobro: " + ward.nextUpkeepAt());
+        if (upkeepService != null) {
+            info(player, WARD_PREFIX, "Depositar ítems: /ward upkeep deposit <material> <n>");
+            info(player, WARD_PREFIX, "Aceptados: " + acceptedMaterialsList());
+        }
         return true;
+    }
+
+    private String acceptedMaterialsList() {
+        StringBuilder sb = new StringBuilder();
+        upkeepService.acceptedMaterials().forEach((mat, units) -> {
+            if (sb.length() > 0) sb.append("§7, ");
+            sb.append("§f").append(upkeepService.displayName(mat)).append(" §7(×").append(units).append(")");
+        });
+        return sb.toString();
+    }
+
+    private int countMaterial(Player player, org.bukkit.Material material) {
+        int total = 0;
+        for (org.bukkit.inventory.ItemStack item : player.getInventory().getStorageContents()) {
+            if (item != null && item.getType() == material) total += item.getAmount();
+        }
+        return total;
     }
 
     private boolean handleTransfer(Player player, String[] args) {
@@ -352,11 +419,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
     // ── Menu opening ───────────────────────────────────────────────────────────
 
     public void openWardMenu(Player player, Ward ward) {
-        WardViewModel vm = viewModelBuilder.build(ward, player.getUniqueId());
-        var def = WardMenuBuilder.build(vm);
-        MenuContext ctx = new MenuContext(player.getUniqueId(), player.getName(),
-                Map.of("wardId", ward.id()));
-        menuProvider.open(def, ctx);
+        menuFacade.open(player, ward);
     }
 
     // ── Ward resolution ────────────────────────────────────────────────────────
@@ -399,11 +462,12 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         player.sendMessage("§7Gestiona tu territorio Ward.");
         player.sendMessage(" ");
         player.sendMessage("§f/ward create              §7— Crear Ward en tu posición");
+        player.sendMessage("§f/ward rename <nombre>    §7— Renombrar tu Ward");
         player.sendMessage("§f/ward give               §7— (Admin) Recibir la Baliza de Ward");
         player.sendMessage("§f/ward info [id]          §7— Ver información del Ward");
         player.sendMessage("§f/ward menu [id]          §7— Abrir menú del Ward §8(admins/VIPs)");
         player.sendMessage("§f/ward score [add <n>]    §7— Ver/añadir score");
-        player.sendMessage("§f/ward upkeep [deposit <n>] §7— Ver/depositar upkeep");
+        player.sendMessage("§f/ward upkeep [deposit <material> <n>] §7— Ver/depositar upkeep");
         player.sendMessage("§f/ward transfer <jugador> §7— Transferir ownership");
         player.sendMessage("§f/ward permissions [perm grant|revoke] §7— Gestionar permisos");
         player.sendMessage("§f/ward city [annex|leave] §7— Anexar/desvincular de ciudad");
@@ -416,7 +480,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();
         if (args.length == 1) {
-            List<String> subs = List.of("create", "info", "delete", "score", "upkeep", "transfer", "permissions", "city", "menu", "give");
+            List<String> subs = List.of("create", "rename", "info", "delete", "score", "upkeep", "transfer", "permissions", "city", "menu", "give");
             filter(subs, args[0]).forEach(completions::add);
             return completions;
         }
@@ -429,15 +493,30 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
                     filter(completions, args[1]);
                 }
                 case "score" -> filter(List.of("add"), args[1]).forEach(completions::add);
-                case "upkeep" -> filter(List.of("deposit"), args[1]).forEach(completions::add);
+                case "upkeep" -> {
+                    List<String> opts = new ArrayList<>(List.of("deposit"));
+                    if (sender.hasPermission(ADMIN_PERM)) opts.add("credit");
+                    filter(opts, args[1]).forEach(completions::add);
+                }
                 case "city" -> filter(List.of("annex", "leave"), args[1]).forEach(completions::add);
                 default -> wardIdsOf(sender).stream().filter(id -> id.startsWith(args[1])).forEach(completions::add);
             }
             return completions;
         }
-        if (args.length == 3 && "permissions".equalsIgnoreCase(args[0])) {
-            filter(List.of("grant", "revoke"), args[2]).forEach(completions::add);
-            return completions;
+        if (args.length == 3) {
+            String sub = args[0].toLowerCase(Locale.ROOT);
+            if ("upkeep".equals(sub) && "deposit".equalsIgnoreCase(args[1]) && upkeepService != null) {
+                upkeepService.acceptedMaterials().keySet().stream()
+                        .map(Enum::name)
+                        .map(String::toLowerCase)
+                        .filter(m -> m.startsWith(args[2].toLowerCase(Locale.ROOT)))
+                        .forEach(completions::add);
+                return completions;
+            }
+            if ("permissions".equals(sub)) {
+                filter(List.of("grant", "revoke"), args[2]).forEach(completions::add);
+                return completions;
+            }
         }
         return List.of();
     }

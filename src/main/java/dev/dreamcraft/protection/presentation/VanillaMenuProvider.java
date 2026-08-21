@@ -61,6 +61,17 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
 
     private BiConsumer<MenuContext, MenuAction> actionHandler = (ctx, act) -> {};
 
+    /**
+     * Handler for deposit slots. Receives the offered material/amount and a
+     * {@code consume} action that removes the items from the cursor — invoke it
+     * only after the deposit is accepted so rejected offers never destroy items.
+     */
+    public interface DepositHandler {
+        void onDeposit(MenuContext ctx, Material material, int amount, Runnable consume);
+    }
+
+    private DepositHandler depositHandler = (ctx, mat, amt, consume) -> {};
+
     public VanillaMenuProvider() {
         this.iconMap = new HashMap<>(DEFAULT_ICON_MAP);
     }
@@ -72,6 +83,10 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
 
     public void setActionHandler(BiConsumer<MenuContext, MenuAction> handler) {
         this.actionHandler = Objects.requireNonNull(handler);
+    }
+
+    public void setDepositHandler(DepositHandler handler) {
+        this.depositHandler = Objects.requireNonNull(handler);
     }
 
     // ── MenuProvider ──────────────────────────────────────────────────────────
@@ -169,8 +184,8 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
     private void handleDeposit(InventoryClickEvent event, Player player, MenuItem item, MenuContext ctx) {
         ItemStack cursor = event.getCursor();
         if (cursor == null || cursor.getType().isAir()) return;
-        actionHandler.accept(ctx, MenuAction.of("deposit",
-                cursor.getType().name() + ":" + cursor.getAmount()));
+        depositHandler.onDeposit(ctx, cursor.getType(), cursor.getAmount(),
+                () -> event.getView().setCursor(null));
     }
 
     // ── Render helpers ────────────────────────────────────────────────────────

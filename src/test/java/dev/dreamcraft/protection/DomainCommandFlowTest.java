@@ -8,6 +8,7 @@ import dev.dreamcraft.protection.domain.port.WardTierProvider;
 import dev.dreamcraft.protection.domain.service.CityService;
 import dev.dreamcraft.protection.domain.service.EstateService;
 import dev.dreamcraft.protection.domain.service.WardService;
+import dev.dreamcraft.protection.service.CityLevelService;
 import dev.dreamcraft.protection.presentation.MenuDefinition;
 import dev.dreamcraft.protection.presentation.menu.CityMenuBuilder;
 import dev.dreamcraft.protection.presentation.menu.EstateMenuBuilder;
@@ -122,6 +123,43 @@ class DomainCommandFlowTest {
         assertFalse(ward.hasPermission(WardPermission.PUBLIC_BUILD));
     }
 
+    // ── Ward rename ──────────────────────────────────────────────────────────
+
+    @Test
+    void wardRenameChangesNameAndPersists() {
+        Ward ward = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 0, 64, 0);
+        String generated = ward.name();
+
+        wardService.renameWard(ward, "Fortaleza Norte");
+
+        assertEquals("Fortaleza Norte", ward.name());
+        assertEquals("Fortaleza Norte", wardService.findById(ward.id()).orElseThrow().name());
+        assertNotEquals(generated, ward.name());
+    }
+
+    @Test
+    void wardRenameRejectsDuplicatesBlankAndTooLong() {
+        Ward a = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 0, 64, 0, "Alpha");
+        Ward b = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 200, 64, 200, "Beta");
+
+        // Duplicate (case-insensitive) is rejected
+        assertThrows(IllegalArgumentException.class, () -> wardService.renameWard(b, "alpha"));
+        // Blank is rejected
+        assertThrows(IllegalArgumentException.class, () -> wardService.renameWard(b, "   "));
+        // Longer than 32 chars is rejected
+        assertThrows(IllegalArgumentException.class, () -> wardService.renameWard(b, "x".repeat(33)));
+        // Renaming to your own current name is fine
+        assertDoesNotThrow(() -> wardService.renameWard(a, "Alpha"));
+        assertEquals("Beta", b.name()); // unchanged after failed attempts
+    }
+
+    @Test
+    void wardRenameAcceptsMultiWordNames() {
+        Ward ward = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 0, 64, 0);
+        wardService.renameWard(ward, "  Bastión   del   Este  ".replaceAll("\\s+", " "));
+        assertEquals("Bastión del Este", ward.name());
+    }
+
     // ── City service flow ────────────────────────────────────────────────────
 
     @Test
@@ -195,6 +233,70 @@ class DomainCommandFlowTest {
         assertFalse(city.hasPolicy(CityPolicy.PUBLIC_LISTING));
         cityService.setPolicy(city, CityPolicy.OPEN_RECRUITMENT, true);
         assertTrue(city.hasPolicy(CityPolicy.OPEN_RECRUITMENT));
+    }
+
+    // ── City levels (computed from wards/members/wealth) ─────────────────────
+
+    @Test
+    void cityLevelStartsAtStarterLevel() {
+        CityLevelService levels = testCityLevels();
+        City city = cityService.createCity(ownerId, "Hamlet");
+
+        var status = levels.statusOf(city);
+        assertEquals("aldea", status.levelKey());
+        assertEquals(0, status.wards());
+        assertEquals(1, status.members()); // governor counts as member
+        assertEquals(0, status.wealth());
+        assertFalse(status.maxed());
+        assertEquals("Pueblo", status.nextLevelName());
+    }
+
+    @Test
+    void cityLevelRequiresAllThreeMinimums() {
+        CityLevelService levels = testCityLevels();
+        City city = cityService.createCity(ownerId, "GrowingTown");
+
+        // 1 annexed ward with wealth 100 — but only 1 member: stays "aldea"
+        Ward ward = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 0, 64, 0);
+        wardService.addBaseScore(ward, 100);
+        wardService.setCityMembership(ward, city.id());
+        assertEquals("aldea", levels.statusOf(city).levelKey());
+
+        // Reach 3 members → pueblo unlocks
+        cityService.addMember(city, memberId);
+        cityService.addMember(city, otherId);
+        var pueblo = levels.statusOf(city);
+        assertEquals("pueblo", pueblo.levelKey());
+        assertEquals(100, pueblo.wealth());
+
+        // Next level needs 3 wards / 6 members / 400 wealth
+        assertEquals(2, pueblo.needWards());
+        assertEquals(3, pueblo.needMembers());
+        assertEquals(300, pueblo.needWealth());
+    }
+
+    @Test
+    void cityLevelWealthIsSumOfAnnexedWardScores() {
+        CityLevelService levels = testCityLevels();
+        City city = cityService.createCity(ownerId, "RichVille");
+        for (int i = 0; i < 3; i++) {
+            Ward w = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", i * 500, 64, 0);
+            wardService.addBaseScore(w, 150);
+            wardService.setCityMembership(w, city.id());
+        }
+        var status = levels.statusOf(city);
+        assertEquals(450, status.wealth());
+        assertEquals(3, status.wards());
+        // members still 1 → neither "pueblo" (needs 3) nor "ciudad"
+        assertEquals("aldea", status.levelKey());
+    }
+
+    private CityLevelService testCityLevels() {
+        return new CityLevelService(wardService, java.util.List.of(
+                new dev.dreamcraft.protection.config.CityLevelDefinition("aldea", "Aldea", 0, 0, 0),
+                new dev.dreamcraft.protection.config.CityLevelDefinition("pueblo", "Pueblo", 1, 3, 100),
+                new dev.dreamcraft.protection.config.CityLevelDefinition("ciudad", "Ciudad", 3, 6, 400)
+        ));
     }
 
     // ── Estate service flow ─────────────────────────────────────────────────

@@ -136,30 +136,44 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         pm.registerEvents(new HopperProtectionListener(checker), this);
         pm.registerEvents(menuProvider, this);
 
-        // 7. Upkeep tick
+        // 7. Upkeep tick (legacy claims)
         new UpkeepTickTask(claimManager, upkeepManager(), upkeepCalculator, protectionConfig, this).register();
 
-        // 8. Commands
+        // 8. Unified Ward mechanic — shared services, menu façade and commands
+        WardTierProvider tierProvider = new ConfigWardTierProvider(getConfig());
+        dev.dreamcraft.protection.service.WardUpgradeService upgradeService =
+                new dev.dreamcraft.protection.service.WardUpgradeService(tierProvider, protectionConfig);
+        dev.dreamcraft.protection.service.WardUpkeepService upkeepService =
+                new dev.dreamcraft.protection.service.WardUpkeepService(protectionConfig, wardService);
+        dev.dreamcraft.protection.service.CityLevelService cityLevelService =
+                new dev.dreamcraft.protection.service.CityLevelService(wardService, protectionConfig);
+
+        java.util.List<String> upkeepLines = new java.util.ArrayList<>();
+        upkeepService.acceptedMaterials().forEach((mat, units) ->
+                upkeepLines.add(upkeepService.displayName(mat) + " ×" + units + " u"));
+        dev.dreamcraft.protection.command.WardMenuFacade wardMenuFacade =
+                new dev.dreamcraft.protection.command.WardMenuFacade(
+                        tierProvider, cityService, upgradeService, menuProvider, upkeepLines);
+
+        // 8a. Wire the action + deposit dispatchers to the vanilla menu provider
+        MenuActionDispatcher dispatcher = new MenuActionDispatcher(
+                wardService, cityService, estateService, worldGuardAdapter, upgradeService, upkeepService);
+        dispatcher.setWardMenuReopener(wardMenuFacade::open);
+        menuProvider.setActionHandler(dispatcher);
+        menuProvider.setDepositHandler(dispatcher);
+
+        // 8b. Commands: /protection delegates to the same Ward mechanic as /ward
         PluginCommand command = getCommand("protection");
         if (command != null) {
             ProtectionCommand executor = new ProtectionCommand(
-                    claimManager, wardrobeItems(), menu, this::reloadPluginConfig,
-                    upkeepManager(), protectionConfig, cityService);
+                    wardService, cityService, worldGuardAdapter, wardItems(),
+                    upgradeService, upkeepService, wardMenuFacade, this::reloadPluginConfig);
             command.setExecutor(executor);
             command.setTabCompleter(executor);
         }
 
-        // 8a. Wire the menu action dispatcher to the vanilla menu provider
-        WardTierProvider tierProvider = new ConfigWardTierProvider(getConfig());
-        dev.dreamcraft.protection.service.WardUpgradeService upgradeService =
-                new dev.dreamcraft.protection.service.WardUpgradeService(tierProvider, protectionConfig);
-        menuProvider.setActionHandler(new MenuActionDispatcher(
-                wardService, cityService, estateService, worldGuardAdapter, upgradeService));
-
-        // 8b. Domain commands: /ward, /city, /estate
         WardCommand wardExecutor = new WardCommand(
-                wardService, cityService, worldGuardAdapter, tierProvider, menuProvider,
-                wardItems(), upgradeService);
+                wardService, cityService, worldGuardAdapter, wardItems(), wardMenuFacade, upkeepService);
         PluginCommand wardCmd = getCommand("ward");
         if (wardCmd != null) {
             wardCmd.setExecutor(wardExecutor);
@@ -167,7 +181,7 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         }
         PluginCommand cityCmd = getCommand("city");
         if (cityCmd != null) {
-            CityCommand cityExecutor = new CityCommand(cityService, wardService, menuProvider);
+            CityCommand cityExecutor = new CityCommand(cityService, wardService, menuProvider, cityLevelService);
             cityCmd.setExecutor(cityExecutor);
             cityCmd.setTabCompleter(cityExecutor);
         }
@@ -188,6 +202,14 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                 wardExecutor::canOpenWardMenu,
                 this::saveDomainData
         ), this);
+
+        // 8d. Ward upkeep tick + tier-gated blocks + region entry action bar
+        new dev.dreamcraft.protection.service.WardUpkeepTickTask(
+                wardService, tierProvider, wardRepository,
+                protectionConfig.upkeepInterval(), this).register();
+        pm.registerEvents(new dev.dreamcraft.protection.listener.WardBlockGateListener(
+                wardService, tierProvider, protectionConfig), this);
+        pm.registerEvents(new dev.dreamcraft.protection.listener.WardRegionListener(wardService), this);
 
         getLogger().info("[DreamCraft] Domain layer active — Ward/City/Estate ready.");
     }

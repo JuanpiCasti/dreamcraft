@@ -20,9 +20,21 @@
 - `WardrobeItems` provides a stable logical item identity using persistent item data, with optional `CustomModelData` for resource-pack presentation.
 - `ProtectionMenu` is a vanilla inventory UI and remains functional without any Resource Pack.
 
+## Ward Domain (current system)
+
+- `Ward` is the new protection aggregate: owner, WG region id, base score → tier → radius, upkeep balance, per-ward permissions, optional city membership.
+- `WardService` owns the ward lifecycle (create/rename/score/tier recalculation/upkeep deduction/transfer/delete) on top of `YamlWardRepository`.
+- `/protection` and `/ward` share the exact same mechanics: both delegate to the Ward domain through `WardMenuFacade` and the shared `MenuActionDispatcher`. The legacy claim system still runs to protect pre-existing claims but is no longer reachable from commands.
+- The ward menu is a vanilla chest UI (`VanillaMenuProvider`) with an item-deposit slot: players insert accepted materials (config `ward.upkeep-materials`, e.g. diamond/emerald/gold/iron/coal with per-material unit values) credited by `WardUpkeepService`.
+- `WardUpkeepTickTask` drains the balance every interval; when funds run out the balance zeroes and the owner is warned once per interval (region suspension is future work).
+- `WardBlockGateListener` blocks placing high-value blocks (enchanting table, brewing stand, beacon…) until the ward reaches the configured minimum tier (`ward.tier-gated-blocks`).
+- `WardRegionListener` shows an action bar with the ward name and center coordinates while inside a ward.
+- `CityLevelService` computes city levels purely from annexed wards, member count and wealth (sum of annexed wards' base scores) — never from direct deposits: `city-levels.levels` in `config.yml`.
+- Ward names can be changed with `/ward rename <nombre>` / `/protection rename <nombre>` (owner or admin, unique, ≤32 chars); epic default generated names are preserved until renamed.
+
 ## Current Gaps
 
 - Resource Pack assets were not added in this worktree because the verified pack source lives in a separate branch/worktree and should be integrated there deliberately.
-- Explosion, piston, hopper, and redstone listeners are not implemented yet in this first pass.
 - Docker runtime integration for auto-loading the locally built plugin JAR still needs a verified build artifact path and startup wiring.
-- Build/test execution has not been completed yet because this workspace does not currently include a Gradle wrapper or local Gradle installation.
+- Ward upkeep debt currently warns but does not suspend/dissolve the WG region yet.
+- Legacy claim listeners remain active alongside the Ward system until existing claims are migrated.

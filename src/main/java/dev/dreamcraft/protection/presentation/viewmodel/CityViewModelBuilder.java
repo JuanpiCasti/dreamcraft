@@ -15,11 +15,20 @@ public final class CityViewModelBuilder {
 
     private final Function<UUID, String> nameResolver;
     private final Function<City, Integer> wardCountResolver;
+    /** Optional: computes the city's level status (wards/members/wealth based). */
+    private final java.util.function.Function<City, dev.dreamcraft.protection.service.CityLevelService.CityLevelStatus> levelResolver;
 
     public CityViewModelBuilder(Function<UUID, String> nameResolver,
                                 Function<City, Integer> wardCountResolver) {
+        this(nameResolver, wardCountResolver, null);
+    }
+
+    public CityViewModelBuilder(Function<UUID, String> nameResolver,
+                                Function<City, Integer> wardCountResolver,
+                                java.util.function.Function<City, dev.dreamcraft.protection.service.CityLevelService.CityLevelStatus> levelResolver) {
         this.nameResolver = nameResolver;
         this.wardCountResolver = wardCountResolver;
+        this.levelResolver = levelResolver;
     }
 
     /**
@@ -45,6 +54,7 @@ public final class CityViewModelBuilder {
                 city.createdAt(),
                 city.policies(),
                 wardCountResolver.apply(city),
+                levelResolver != null ? levelResolver.apply(city) : null,
                 isGovernor,
                 isCouncil,
                 isCouncil,          // canManageResidents — governor + council

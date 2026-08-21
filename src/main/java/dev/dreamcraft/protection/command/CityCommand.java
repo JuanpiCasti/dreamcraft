@@ -43,13 +43,22 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
     private final CityService cityService;
     private final WardService wardService;
     private final MenuProvider menuProvider;
+    /** Optional: computed city levels (wards/members/wealth). */
+    private final dev.dreamcraft.protection.service.CityLevelService levelService;
     private final CityViewModelBuilder viewModelBuilder;
 
     public CityCommand(CityService cityService, WardService wardService, MenuProvider menuProvider) {
+        this(cityService, wardService, menuProvider, null);
+    }
+
+    public CityCommand(CityService cityService, WardService wardService, MenuProvider menuProvider,
+                       dev.dreamcraft.protection.service.CityLevelService levelService) {
         this.cityService = cityService;
         this.wardService = wardService;
         this.menuProvider = menuProvider;
-        this.viewModelBuilder = new CityViewModelBuilder(this::resolveName, this::wardCountOf);
+        this.levelService = levelService;
+        this.viewModelBuilder = new CityViewModelBuilder(this::resolveName, this::wardCountOf,
+                levelService != null ? levelService::statusOf : null);
     }
 
     @Override
@@ -328,8 +337,13 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
         info(player, CITY_PREFIX, "Nombre: " + city.name());
         info(player, CITY_PREFIX, "Gobernador: " + resolveName(city.governorId()));
         info(player, CITY_PREFIX, "Miembros: " + city.members().size());
-        info(player, CITY_PREFIX, "Tesoro: " + city.treasury() + " | Score: " + city.cityScore());
+          info(player, CITY_PREFIX, "Tesoro: " + city.treasury() + " | Score: " + city.cityScore());
         info(player, CITY_PREFIX, "Wards: " + wardCountOf(city));
+        if (levelService != null) {
+            var lvl = levelService.statusOf(city);
+            info(player, CITY_PREFIX, "Nivel: " + lvl.levelName()
+                    + (lvl.maxed() ? " §8(máximo)" : " §8→ siguiente: " + lvl.nextLevelName()));
+        }
         info(player, CITY_PREFIX, "Políticas: " + city.policies());
         return true;
     }

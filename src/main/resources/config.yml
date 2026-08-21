@@ -33,6 +33,57 @@ ward:
   # Puntos de score que suma cada mejora desde el menú del Ward
   score-per-upgrade: 100
 
+  # Ítems aceptados como upkeep del Ward y su valor en unidades por ítem.
+  # Se depositan en el slot de upkeep del menú del Ward (o /ward upkeep deposit).
+  upkeep-materials:
+    DIAMOND: 64
+    EMERALD: 48
+    GOLD_INGOT: 16
+    IRON_INGOT: 8
+    COAL: 2
+
+  # Bloques que requieren un tier mínimo del Ward para poder colocarse dentro.
+  # La clave es el material; el valor es la clave del ward-tier mínimo requerido.
+  # Un Ward recién fundado (basic) no puede colocar estos bloques hasta subir de rango.
+  tier-gated-blocks:
+    ENCHANTING_TABLE: reinforced
+    BREWING_STAND: reinforced
+    ANVIL: reinforced
+    SMITHING_TABLE: reinforced
+    LECTERN: reinforced
+    BEACON: advanced
+    CONDUIT: advanced
+    RESPAWN_ANCHOR: advanced
+
+# Niveles de Ciudad — calculados, no se depositan ítems.
+# El nivel se resuelve como el más alto cuyos 3 requisitos se cumplen:
+#   min-wards   — wards anexados a la ciudad
+#   min-members — habitantes (miembros) de la ciudad
+#   min-wealth  — riqueza = suma del baseScore de los wards anexados
+#                 (proxy de "objetos caros": cada mejora de ward suma score)
+city-levels:
+  levels:
+    aldea:
+      display-name: Aldea
+      min-wards: 0
+      min-members: 0
+      min-wealth: 0
+    pueblo:
+      display-name: Pueblo
+      min-wards: 1
+      min-members: 3
+      min-wealth: 100
+    ciudad:
+      display-name: Ciudad
+      min-wards: 3
+      min-members: 6
+      min-wealth: 400
+    metropoli:
+      display-name: Metrópoli
+      min-wards: 6
+      min-members: 12
+      min-wealth: 1200
+
 # Costo en ítems para mejorar el Ward a cada tier destino.
 # La clave es el tier DESTINO de la mejora. Si un tier no está listado, mejorarlo a ese tier es gratis.
 ward-upgrade-costs:

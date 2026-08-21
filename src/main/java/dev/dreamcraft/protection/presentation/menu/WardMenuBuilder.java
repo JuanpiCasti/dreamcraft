@@ -48,13 +48,21 @@ public final class WardMenuBuilder {
                 )));
 
         // Slot 10 — Upkeep deposit
+        List<String> upkeepLore = new ArrayList<>();
+        upkeepLore.add("&7Balance actual: &f" + vm.upkeepBalance() + " unidades");
+        if (!vm.upkeepMaterials().isEmpty()) {
+            upkeepLore.add("");
+            upkeepLore.add("&7Ítems aceptados &8(unidades por ítem):");
+            for (String line : vm.upkeepMaterials()) {
+                upkeepLore.add("&8- &f" + line);
+            }
+        }
+        upkeepLore.add("");
+        upkeepLore.add(vm.canDeposit()
+                ? "&7Toma el ítem en mano y haz clic aquí"
+                : "&cNo puedes depositar en este Ward");
         items.add(MenuItem.depositSlot(10, "icon.upkeep",
-                "&a&lDepositar Upkeep",
-                List.of(
-                        "&7Balance actual: &f" + vm.upkeepBalance(),
-                        "&7Haz clic con ítems para depositar",
-                        vm.canDeposit() ? "&aDisponible" : "&cBloqueado"
-                )));
+                "&a&lDepositar Upkeep", upkeepLore));
 
         // Slot 12 — Score / upgrade
         List<String> scoreLore = new ArrayList<>();

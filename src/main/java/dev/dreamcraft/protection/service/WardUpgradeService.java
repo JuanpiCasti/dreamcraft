@@ -151,34 +151,8 @@ public final class WardUpgradeService {
 
     // ── Display helpers ───────────────────────────────────────────────────────
 
-    private static final Map<String, String> MATERIAL_NAMES_ES = buildMaterialNames();
-
-    private static Map<String, String> buildMaterialNames() {
-        Map<String, String> m = new LinkedHashMap<>();
-        m.put("DIAMOND", "Diamante");
-        m.put("EMERALD", "Esmeralda");
-        m.put("IRON_INGOT", "Lingote de Hierro");
-        m.put("GOLD_INGOT", "Lingote de Oro");
-        m.put("COPPER_INGOT", "Lingote de Cobre");
-        m.put("NETHERITE_INGOT", "Lingote de Netherite");
-        m.put("REDSTONE", "Redstone");
-        m.put("LAPIS_LAZULI", "Lapislázuli");
-        m.put("COAL", "Carbón");
-        m.put("OBSIDIAN", "Obsidiana");
-        m.put("AMETHYST_SHARD", "Fragmento de Amatista");
-        m.put("QUARTZ", "Cuarzo");
-        m.put("GOLD_BLOCK", "Bloque de Oro");
-        m.put("IRON_BLOCK", "Bloque de Hierro");
-        m.put("DIAMOND_BLOCK", "Bloque de Diamante");
-        m.put("EMERALD_BLOCK", "Bloque de Esmeralda");
-        return m;
-    }
-
     /** Spanish display name for common materials; falls back to a prettified enum name. */
     public String displayName(Material material) {
-        String es = MATERIAL_NAMES_ES.get(material.name());
-        if (es != null) return es;
-        String raw = material.name().toLowerCase(Locale.ROOT).replace('_', ' ');
-        return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
+        return MaterialNames.forMaterial(material);
     }
 }

@@ -31,19 +31,24 @@ import java.util.function.BiConsumer;
  *   <li>Estate start/end instance (temporal access flags)</li>
  * </ul>
  */
-public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuAction> {
+public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuAction>,
+        VanillaMenuProvider.DepositHandler {
 
     private final WardService wardService;
     private final CityService cityService;
     private final EstateService estateService;
     private final WorldGuardAdapter worldGuardAdapter;
     private final dev.dreamcraft.protection.service.WardUpgradeService upgradeService;
+    /** Optional: item-based upkeep deposits for Wards. */
+    private final dev.dreamcraft.protection.service.WardUpkeepService upkeepService;
+    /** Optional: reopens the Ward menu with fresh data (scheduled 1 tick later). */
+    private java.util.function.BiConsumer<Player, Ward> wardMenuReopener = null;
 
     public MenuActionDispatcher(WardService wardService,
                                 CityService cityService,
                                 EstateService estateService,
                                 WorldGuardAdapter worldGuardAdapter) {
-        this(wardService, cityService, estateService, worldGuardAdapter, null);
+        this(wardService, cityService, estateService, worldGuardAdapter, null, null);
     }
 
     public MenuActionDispatcher(WardService wardService,
@@ -51,11 +56,26 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                                 EstateService estateService,
                                 WorldGuardAdapter worldGuardAdapter,
                                 dev.dreamcraft.protection.service.WardUpgradeService upgradeService) {
+        this(wardService, cityService, estateService, worldGuardAdapter, upgradeService, null);
+    }
+
+    public MenuActionDispatcher(WardService wardService,
+                                CityService cityService,
+                                EstateService estateService,
+                                WorldGuardAdapter worldGuardAdapter,
+                                dev.dreamcraft.protection.service.WardUpgradeService upgradeService,
+                                dev.dreamcraft.protection.service.WardUpkeepService upkeepService) {
         this.wardService = wardService;
         this.cityService = cityService;
         this.estateService = estateService;
         this.worldGuardAdapter = worldGuardAdapter;
         this.upgradeService = upgradeService;
+        this.upkeepService = upkeepService;
+    }
+
+    /** Registers the callback used to refresh the open Ward menu after state changes. */
+    public void setWardMenuReopener(java.util.function.BiConsumer<Player, Ward> reopener) {
+        this.wardMenuReopener = reopener;
     }
 
     @Override
@@ -93,6 +113,55 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
 
     // ── Ward actions ──────────────────────────────────────────────────────────
 
+    /**
+     * Deposit-slot handler: credits the offered stack as Ward upkeep units and
+     * consumes the cursor items only on success.
+     */
+    @Override
+    public void onDeposit(MenuContext ctx, org.bukkit.Material material, int amount, Runnable consume) {
+        Player player = Bukkit.getPlayer(ctx.viewerId());
+        if (player == null) return;
+        if (upkeepService == null) {
+            feedback(player, "Depósitos no disponibles.", NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        Ward ward = resolveWard(player, ctx);
+        if (ward == null) return;
+        if (!upkeepService.canDeposit(player, ward)) {
+            feedback(player, "No puedes depositar upkeep en este Ward.", NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        if (!upkeepService.isAccepted(material)) {
+            feedback(player, "Ítem no válido para upkeep. Mira los aceptados en el menú.",
+                    NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        var receipt = upkeepService.deposit(ward, player, material, amount);
+        consume.run();
+        player.sendMessage(Component.text("[Ward] ", NamedTextColor.DARK_AQUA)
+                .append(Component.text("Depositaste ", NamedTextColor.GREEN))
+                .append(Component.text(receipt.amount() + "x "
+                        + upkeepService.displayName(receipt.material()), NamedTextColor.WHITE))
+                .append(Component.text(" → +" + receipt.unitsCredited()
+                        + " unidades. Balance: " + receipt.newBalance(), NamedTextColor.GREEN)));
+        playSuccess(player);
+        reopenWardMenu(player, ward);
+    }
+
+    /** Reopens the Ward menu next tick so the viewer sees fresh balance/state. */
+    private void reopenWardMenu(Player player, Ward ward) {
+        if (wardMenuReopener == null) return;
+        Bukkit.getScheduler().runTask(plugin(), () -> wardMenuReopener.accept(player, ward));
+    }
+
+    /** The dispatcher runs inside the plugin — resolve it lazily from any registered command. */
+    private org.bukkit.plugin.Plugin plugin() {
+        return Bukkit.getPluginManager().getPlugin("DreamCraftProtection");
+    }
+
     private void handleWardUpgrade(Player player, MenuContext ctx) {
         Ward ward = resolveWard(player, ctx);
         if (ward == null) return;
@@ -107,6 +176,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
             worldGuardAdapter.resizeRegion(ward, -64, 320);
             feedback(player, "Ward mejorado a " + ward.tier() + " (radio " + ward.radius() + ")", NamedTextColor.GREEN);
             playSuccess(player);
+            reopenWardMenu(player, ward);
             return;
         }
 
@@ -141,6 +211,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                         + " bloques, upkeep " + quote.upkeepPerInterval()
                         + " unidades/intervalo. Ítems descontados.", NamedTextColor.GREEN)));
         playSuccess(player);
+        reopenWardMenu(player, ward);
     }
 
     private void handleWardTogglePermission(Player player, MenuContext ctx, MenuAction action) {
@@ -166,6 +237,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         }
         wardService.assignWorldGuardRegion(ward, ward.worldGuardRegionId()); // persist
         playSuccess(player);
+        reopenWardMenu(player, ward);
     }
 
     private void handleWardAnnexCity(Player player, MenuContext ctx) {
@@ -191,6 +263,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         syncCityMembershipToRegion(ward, city);
         feedback(player, "Ward anexado a la ciudad " + city.name() + ".", NamedTextColor.GREEN);
         playSuccess(player);
+        reopenWardMenu(player, ward);
     }
 
     private void handleWardDisband(Player player, MenuContext ctx) {

@@ -27,6 +27,8 @@ public record CityViewModel(
         Instant createdAt,
         Set<CityPolicy> policies,
         int wardCount,
+        /** Computed city level + progression (null when the level service isn't wired). */
+        dev.dreamcraft.protection.service.CityLevelService.CityLevelStatus levelStatus,
         // Pre-computed validation flags for menu rendering
         boolean isGovernor,
         boolean isCouncil,
