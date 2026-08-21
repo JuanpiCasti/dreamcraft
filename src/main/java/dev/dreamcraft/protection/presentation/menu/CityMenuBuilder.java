@@ -95,10 +95,16 @@ public final class CityMenuBuilder {
                     List.of("&8Solo el Gobernador puede asignar roles")));
         }
 
-        // Slot 16 — Treasury deposit
+        // Slot 16 — Treasury vault
         if (vm.canManageTreasury()) {
-            items.add(MenuItem.button(16, "icon.upkeep", "&a&lTesoro",
-                    List.of("&7Saldo: &a" + vm.treasury(), "&7Clic para gestionar el tesoro"),
+            items.add(MenuItem.button(16, "icon.upkeep", "&6&lTesoro de la Ciudad",
+                    List.of("&7Saldo (créditos): &a" + vm.treasury(),
+                            "",
+                            "&7Bóveda física: los ítems quedan",
+                            "&7guardados y podés retirarlos cuando",
+                            "&7quieras. Su valor suma riqueza",
+                            "&7para el nivel de la ciudad.",
+                            "&aClic para abrir la bóveda"),
                     MenuAction.of("city.bank")));
         } else {
             items.add(MenuItem.display(16, "icon.upkeep", "&8&lTesoro",

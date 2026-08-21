@@ -1,28 +1,7 @@
-protection:
-  enabled: true
-  default-radius: 16
-  default-build-radius: 16
-  allow-overlap: false
-  vertical-mode: full
-  require-wardrobe: true
-  wardrobe-material: LODESTONE
-  inventory-size: 27
-
+# ── Upkeep general ──────────────────────────────────────────────────────────
+# Intervalo al que los Wards consumen unidades de upkeep (también usa el tick).
 upkeep:
   interval: 24h
-  warning-threshold: 24h
-  expiring-threshold: 6h
-  grace-period: 24h
-  destruction-delay: 48h
-  resource-material: DIAMOND
-  units-per-item: 64
-
-members:
-  default-max: 8
-
-claim:
-  owner-transfer: true
-  abandoned-after: 7d
 
 # Bloque especial que crea un Ward al colocarlo.
 # La protección del Ward es un radio alrededor de este bloque (su centro).
@@ -54,6 +33,28 @@ ward:
     BEACON: advanced
     CONDUIT: advanced
     RESPAWN_ANCHOR: advanced
+
+# ── Instancias de aventura para Estates (End / Trial Chamber) ───────────────
+# Los estates de tipo END obtienen un mundo End PRIVADO por grupo:
+#   - El portal del área del estate solo acepta ojos de miembros del estate.
+#   - Al cruzarlo se entra a una instancia propia con dragona fresca.
+#   - Al salir el último miembro se borra el mundo: el mapa vuelve a su estado
+#     previo al jefe y la próxima dragona reaparece automáticamente.
+# Los estates de tipo TRIAL_CHAMBER limitan vaults/spawners a sus miembros.
+estate-instances:
+  enabled: true
+  # Prefijo de los mundos instanciados (dc_end_<id8>)
+  world-prefix: dc_end_
+  # Radio por defecto del área al crear un estate admin sin radio explícito
+  default-area-radius: 32
+  # Radio de escaneo alrededor del ancla del área para resetear ojos del portal
+  frame-scan-radius: 24
+  # Segundos entre que sale el último miembro y se reinicia el mundo de la instancia
+  reset-delay-seconds: 10
+  # Reiniciar los ojos del portal de entrada tras el primer ingreso del grupo
+  # (da tiempo a que el equipo cruce antes de cerrar el portal para el próximo grupo)
+  reset-portal-on-first-enter: true
+  portal-reset-delay-seconds: 30
 
 # Niveles de Ciudad — calculados, no se depositan ítems.
 # El nivel se resuelve como el más alto cuyos 3 requisitos se cumplen:
@@ -100,39 +101,7 @@ ward-upgrade-costs:
     - material: NETHERITE_INGOT
       amount: 1
 
-resource-pack:
-  enabled: true
-  optional: true
-  fallback-vanilla: true
-  custom-model-data: 41001
-  item-id: dreamcraft:protection_wardrobe
-
-tiers:
-  basic:
-    radius: 12
-    build-radius: 12
-    max-members: 4
-  advanced:
-    radius: 16
-    build-radius: 16
-    max-members: 8
-  fortress:
-    radius: 24
-    build-radius: 24
-    max-members: 12
-  clan:
-    radius: 32
-    build-radius: 24
-    max-members: 20
-  domain:
-    radius: 48
-    build-radius: 32
-    max-members: 30
-
-# Ward tiers — DreamCraft domain tier system for Wards.
-# These are SEPARATE from the protection "tiers" above (which govern claim
-# radius/build-radius/max-members). Ward tiers govern score→tier→radius
-# progression and upkeep cost per interval for the /ward command.
+# Ward tiers — sistema de progresión score→tier→radio y costo de upkeep por intervalo.
 #
 # Fields per tier:
 #   min-base-score   — lowest score that qualifies for this tier
@@ -160,22 +129,3 @@ ward-tiers:
     base-radius: 64
     radius-per-score: 0.1
     upkeep-per-interval: 10
-
-building-cost:
-  categories:
-    light:
-      base-cost: 1
-    basic:
-      base-cost: 1
-    reinforced:
-      base-cost: 3
-    advanced:
-      base-cost: 10
-    special:
-      base-cost: 15
-  overrides:
-    OBSIDIAN: reinforced
-    CRYING_OBSIDIAN: advanced
-    IRON_BLOCK: advanced
-    DIAMOND_BLOCK: special
-    NETHERITE_BLOCK: special

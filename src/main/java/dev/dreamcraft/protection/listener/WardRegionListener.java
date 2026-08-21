@@ -86,9 +86,10 @@ public final class WardRegionListener implements Listener {
         lastWardByPlayer.put(playerId, ward.id());
 
         boolean own = ward.ownerId().equals(playerId);
-        String coords = ward.centerX() + ", " + ward.centerY() + ", " + ward.centerZ();
         Component bar;
         if (own) {
+            // Coordinates are private: only the Ward owner sees the center location
+            String coords = ward.centerX() + ", " + ward.centerY() + ", " + ward.centerZ();
             bar = Component.text("⚔ ", NamedTextColor.DARK_AQUA)
                     .append(Component.text(ward.name(), NamedTextColor.AQUA))
                     .append(Component.text("  §8|  ", NamedTextColor.DARK_GRAY))
@@ -97,9 +98,7 @@ public final class WardRegionListener implements Listener {
             String ownerName = resolveOwnerName(ward);
             bar = Component.text("⚔ ", NamedTextColor.GOLD)
                     .append(Component.text(ward.name(), NamedTextColor.YELLOW))
-                    .append(Component.text(" de " + ownerName, NamedTextColor.GOLD))
-                    .append(Component.text("  §8|  ", NamedTextColor.DARK_GRAY))
-                    .append(Component.text("Centro: " + coords, NamedTextColor.GRAY));
+                    .append(Component.text(" de " + ownerName, NamedTextColor.GOLD));
         }
         player.sendActionBar(bar);
     }

@@ -193,6 +193,77 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
         }
     }
 
+    // ── Estate area regions ───────────────────────────────────────────────────
+
+    @Override
+    public String createEstateAreaRegion(Estate estate, String worldName, int centerX, int centerZ, int radius) {
+        if (!isAvailable() || estate == null) return null;
+        try {
+            RegionManager rm = getRegionManager(worldName);
+            if (rm == null) return null;
+
+            String regionId = estateRegionId(estate);
+            rm.removeRegion(regionId);
+
+            BlockVector3 min = BlockVector3.at(centerX - radius, -64, centerZ - radius);
+            BlockVector3 max = BlockVector3.at(centerX + radius, 320, centerZ + radius);
+            ProtectedCuboidRegion region = new ProtectedCuboidRegion(regionId, min, max);
+
+            DefaultDomain owners = new DefaultDomain();
+            owners.addPlayer(estate.ownerId());
+            region.setOwners(owners);
+            DefaultDomain members = new DefaultDomain();
+            for (UUID memberId : estate.members()) {
+                members.addPlayer(memberId);
+            }
+            region.setMembers(members);
+            region.setPriority(10); // above default claims so the adventure zone stays intact
+
+            rm.addRegion(region);
+            return regionId;
+        } catch (Exception e) {
+            logger.warning("[WorldGuard] Failed to create estate area region for " + estate.id() + ": " + e.getMessage());
+            return null;
+        }
+    }
+
+    @Override
+    public void removeEstateAreaRegion(Estate estate) {
+        if (!isAvailable() || estate == null || !estate.hasArea()) return;
+        try {
+            RegionManager rm = getRegionManager(estate.areaWorld());
+            if (rm != null) rm.removeRegion(estateRegionId(estate));
+        } catch (Exception e) {
+            logger.warning("[WorldGuard] Failed to remove estate area region for " + estate.id() + ": " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void syncEstateMembers(Estate estate) {
+        if (!isAvailable() || estate == null || !estate.hasArea()) return;
+        try {
+            RegionManager rm = getRegionManager(estate.areaWorld());
+            if (rm == null) return;
+            ProtectedRegion region = rm.getRegion(estateRegionId(estate));
+            if (region == null) return;
+
+            DefaultDomain owners = new DefaultDomain();
+            owners.addPlayer(estate.ownerId());
+            region.setOwners(owners);
+            DefaultDomain members = new DefaultDomain();
+            for (UUID memberId : estate.members()) {
+                members.addPlayer(memberId);
+            }
+            region.setMembers(members);
+        } catch (Exception e) {
+            logger.warning("[WorldGuard] Failed to sync estate members for " + estate.id() + ": " + e.getMessage());
+        }
+    }
+
+    private String estateRegionId(Estate estate) {
+        return "dc_estate_" + estate.id().toString().replace("-", "").substring(0, 12);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private RegionManager getRegionManager(String worldName) {

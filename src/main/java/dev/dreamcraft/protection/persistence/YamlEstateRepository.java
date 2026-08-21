@@ -1,6 +1,7 @@
 package dev.dreamcraft.protection.persistence;
 
 import dev.dreamcraft.protection.domain.model.Estate;
+import dev.dreamcraft.protection.domain.model.EstateType;
 import dev.dreamcraft.protection.domain.port.EstateRepository;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -112,6 +113,17 @@ public final class YamlEstateRepository implements EstateRepository {
         for (String m : s.getStringList("members")) {
             try { members.add(UUID.fromString(m)); } catch (IllegalArgumentException ignored) {}
         }
+        EstateType type;
+        String typeRaw = s.getString("type", null);
+        if (typeRaw != null) {
+            type = EstateType.parse(typeRaw);
+        } else {
+            // Legacy fallback: infer from the adventure id suffix ("adv-end", "admin-trial_chamber")
+            String adv = s.getString("adventure-id", null);
+            type = adv != null && adv.contains("-")
+                    ? EstateType.parse(adv.substring(adv.indexOf('-') + 1))
+                    : EstateType.STANDARD;
+        }
         return new Estate(
                 UUID.fromString(key),
                 UUID.fromString(s.getString("owner-id")),
@@ -120,17 +132,31 @@ public final class YamlEstateRepository implements EstateRepository {
                 s.getString("instance-id"),
                 Instant.parse(s.getString("created-at")),
                 s.getBoolean("persistent", false),
-                s.getString("name", "Estate")
+                s.getString("name", "Estate"),
+                type,
+                s.getString("area-world", null),
+                s.getInt("area-x", 0),
+                s.getInt("area-y", 0),
+                s.getInt("area-z", 0),
+                s.getInt("area-radius", 0)
         );
     }
 
     private void writeEstate(ConfigurationSection s, Estate e) {
         s.set("owner-id", e.ownerId().toString());
         s.set("name", e.name());
+        s.set("type", e.type().key());
         s.set("adventure-id", e.adventureId());
         s.set("instance-id", e.instanceId());
         s.set("created-at", e.createdAt().toString());
         s.set("persistent", e.persistent());
         s.set("members", e.members().stream().map(UUID::toString).toList());
+        if (e.hasArea()) {
+            s.set("area-world", e.areaWorld());
+            s.set("area-x", e.areaX());
+            s.set("area-y", e.areaY());
+            s.set("area-z", e.areaZ());
+            s.set("area-radius", e.areaRadius());
+        }
     }
 }

@@ -160,6 +160,32 @@ class DomainCommandFlowTest {
         assertEquals("Bastión del Este", ward.name());
     }
 
+    // ── Upkeep material matching (lenient) ───────────────────────────────────
+
+    @Test
+    void upkeepDepositMatchesLenientMaterialNames() {
+        dev.dreamcraft.protection.service.WardUpkeepService upkeep =
+                new dev.dreamcraft.protection.service.WardUpkeepService(
+                        java.util.Map.of(org.bukkit.Material.IRON_INGOT, 8, org.bukkit.Material.COAL, 2),
+                        wardService);
+
+        // Exact and case-insensitive
+        assertTrue(upkeep.matchAccepted("IRON_INGOT").isPresent());
+        assertTrue(upkeep.matchAccepted("iron_ingot").isPresent());
+        assertTrue(upkeep.matchAccepted("coal").isPresent());
+        // Missing underscores / spaces are tolerated
+        assertTrue(upkeep.matchAccepted("ironingot").isPresent());
+        assertTrue(upkeep.matchAccepted("iron ingot").isPresent());
+        // Plural of a real material does not exist → rejected
+        assertFalse(upkeep.matchAccepted("IRON_INGOTS").isPresent());
+        // Valid material but not in the accepted set → rejected
+        assertFalse(upkeep.matchAccepted("DIAMOND_BLOCK").isPresent());
+        assertFalse(upkeep.matchAccepted("COAL_ORE").isPresent());
+        // Garbage / blank → rejected
+        assertFalse(upkeep.matchAccepted("noexiste").isPresent());
+        assertFalse(upkeep.matchAccepted("  ").isPresent());
+    }
+
     // ── City service flow ────────────────────────────────────────────────────
 
     @Test
@@ -259,6 +285,7 @@ class DomainCommandFlowTest {
         // 1 annexed ward with wealth 100 — but only 1 member: stays "aldea"
         Ward ward = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 0, 64, 0);
         wardService.addBaseScore(ward, 100);
+        wardService.depositUpkeep(ward, 10); // healthy: positive balance counts towards wealth
         wardService.setCityMembership(ward, city.id());
         assertEquals("aldea", levels.statusOf(city).levelKey());
 
@@ -276,12 +303,13 @@ class DomainCommandFlowTest {
     }
 
     @Test
-    void cityLevelWealthIsSumOfAnnexedWardScores() {
+    void cityLevelWealthIsSumOfHealthyAnnexedWards() {
         CityLevelService levels = testCityLevels();
         City city = cityService.createCity(ownerId, "RichVille");
         for (int i = 0; i < 3; i++) {
             Ward w = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", i * 500, 64, 0);
             wardService.addBaseScore(w, 150);
+            wardService.depositUpkeep(w, 5); // healthy
             wardService.setCityMembership(w, city.id());
         }
         var status = levels.statusOf(city);
@@ -289,6 +317,29 @@ class DomainCommandFlowTest {
         assertEquals(3, status.wards());
         // members still 1 → neither "pueblo" (needs 3) nor "ciudad"
         assertEquals("aldea", status.levelKey());
+    }
+
+    @Test
+    void cityLevelWealthIgnoresWardsWithDepletedUpkeep() {
+        CityLevelService levels = testCityLevels();
+        City city = cityService.createCity(ownerId, "DecayingTown");
+
+        Ward healthy = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 0, 64, 0);
+        wardService.addBaseScore(healthy, 200);
+        wardService.depositUpkeep(healthy, 10);
+        wardService.setCityMembership(healthy, city.id());
+
+        Ward depleted = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 500, 64, 0);
+        wardService.addBaseScore(depleted, 300);
+        wardService.setCityMembership(depleted, city.id()); // no upkeep → not counted
+
+        var status = levels.statusOf(city);
+        assertEquals(2, status.wards());          // both annexed...
+        assertEquals(200, status.wealth());       // ...but only the healthy one is worth score
+
+        // Upkeep runs out on the first ward → its score stops counting too
+        wardService.deductUpkeep(healthy, 10);
+        assertEquals(0, levels.statusOf(city).wealth());
     }
 
     private CityLevelService testCityLevels() {

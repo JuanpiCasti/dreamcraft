@@ -41,6 +41,8 @@ public final class EstateViewModelBuilder {
                 estate.persistent(),
                 estate.isInstanced(),
                 estate.isAdventureLinked(),
+                estate.type().displayName(),
+                estate.hasArea(),
                 isOwner,
                 isOwner,           // canInvite
                 !isMember && !isOwner, // canJoin — non-members only (owner manages, doesn't join)

@@ -28,6 +28,18 @@ public final class Estate {
     private final Instant createdAt;
     private boolean persistent;
     private String name;
+    /** Adventure kind — controls portal gating and instancing behavior. */
+    private EstateType type;
+    /** Gated area anchor: world name. Null if the estate has no physical area. */
+    private String areaWorld;
+    /** Gated area anchor: center X (block coords). */
+    private int areaX;
+    /** Gated area anchor: center Y (block coords) — used for portal frame scans. */
+    private int areaY;
+    /** Gated area anchor: center Z (block coords). */
+    private int areaZ;
+    /** Gated area radius in blocks; 0 = no area. */
+    private int areaRadius;
 
     public Estate(
             UUID id,
@@ -39,6 +51,26 @@ public final class Estate {
             boolean persistent,
             String name
     ) {
+        this(id, ownerId, members, adventureId, instanceId, createdAt, persistent, name,
+                EstateType.STANDARD, null, 0, 0, 0, 0);
+    }
+
+    public Estate(
+            UUID id,
+            UUID ownerId,
+            Set<UUID> members,
+            String adventureId,
+            String instanceId,
+            Instant createdAt,
+            boolean persistent,
+            String name,
+            EstateType type,
+            String areaWorld,
+            int areaX,
+            int areaY,
+            int areaZ,
+            int areaRadius
+    ) {
         this.id = id;
         this.ownerId = ownerId;
         this.members = new HashSet<>(members);
@@ -47,6 +79,12 @@ public final class Estate {
         this.createdAt = createdAt;
         this.persistent = persistent;
         this.name = name;
+        this.type = type != null ? type : EstateType.STANDARD;
+        this.areaWorld = areaWorld;
+        this.areaX = areaX;
+        this.areaY = areaY;
+        this.areaZ = areaZ;
+        this.areaRadius = Math.max(0, areaRadius);
         // Membership is explicit: the owner is NOT auto-added, so an admin can
         // provision an estate without becoming part of the adventuring group.
     }
@@ -61,14 +99,41 @@ public final class Estate {
     public Instant createdAt() { return createdAt; }
     public boolean persistent() { return persistent; }
     public String name() { return name; }
+    public EstateType type() { return type; }
+    public String areaWorld() { return areaWorld; }
+    public int areaX() { return areaX; }
+    public int areaY() { return areaY; }
+    public int areaZ() { return areaZ; }
+    public int areaRadius() { return areaRadius; }
 
     // ── Mutators ──────────────────────────────────────────────────────────────
 
     public void ownerId(UUID ownerId) { this.ownerId = ownerId; }
     public void persistent(boolean persistent) { this.persistent = persistent; }
     public void name(String name) { this.name = name; }
+    public void type(EstateType type) { this.type = type != null ? type : EstateType.STANDARD; }
     /** Links this Estate to a running instance, or clears it (null) when the instance ends. */
     public void instanceId(String instanceId) { this.instanceId = instanceId; }
+
+    /**
+     * Assigns the gated physical area of this estate. A null world or non-positive
+     * radius clears the area.
+     */
+    public void area(String worldName, int x, int y, int z, int radius) {
+        if (worldName == null || radius <= 0) {
+            this.areaWorld = null;
+            this.areaX = 0;
+            this.areaY = 0;
+            this.areaZ = 0;
+            this.areaRadius = 0;
+            return;
+        }
+        this.areaWorld = worldName;
+        this.areaX = x;
+        this.areaY = y;
+        this.areaZ = z;
+        this.areaRadius = radius;
+    }
 
     public void addMember(UUID playerId) { members.add(playerId); }
     public boolean removeMember(UUID playerId) {
@@ -82,4 +147,14 @@ public final class Estate {
     public boolean isAdventureLinked() { return adventureId != null; }
     /** True if this Estate is linked to a specific instance. */
     public boolean isInstanced() { return instanceId != null; }
+    /** True if this Estate owns a gated physical area. */
+    public boolean hasArea() { return areaWorld != null && areaRadius > 0; }
+
+    /** True if the given block coordinates lie inside this estate's circular area. */
+    public boolean contains(String worldName, int x, int z) {
+        if (!hasArea() || !areaWorld.equals(worldName)) return false;
+        int dx = x - areaX;
+        int dz = z - areaZ;
+        return (long) dx * dx + (long) dz * dz <= (long) areaRadius * areaRadius;
+    }
 }

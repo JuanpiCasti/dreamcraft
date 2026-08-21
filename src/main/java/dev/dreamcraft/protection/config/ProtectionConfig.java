@@ -168,6 +168,14 @@ public record ProtectionConfig(
                 }
             }
         }
+        if (wardUpkeepMaterials.isEmpty()) {
+            // Defaults for servers whose config.yml predates this section
+            wardUpkeepMaterials.put(Material.DIAMOND, 64);
+            wardUpkeepMaterials.put(Material.EMERALD, 48);
+            wardUpkeepMaterials.put(Material.GOLD_INGOT, 16);
+            wardUpkeepMaterials.put(Material.IRON_INGOT, 8);
+            wardUpkeepMaterials.put(Material.COAL, 2);
+        }
 
         Map<Material, String> wardTierGatedBlocks = new LinkedHashMap<>();
         ConfigurationSection gatedSection =
@@ -180,6 +188,17 @@ public record ProtectionConfig(
                     wardTierGatedBlocks.put(material, tierKey.toLowerCase(Locale.ROOT));
                 }
             }
+        }
+        if (wardTierGatedBlocks.isEmpty()) {
+            // Defaults for servers whose config.yml predates this section
+            wardTierGatedBlocks.put(Material.ENCHANTING_TABLE, "reinforced");
+            wardTierGatedBlocks.put(Material.BREWING_STAND, "reinforced");
+            wardTierGatedBlocks.put(Material.ANVIL, "reinforced");
+            wardTierGatedBlocks.put(Material.SMITHING_TABLE, "reinforced");
+            wardTierGatedBlocks.put(Material.LECTERN, "reinforced");
+            wardTierGatedBlocks.put(Material.BEACON, "advanced");
+            wardTierGatedBlocks.put(Material.CONDUIT, "advanced");
+            wardTierGatedBlocks.put(Material.RESPAWN_ANCHOR, "advanced");
         }
 
         List<CityLevelDefinition> cityLevels = new ArrayList<>();
@@ -200,6 +219,13 @@ public record ProtectionConfig(
             cityLevels.sort(Comparator.comparingInt(CityLevelDefinition::minWealth)
                     .thenComparingInt(CityLevelDefinition::minWards)
                     .thenComparingInt(CityLevelDefinition::minMembers));
+        }
+        if (cityLevels.isEmpty()) {
+            // Defaults for servers whose config.yml predates this section
+            cityLevels.add(new CityLevelDefinition("aldea", "Aldea", 0, 0, 0));
+            cityLevels.add(new CityLevelDefinition("pueblo", "Pueblo", 1, 3, 100));
+            cityLevels.add(new CityLevelDefinition("ciudad", "Ciudad", 3, 6, 400));
+            cityLevels.add(new CityLevelDefinition("metropoli", "Metrópoli", 6, 12, 1200));
         }
 
         return new ProtectionConfig(

@@ -82,4 +82,25 @@ public interface WorldGuardAdapter {
      * @param ward the Ward whose temporal flags should be cleared
      */
     void clearEstateInstanceFlags(Ward ward);
+
+    /**
+     * Creates (or replaces) a WorldGuard region covering an Estate's gated area
+     * (full world height). The estate owner becomes the region owner and all
+     * estate members become region members, so only the adventuring group can
+     * build inside the portal / structure zone.
+     *
+     * @return the WorldGuard region ID, or null if creation failed or WG unavailable
+     */
+    String createEstateAreaRegion(Estate estate, String worldName, int centerX, int centerZ, int radius);
+
+    /**
+     * Removes the WorldGuard region associated with the Estate's gated area.
+     */
+    void removeEstateAreaRegion(Estate estate);
+
+    /**
+     * Re-syncs the WorldGuard member list of the Estate's area region with the
+     * current estate membership (owner + members).
+     */
+    void syncEstateMembers(Estate estate);
 }

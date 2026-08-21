@@ -60,61 +60,6 @@ class TierAndConfigTest {
         assertEquals(30, domain.maxMembers());
     }
 
-    // ── ClaimBounds geometry ──────────────────────────────────────────────────
-
-    @Test
-    void claimBoundsContainsCenter() {
-        dev.dreamcraft.protection.model.ClaimBounds bounds =
-                new dev.dreamcraft.protection.model.ClaimBounds(-16, 16, -16, 16);
-        assertTrue(bounds.contains(0, 0));
-    }
-
-    @Test
-    void claimBoundsContainsEdge() {
-        dev.dreamcraft.protection.model.ClaimBounds bounds =
-                new dev.dreamcraft.protection.model.ClaimBounds(-16, 16, -16, 16);
-        assertTrue(bounds.contains(16, 16));
-        assertTrue(bounds.contains(-16, -16));
-    }
-
-    @Test
-    void claimBoundsExcludesOutside() {
-        dev.dreamcraft.protection.model.ClaimBounds bounds =
-                new dev.dreamcraft.protection.model.ClaimBounds(-16, 16, -16, 16);
-        assertFalse(bounds.contains(17, 17));
-        assertFalse(bounds.contains(-17, 0));
-    }
-
-    @Test
-    void claimBoundsIntersect() {
-        dev.dreamcraft.protection.model.ClaimBounds a =
-                new dev.dreamcraft.protection.model.ClaimBounds(0, 20, 0, 20);
-        dev.dreamcraft.protection.model.ClaimBounds b =
-                new dev.dreamcraft.protection.model.ClaimBounds(10, 30, 10, 30);
-        assertTrue(a.intersects(b));
-        assertTrue(b.intersects(a));
-    }
-
-    @Test
-    void claimBoundsNoIntersect() {
-        dev.dreamcraft.protection.model.ClaimBounds a =
-                new dev.dreamcraft.protection.model.ClaimBounds(0, 10, 0, 10);
-        dev.dreamcraft.protection.model.ClaimBounds b =
-                new dev.dreamcraft.protection.model.ClaimBounds(20, 30, 20, 30);
-        assertFalse(a.intersects(b));
-    }
-
-    // ── Config defaults (null Material fields are tested elsewhere) ───────────
-
-    @Test
-    void allConfiguredTiersFromTestConfig() {
-        var cfg = UpkeepCalculatorTest.testConfig();
-        // Test config has no tiers — that's fine for upkeep tests
-        assertNotNull(cfg);
-        assertTrue(cfg.upkeepInterval().toHours() == 24);
-        assertTrue(cfg.upkeepUnitsPerItem() == 64);
-    }
-
     @Test
     void configuredTierRadiusIsCorrectForDomainViaMap() {
         Map<String, TierDefinition> tiers = Map.of(

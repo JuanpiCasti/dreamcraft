@@ -24,6 +24,9 @@ public record EstateViewModel(
         boolean persistent,
         boolean isInstanced,
         boolean isAdventureLinked,
+        // Adventure flavor
+        String typeLabel,
+        boolean hasArea,
         // Pre-computed validation flags for menu rendering
         boolean isOwner,
         boolean canInvite,

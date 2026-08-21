@@ -1,6 +1,7 @@
 package dev.dreamcraft.protection.command;
 
 import dev.dreamcraft.protection.domain.model.Estate;
+import dev.dreamcraft.protection.domain.model.EstateType;
 import dev.dreamcraft.protection.domain.service.EstateService;
 import dev.dreamcraft.protection.presentation.MenuContext;
 import dev.dreamcraft.protection.presentation.MenuProvider;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static dev.dreamcraft.protection.command.CommandMessages.*;
@@ -37,10 +39,23 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
     private final EstateService estateService;
     private final MenuProvider menuProvider;
     private final EstateViewModelBuilder viewModelBuilder;
+    /** Optional: syncs estate areas/membership to WorldGuard regions. */
+    private final dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter worldGuardAdapter;
+    /** Optional: manages private End instances for END-type estates. */
+    private final dev.dreamcraft.protection.service.EndInstanceService instanceService;
 
     public EstateCommand(EstateService estateService, MenuProvider menuProvider) {
+        this(estateService, menuProvider, null, null);
+    }
+
+    public EstateCommand(EstateService estateService,
+                         MenuProvider menuProvider,
+                         dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter worldGuardAdapter,
+                         dev.dreamcraft.protection.service.EndInstanceService instanceService) {
         this.estateService = estateService;
         this.menuProvider = menuProvider;
+        this.worldGuardAdapter = worldGuardAdapter;
+        this.instanceService = instanceService;
         this.viewModelBuilder = new EstateViewModelBuilder(this::resolveName);
     }
 
@@ -99,32 +114,35 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /**
+     * Creates a personal party estate for the player: they become its leader
+     * (owner) and can invite their group. For END / TRIAL_CHAMBER types, the
+     * party inherits the gated area of the admin-created zone (if any) so the
+     * portal/structure recognizes its members.
+     */
     private boolean handleDiscover(Player player, String[] args) {
         if (args.length < 2) {
-            error(player, ESTATE_PREFIX, "Uso: /estate discover <tipo>");
+            error(player, ESTATE_PREFIX, "Uso: /estate discover <tipo> (end, trial_chamber)");
             return true;
         }
-        String adventureType = args[1];
-        String adventureId = "adv-" + adventureType.toLowerCase(Locale.ROOT);
-        // Find an existing estate for this adventure before creating a new one,
-        // preferring one the player already belongs to.
-        var existing = estateService.findByAdventure(adventureId);
-        Estate estate;
-        if (existing.isEmpty()) {
-            estate = estateService.createEstate(
-                    player.getUniqueId(), "Aventura: " + adventureType, adventureId, null, false);
-            estateService.addMember(estate, player.getUniqueId());
-            ok(player, ESTATE_PREFIX, "Estate de aventura '" + estate.name() + "' descubierto.");
-        } else {
-            estate = existing.stream()
-                    .filter(e -> e.isMember(player.getUniqueId()))
-                    .findFirst()
-                    .orElse(existing.iterator().next());
-            if (!estate.isMember(player.getUniqueId())) {
-                estateService.addMember(estate, player.getUniqueId());
-                ok(player, ESTATE_PREFIX, "Te uniste al Estate de aventura '" + estate.name() + "'.");
+        EstateType type = EstateType.parse(args[1]);
+        var zoneOpt = type.isInstancedAdventure()
+                ? estateService.findZoneTemplate(type)
+                : Optional.<Estate>empty();
+
+        Estate estate = estateService.createPartyEstate(
+                player.getUniqueId(), player.getName(), type, zoneOpt.orElse(null));
+        estateService.addMember(estate, player.getUniqueId());
+        syncEstateMembers(estate);
+
+        ok(player, ESTATE_PREFIX, "Estate '" + estate.name() + "' creado. Sos su líder.");
+        if (type.isInstancedAdventure()) {
+            if (zoneOpt.isPresent()) {
+                info(player, ESTATE_PREFIX, "Zona de aventura heredada. Colocá los ojos y cruzá el portal "
+                        + "con tu grupo (/estate invite <jugador>).");
             } else {
-                ok(player, ESTATE_PREFIX, "Estate de aventura '" + estate.name() + "' encontrado.");
+                warn(player, ESTATE_PREFIX, "Todavía no hay zona de '" + type.displayName()
+                        + "' creada por un admin; tu estate funcionará cuando exista.");
             }
         }
         openEstateMenu(player, estate);
@@ -136,17 +154,125 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             error(player, ESTATE_PREFIX, "No tienes permiso para este comando.");
             return true;
         }
-        if (args.length < 4 || !"create".equalsIgnoreCase(args[1])) {
+        if (args.length < 2) {
+            error(player, ESTATE_PREFIX, "Uso: /estate admin create <id> <tipo> [radio] | "
+                    + "/estate admin area <id> [radio] | /estate admin reset <id>");
+            return true;
+        }
+        return switch (args[1].toLowerCase(Locale.ROOT)) {
+            case "create" -> handleAdminCreate(player, args);
+            case "area" -> handleAdminArea(player, args);
+            case "reset" -> handleAdminReset(player, args);
+            default -> {
+                error(player, ESTATE_PREFIX, "Subcomando admin desconocido: " + args[1]);
+                yield true;
+            }
+        };
+    }
+
+    /**
+     * Creates a persistent typed estate and — when run by a player — anchors its
+     * gated area at the player's position. Stand inside the portal/structure zone
+     * before running it; the area protects the structure via WorldGuard and gates
+     * it to estate members only.
+     */
+    private boolean handleAdminCreate(Player player, String[] args) {
+        if (args.length < 4) {
             error(player, ESTATE_PREFIX, "Uso: /estate admin create <id> <tipo> [radio]");
             return true;
         }
         String id = args[2];
-        String type = args[3];
-        String adventureId = "admin-" + type.toLowerCase(Locale.ROOT);
+        EstateType type = EstateType.parse(args[3]);
+        int radius = args.length >= 5 ? parseRadius(args[4]) : defaultAreaRadius();
+
         Estate estate = estateService.createEstate(
-                player.getUniqueId(), id, adventureId, null, true);
-        ok(player, ESTATE_PREFIX, "Estate admin '" + estate.name() + "' creado (persistente).");
+                player.getUniqueId(), id, "adv-" + type.key(), null, true, type,
+                null, 0, 0, 0, 0);
+        if (player.getWorld() != null && radius > 0) {
+            applyArea(estate, player.getLocation(), radius);
+            ok(player, ESTATE_PREFIX, "Estate admin '" + estate.name() + "' creado (persistente, tipo "
+                    + type.displayName() + ", área r=" + radius + ").");
+        } else {
+            ok(player, ESTATE_PREFIX, "Estate admin '" + estate.name() + "' creado (persistente, tipo "
+                    + type.displayName() + "). Define su área con /estate admin area " + estate.id());
+        }
         return true;
+    }
+
+    /** Moves/re-anchors the estate's gated area at the player's position. */
+    private boolean handleAdminArea(Player player, String[] args) {
+        if (args.length < 3) {
+            error(player, ESTATE_PREFIX, "Uso: /estate admin area <id> [radio]");
+            return true;
+        }
+        Estate estate = findEstateByIdOrName(args[2]);
+        if (estate == null) {
+            error(player, ESTATE_PREFIX, "Estate no encontrado: " + args[2]);
+            return true;
+        }
+        int radius = args.length >= 4 ? parseRadius(args[3]) : Math.max(estate.areaRadius(), defaultAreaRadius());
+        applyArea(estate, player.getLocation(), radius);
+        ok(player, ESTATE_PREFIX, "Área del estate '" + estate.name()
+                + "' fijada aquí (r=" + radius + ").");
+        return true;
+    }
+
+    /** Forces the instance world reset (map restore + dragon respawn). */
+    private boolean handleAdminReset(Player player, String[] args) {
+        if (args.length < 3) {
+            error(player, ESTATE_PREFIX, "Uso: /estate admin reset <id>");
+            return true;
+        }
+        Estate estate = findEstateByIdOrName(args[2]);
+        if (estate == null) {
+            error(player, ESTATE_PREFIX, "Estate no encontrado: " + args[2]);
+            return true;
+        }
+        if (instanceService == null || !estate.type().usesEndInstance()) {
+            error(player, ESTATE_PREFIX, "Este estate no tiene instancia de End.");
+            return true;
+        }
+        instanceService.resetInstance(estate);
+        ok(player, ESTATE_PREFIX, "Instancia reiniciada: mapa restaurado y dragona lista.");
+        return true;
+    }
+
+    private void applyArea(Estate estate, org.bukkit.Location location, int radius) {
+        // Drop any previous WG region before re-anchoring
+        if (worldGuardAdapter != null) worldGuardAdapter.removeEstateAreaRegion(estate);
+        estateService.setArea(estate, location.getWorld().getName(),
+                location.getBlockX(), location.getBlockY(), location.getBlockZ(), radius);
+        if (worldGuardAdapter != null && worldGuardAdapter.isAvailable()) {
+            worldGuardAdapter.createEstateAreaRegion(estate, estate.areaWorld(),
+                    estate.areaX(), estate.areaZ(), estate.areaRadius());
+        }
+    }
+
+    private int parseRadius(String raw) {
+        try {
+            return Math.max(4, Integer.parseInt(raw));
+        } catch (NumberFormatException e) {
+            return defaultAreaRadius();
+        }
+    }
+
+    private int defaultAreaRadius() { return 32; }
+
+    private Estate findEstateByIdOrName(String raw) {
+        try {
+            UUID id = UUID.fromString(raw);
+            var byId = estateService.findById(id);
+            if (byId.isPresent()) return byId.get();
+        } catch (IllegalArgumentException ignored) {}
+        return estateService.findAll().stream()
+                .filter(e -> e.name().equalsIgnoreCase(raw))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /** Syncs the estate's WorldGuard area region with its current membership. */
+    private void syncEstateMembers(Estate estate) {
+        if (worldGuardAdapter != null) worldGuardAdapter.syncEstateMembers(estate);
     }
 
     private boolean handleInvite(Player player, String[] args) {
@@ -167,6 +293,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         }
         boolean added = estateService.addMember(estate, target.getUniqueId());
         if (added) {
+            syncEstateMembers(estate);
             ok(player, ESTATE_PREFIX, target.getName() + " invitado al Estate.");
             target.sendMessage(ESTATE_PREFIX.append(
                     Component.text("Fuiste invitado al Estate " + estate.name() + ".", NamedTextColor.GREEN)));
@@ -198,6 +325,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         estateService.addMember(estate, player.getUniqueId());
+        syncEstateMembers(estate);
         ok(player, ESTATE_PREFIX, "Te uniste al Estate " + estate.name() + ".");
         return true;
     }
@@ -214,6 +342,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         estateService.removeMember(estate, player.getUniqueId());
+        syncEstateMembers(estate);
         ok(player, ESTATE_PREFIX, "Saliste del Estate " + estate.name() + ".");
         return true;
     }
@@ -225,6 +354,10 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             error(player, ESTATE_PREFIX, "Solo el owner puede disolver el Estate.");
             return true;
         }
+        if (instanceService != null && estate.type().usesEndInstance()) {
+            instanceService.resetInstance(estate);
+        }
+        if (worldGuardAdapter != null) worldGuardAdapter.removeEstateAreaRegion(estate);
         estateService.delete(estate);
         ok(player, ESTATE_PREFIX, "Estate " + estate.name() + " disuelto.");
         return true;
@@ -240,7 +373,13 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         String instanceId = "inst-" + estate.id().toString().substring(0, 8);
         boolean started = estateService.startInstance(estate, instanceId);
         if (started) {
-            ok(player, ESTATE_PREFIX, "Instancia de §f" + estate.name() + "§a iniciada.");
+            // END-type estates pre-open their private End world + dragon right away
+            if (instanceService != null && instanceService.preopen(estate)) {
+                ok(player, ESTATE_PREFIX, "Instancia de §f" + estate.name()
+                        + "§a iniciada. El End privado está listo con la dragona.");
+            } else {
+                ok(player, ESTATE_PREFIX, "Instancia de §f" + estate.name() + "§a iniciada.");
+            }
             title(player, "Instancia Iniciada", estate.name(), NamedTextColor.LIGHT_PURPLE);
         } else {
             warn(player, ESTATE_PREFIX, "El Estate ya tiene una instancia activa.");
@@ -284,10 +423,23 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         Estate estate = resolveEstate(player, args);
         if (estate == null) return true;
         info(player, ESTATE_PREFIX, "Nombre: " + estate.name());
+        info(player, ESTATE_PREFIX, "Tipo: " + estate.type().displayName());
         info(player, ESTATE_PREFIX, "Owner: " + resolveName(estate.ownerId()));
         info(player, ESTATE_PREFIX, "Miembros: " + estate.members().size());
         info(player, ESTATE_PREFIX, "Aventura: " + (estate.adventureId() != null ? estate.adventureId() : "N/A"));
         info(player, ESTATE_PREFIX, "Instancia: " + (estate.instanceId() != null ? estate.instanceId() : "Inactiva"));
+        if (estate.hasArea()) {
+            info(player, ESTATE_PREFIX, "Área: " + estate.areaWorld() + " @ "
+                    + estate.areaX() + ", " + estate.areaY() + ", " + estate.areaZ()
+                    + " (r=" + estate.areaRadius() + ")");
+        } else {
+            info(player, ESTATE_PREFIX, "Área: sin definir");
+        }
+        if (instanceService != null && estate.type().usesEndInstance()) {
+            boolean active = Bukkit.getWorld(instanceService.worldNameFor(estate)) != null;
+            info(player, ESTATE_PREFIX, "Mundo End: "
+                    + instanceService.worldNameFor(estate) + (active ? " (activo)" : " (sin crear)"));
+        }
         info(player, ESTATE_PREFIX, "Persistente: " + (estate.persistent() ? "Sí" : "No"));
         return true;
     }
@@ -338,8 +490,10 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         player.sendMessage("§7Gestiona tu grupo de aventura.");
         player.sendMessage(" ");
         player.sendMessage("§f/estate create <id>          §7— Crear Estate");
-        player.sendMessage("§f/estate discover <tipo>      §7— Descubrir Estate de aventura");
-        player.sendMessage("§f/estate admin create <id> <tipo> §7— Crear Estate admin (persistente)");
+        player.sendMessage("§f/estate discover <tipo>      §7— Unirte a la aventura (end, trial_chamber)");
+        player.sendMessage("§f/estate admin create <id> <tipo> [radio] §7— Crear estate admin con área aquí");
+        player.sendMessage("§f/estate admin area <id> [radio]  §7— Mover el área del estate aquí");
+        player.sendMessage("§f/estate admin reset <id>     §7— Reiniciar la instancia de End");
         player.sendMessage("§f/estate invite <jugador>     §7— Invitar miembro");
         player.sendMessage("§f/estate join <id>           §7— Unirse a un Estate");
         player.sendMessage("§f/estate leave               §7— Salir del Estate");
@@ -365,13 +519,25 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             switch (sub) {
                 case "invite", "transfer" -> filter(onlinePlayers(args[1]), args[1]).forEach(completions::add);
                 case "join" -> filter(estateIds(), args[1]).forEach(completions::add);
-                case "admin" -> filter(List.of("create"), args[1]).forEach(completions::add);
+                case "discover" -> filter(List.of("end", "trial_chamber", "standard"), args[1]).forEach(completions::add);
+                case "admin" -> filter(List.of("create", "area", "reset"), args[1]).forEach(completions::add);
                 default -> estateIdsOf(sender).stream().filter(id -> id.startsWith(args[1])).forEach(completions::add);
             }
             return completions;
         }
         if (args.length == 3 && "admin".equalsIgnoreCase(sub)) {
-            filter(List.of("<id>"), args[2]).forEach(completions::add);
+            switch (args[1].toLowerCase(Locale.ROOT)) {
+                case "create" -> filter(List.of("<id>"), args[2]).forEach(completions::add);
+                case "area", "reset" -> estateNames().stream()
+                        .filter(n -> n.toLowerCase(Locale.ROOT).startsWith(args[2].toLowerCase(Locale.ROOT)))
+                        .forEach(completions::add);
+                default -> {}
+            }
+            return completions;
+        }
+        if (args.length == 4 && "admin".equalsIgnoreCase(sub)
+                && "create".equalsIgnoreCase(args[1])) {
+            filter(List.of("end", "trial_chamber", "standard"), args[3]).forEach(completions::add);
             return completions;
         }
         return List.of();
@@ -386,6 +552,10 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
 
     private List<String> estateIds() {
         return estateService.findAll().stream().map(e -> e.id().toString()).toList();
+    }
+
+    private List<String> estateNames() {
+        return estateService.findAll().stream().map(Estate::name).toList();
     }
 
     private List<String> estateIdsOf(CommandSender sender) {

@@ -11,15 +11,16 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Computes a City's level from live progress — never from item deposits.
+ * Computes a City's level from live progress — never from direct credit deposits.
  *
  * <p>Progress inputs:
  * <ul>
  *   <li><b>wards</b> — wards annexed to the city</li>
  *   <li><b>members</b> — inhabitants of the city</li>
- *   <li><b>wealth</b> — sum of annexed wards' baseScore (each ward upgrade is
- *       paid with expensive items, so accumulated score approximates "valuable
- *       objects inside the city" without scanning blocks)</li>
+ *   <li><b>wealth</b> — dynamic score: the treasury vault's item value plus the
+ *       baseScore of annexed wards that are "in good standing" (positive upkeep
+ *       balance). Both parts move up and down on their own: deposits/withdrawals
+ *       change the treasury value, and the upkeep tick drains ward balances.</li>
  * </ul>
  *
  * <p>The resolved level is the highest configured level whose three minimums
@@ -49,14 +50,23 @@ public final class CityLevelService {
 
     private final WardService wardService;
     private final List<CityLevelDefinition> levels; // sorted ascending by requirements
+    /** Optional: persistent city treasury vaults contributing item value to wealth. */
+    private final dev.dreamcraft.protection.persistence.CityTreasuryStore treasuryStore;
 
     public CityLevelService(WardService wardService, ProtectionConfig config) {
-        this(wardService, config.cityLevels());
+        this(wardService, config.cityLevels(), null);
     }
 
-    /** Test-friendly constructor taking the raw level list. */
+    /** Test-friendly constructor taking the raw level list (no treasury store). */
     public CityLevelService(WardService wardService, List<CityLevelDefinition> configuredLevels) {
+        this(wardService, configuredLevels, null);
+    }
+
+    public CityLevelService(WardService wardService,
+                            List<CityLevelDefinition> configuredLevels,
+                            dev.dreamcraft.protection.persistence.CityTreasuryStore treasuryStore) {
         this.wardService = wardService;
+        this.treasuryStore = treasuryStore;
         this.levels = configuredLevels == null ? List.of() : configuredLevels.stream()
                 .sorted(Comparator.comparingInt(CityLevelDefinition::minWealth)
                         .thenComparingInt(CityLevelDefinition::minWards)
@@ -69,7 +79,16 @@ public final class CityLevelService {
         List<Ward> annexed = List.copyOf(wardService.findByCity(city.id()));
         int wards = annexed.size();
         int members = city.members().size();
-        int wealth = annexed.stream().mapToInt(Ward::baseScore).sum();
+
+        // Dynamic wealth: healthy wards + treasury vault content value
+        int wardWealth = annexed.stream()
+                .filter(w -> w.upkeepBalance() > 0) // "en buen estado" — upkeep paid
+                .mapToInt(Ward::baseScore)
+                .sum();
+        int treasuryValue = treasuryStore != null
+                ? treasuryStore.computeValue(treasuryStore.get(city.id()))
+                : 0;
+        int wealth = wardWealth + treasuryValue;
 
         CityLevelDefinition current = null;
         for (CityLevelDefinition lvl : levels) {

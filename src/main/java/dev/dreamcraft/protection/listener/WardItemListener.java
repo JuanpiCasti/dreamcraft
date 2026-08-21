@@ -4,7 +4,6 @@ import dev.dreamcraft.protection.domain.model.OwnerType;
 import dev.dreamcraft.protection.domain.model.Ward;
 import dev.dreamcraft.protection.domain.service.WardService;
 import dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter;
-import dev.dreamcraft.protection.service.ClaimManager;
 import dev.dreamcraft.protection.ui.WardItems;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -36,7 +35,6 @@ public final class WardItemListener implements Listener {
 
     private final WardItems wardItems;
     private final WardService wardService;
-    private final ClaimManager claimManager;
     private final WorldGuardAdapter worldGuardAdapter;
     private final BiConsumer<Player, Ward> menuOpener;
     private final java.util.function.Predicate<Player> menuAccess;
@@ -44,14 +42,12 @@ public final class WardItemListener implements Listener {
 
     public WardItemListener(WardItems wardItems,
                             WardService wardService,
-                            ClaimManager claimManager,
                             WorldGuardAdapter worldGuardAdapter,
                             BiConsumer<Player, Ward> menuOpener,
                             java.util.function.Predicate<Player> menuAccess,
                             Runnable saveAction) {
         this.wardItems = wardItems;
         this.wardService = wardService;
-        this.claimManager = claimManager;
         this.worldGuardAdapter = worldGuardAdapter;
         this.menuOpener = menuOpener;
         this.menuAccess = menuAccess;
@@ -68,13 +64,7 @@ public final class WardItemListener implements Listener {
         Block block = event.getBlockPlaced();
         String world = block.getWorld().getName();
 
-        // No founding a Ward inside an existing claim...
-        if (claimManager.findByLocation(block.getLocation()).isPresent()) {
-            event.setCancelled(true);
-            player.sendMessage("§c[Ward] No puedes fundar un Ward dentro de un claim existente.");
-            return;
-        }
-        // ...nor inside another Ward's radius
+        // No founding a Ward inside another Ward's radius
         if (wardService.findAtLocation(world, block.getX(), block.getZ()).isPresent()) {
             event.setCancelled(true);
             player.sendMessage("§c[Ward] Esta área ya pertenece a otro Ward.");

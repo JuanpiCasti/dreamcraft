@@ -41,8 +41,12 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     private final dev.dreamcraft.protection.service.WardUpgradeService upgradeService;
     /** Optional: item-based upkeep deposits for Wards. */
     private final dev.dreamcraft.protection.service.WardUpkeepService upkeepService;
+    /** Optional: persistent city treasury vaults. */
+    private dev.dreamcraft.protection.persistence.CityTreasuryStore treasuryStore = null;
     /** Optional: reopens the Ward menu with fresh data (scheduled 1 tick later). */
     private java.util.function.BiConsumer<Player, Ward> wardMenuReopener = null;
+    /** Optional: manages private End instances for END-type estates. */
+    private dev.dreamcraft.protection.service.EndInstanceService endInstanceService = null;
 
     public MenuActionDispatcher(WardService wardService,
                                 CityService cityService,
@@ -78,6 +82,16 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         this.wardMenuReopener = reopener;
     }
 
+    /** Registers the persistent city treasury vault store. */
+    public void setCityTreasuryStore(dev.dreamcraft.protection.persistence.CityTreasuryStore store) {
+        this.treasuryStore = store;
+    }
+
+    /** Registers the End instance service for END-type estate actions. */
+    public void setEndInstanceService(dev.dreamcraft.protection.service.EndInstanceService service) {
+        this.endInstanceService = service;
+    }
+
     @Override
     public void accept(MenuContext ctx, MenuAction action) {
         Player player = Bukkit.getPlayer(ctx.viewerId());
@@ -91,10 +105,12 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                 case "ward.toggle_permission" -> handleWardTogglePermission(player, ctx, action);
                 case "ward.annex_city" -> handleWardAnnexCity(player, ctx);
                 case "ward.disband" -> handleWardDisband(player, ctx);
+                case "ward.upkeep_vault" -> handleOpenUpkeepVault(player, ctx);
+                case "ward.transfer" -> feedback(player, "Usa /ward transfer <jugador>", NamedTextColor.YELLOW);
                 case "city.invite" -> feedback(player, "Usa /city invite <jugador>", NamedTextColor.YELLOW);
                 case "city.kick" -> feedback(player, "Usa /city kick <jugador>", NamedTextColor.YELLOW);
                 case "city.roles" -> feedback(player, "Usa /city roles <jugador> <rol>", NamedTextColor.YELLOW);
-                case "city.bank" -> feedback(player, "Usa /city bank <deposit|withdraw> <monto>", NamedTextColor.YELLOW);
+                case "city.bank" -> handleOpenCityTreasury(player, ctx);
                 case "city.policy" -> handleCityPolicy(player, ctx, action);
                 case "city.delete" -> handleCityDelete(player, ctx);
                 case "estate.invite" -> feedback(player, "Usa /estate invite <jugador>", NamedTextColor.YELLOW);
@@ -112,6 +128,38 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     }
 
     // ── Ward actions ──────────────────────────────────────────────────────────
+
+    /**
+     * Opens the Ward upkeep vault: a free-use chest inventory. Nothing is
+     * consumed while it is open — the close listener settles the contents
+     * (accepted materials → units, everything else returned).
+     */
+    private void handleOpenUpkeepVault(Player player, MenuContext ctx) {
+        if (upkeepService == null) {
+            feedback(player, "Depósitos no disponibles.", NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        Ward ward = resolveWard(player, ctx);
+        if (ward == null) return;
+        if (!upkeepService.canDeposit(player, ward)) {
+            feedback(player, "No puedes depositar upkeep en este Ward.", NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        // Open next tick — opening inventories during a click event causes ghost items
+        UUID wardId = ward.id();
+        String wardName = ward.name();
+        Bukkit.getScheduler().runTask(plugin(), () -> {
+            Player online = Bukkit.getPlayer(player.getUniqueId());
+            if (online == null) return;
+            var holder = dev.dreamcraft.protection.ui.WardUpkeepVaultHolder.create(wardId,
+                    net.kyori.adventure.text.Component.text("⚔ Bóveda de Upkeep — " + wardName,
+                            NamedTextColor.DARK_AQUA));
+            online.openInventory(holder.getInventory());
+            playSuccess(online);
+        });
+    }
 
     /**
      * Deposit-slot handler: credits the offered stack as Ward upkeep units and
@@ -282,6 +330,43 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
 
     // ── City actions ──────────────────────────────────────────────────────────
 
+    /**
+     * Opens the City treasury vault: a persistent chest inventory backed by
+     * {@link dev.dreamcraft.protection.persistence.CityTreasuryStore}. Items
+     * stay inside and their value feeds the city's wealth score. Requires
+     * Council role or higher.
+     */
+    private void handleOpenCityTreasury(Player player, MenuContext ctx) {
+        if (treasuryStore == null) {
+            feedback(player, "El tesoro no está disponible.", NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        City city = resolveCity(player, ctx);
+        if (city == null) return;
+        CityRole role = city.roleOf(player.getUniqueId());
+        boolean council = city.isGovernor(player.getUniqueId()) || role == CityRole.COUNCIL;
+        if (!council) {
+            feedback(player, "Requerís rol Council o superior para el tesoro.", NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        UUID cityId = city.id();
+        String cityName = city.name();
+        int value = treasuryStore.computeValue(treasuryStore.get(cityId));
+        Bukkit.getScheduler().runTask(plugin(), () -> {
+            Player online = Bukkit.getPlayer(player.getUniqueId());
+            if (online == null) return;
+            var holder = dev.dreamcraft.protection.ui.CityTreasuryVaultHolder.create(cityId,
+                    net.kyori.adventure.text.Component.text("★ Tesoro de " + cityName,
+                            NamedTextColor.GOLD));
+            online.openInventory(holder.getInventory());
+            online.sendMessage(Component.text("[Ciudad] ", NamedTextColor.GOLD)
+                    .append(Component.text("Valor actual del tesoro: ", NamedTextColor.GRAY))
+                    .append(Component.text(value + " unidades de riqueza", NamedTextColor.YELLOW)));
+        });
+    }
+
     private void handleCityPolicy(Player player, MenuContext ctx, MenuAction action) {
         City city = resolveCity(player, ctx);
         if (city == null) return;
@@ -334,6 +419,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
             return;
         }
         estateService.addMember(estate, player.getUniqueId());
+        worldGuardAdapter.syncEstateMembers(estate);
         feedback(player, "Te uniste al Estate " + estate.name() + ".", NamedTextColor.GREEN);
         playSuccess(player);
     }
@@ -350,6 +436,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
             return;
         }
         estateService.removeMember(estate, player.getUniqueId());
+        worldGuardAdapter.syncEstateMembers(estate);
         player.closeInventory();
         feedback(player, "Saliste del Estate " + estate.name() + ".", NamedTextColor.GREEN);
         playSuccess(player);
@@ -368,7 +455,12 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
             feedback(player, "El Estate ya tiene una instancia activa.", NamedTextColor.YELLOW);
             return;
         }
-        feedback(player, "Instancia de " + estate.name() + " iniciada.", NamedTextColor.GREEN);
+        // END-type estates pre-open their private End world + dragon right away
+        String extra = "";
+        if (endInstanceService != null && endInstanceService.preopen(estate)) {
+            extra = " El End privado está listo con la dragona.";
+        }
+        feedback(player, "Instancia de " + estate.name() + " iniciada." + extra, NamedTextColor.GREEN);
         playSuccess(player);
     }
 
@@ -379,6 +471,10 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
             feedback(player, "Solo el owner puede disolver el Estate.", NamedTextColor.RED);
             return;
         }
+        if (endInstanceService != null && estate.type().usesEndInstance()) {
+            endInstanceService.resetInstance(estate);
+        }
+        worldGuardAdapter.removeEstateAreaRegion(estate);
         estateService.delete(estate);
         player.closeInventory();
         feedback(player, "Estate " + estate.name() + " disuelto.", NamedTextColor.GREEN);

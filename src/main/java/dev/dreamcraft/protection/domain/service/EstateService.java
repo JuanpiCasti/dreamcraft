@@ -1,6 +1,7 @@
 package dev.dreamcraft.protection.domain.service;
 
 import dev.dreamcraft.protection.domain.model.Estate;
+import dev.dreamcraft.protection.domain.model.EstateType;
 import dev.dreamcraft.protection.domain.port.EstateRepository;
 
 import java.time.Instant;
@@ -37,6 +38,33 @@ public final class EstateService {
             String instanceId,
             boolean persistent
     ) {
+        return createEstate(ownerId, name, adventureId, instanceId, persistent,
+                EstateType.STANDARD, null, 0, 0, 0, 0);
+    }
+
+    /**
+     * Creates a new Estate with an explicit adventure type and optional gated area.
+     *
+     * @param type       adventure kind (STANDARD / END / TRIAL_CHAMBER)
+     * @param areaWorld  world of the gated area (null = no area)
+     * @param areaX      area center X
+     * @param areaY      area center Y
+     * @param areaZ      area center Z
+     * @param areaRadius area radius in blocks (0 = no area)
+     */
+    public Estate createEstate(
+            UUID ownerId,
+            String name,
+            String adventureId,
+            String instanceId,
+            boolean persistent,
+            EstateType type,
+            String areaWorld,
+            int areaX,
+            int areaY,
+            int areaZ,
+            int areaRadius
+    ) {
         Estate estate = new Estate(
                 UUID.randomUUID(),
                 ownerId,
@@ -45,7 +73,13 @@ public final class EstateService {
                 instanceId,
                 Instant.now(),
                 persistent,
-                name
+                name,
+                type,
+                areaWorld,
+                areaX,
+                areaY,
+                areaZ,
+                areaRadius
         );
         estateRepository.save(estate);
         return estate;
@@ -77,6 +111,21 @@ public final class EstateService {
 
     public void makePersistent(Estate estate, boolean persistent) {
         estate.persistent(persistent);
+        estateRepository.save(estate);
+    }
+
+    /** Changes the adventure type of the estate (e.g. STANDARD → END). */
+    public void setType(Estate estate, EstateType type) {
+        estate.type(type);
+        estateRepository.save(estate);
+    }
+
+    /**
+     * Assigns or moves the gated physical area of the estate.
+     * A null world or non-positive radius clears the area.
+     */
+    public void setArea(Estate estate, String worldName, int x, int y, int z, int radius) {
+        estate.area(worldName, x, y, z, radius);
         estateRepository.save(estate);
     }
 
@@ -118,4 +167,63 @@ public final class EstateService {
     public Collection<Estate> findByMember(UUID memberId) { return estateRepository.findByMember(memberId); }
     public Collection<Estate> findByAdventure(String adventureId) { return estateRepository.findByAdventureId(adventureId); }
     public Collection<Estate> findAll() { return estateRepository.findAll(); }
+
+    /** All estates of the given adventure type. */
+    public Collection<Estate> findByType(EstateType type) {
+        return estateRepository.findAll().stream()
+                .filter(e -> e.type() == type)
+                .toList();
+    }
+
+    /**
+     * Finds the estate whose gated area contains the given block coordinates.
+     * When several areas overlap, the smallest (most specific) wins.
+     */
+    public Optional<Estate> findAreaAt(String worldName, int x, int z) {
+        return estateRepository.findAll().stream()
+                .filter(e -> e.contains(worldName, x, z))
+                .min(Comparator.comparingInt(Estate::areaRadius));
+    }
+
+    /**
+     * All instanced-adventure estates (END / TRIAL_CHAMBER) whose gated area
+     * contains the given block coordinates. Several parties may share one zone:
+     * each has its own estate and, for END, its own private instance world.
+     */
+    public Collection<Estate> findInstancedAreasAt(String worldName, int x, int z) {
+        return estateRepository.findAll().stream()
+                .filter(e -> e.type().isInstancedAdventure())
+                .filter(e -> e.contains(worldName, x, z))
+                .toList();
+    }
+
+    /**
+     * The admin-created zone template for an adventure type: an estate of that
+     * type which owns a gated area. Party estates copy their area from it.
+     */
+    public Optional<Estate> findZoneTemplate(EstateType type) {
+        return findByType(type).stream()
+                .filter(Estate::hasArea)
+                .findFirst();
+    }
+
+    /**
+     * Creates a personal party estate for a player: they become the owner
+     * (leader) and can invite their group. When a zone template exists, the
+     * party inherits its gated area so portal gating recognizes its members.
+     *
+     * @param ownerId   the player who discovered/joined — becomes leader
+     * @param ownerName display name for the estate title
+     * @param type      adventure kind (END / TRIAL_CHAMBER / STANDARD)
+     * @param zone      the zone template to inherit the area from (nullable)
+     */
+    public Estate createPartyEstate(UUID ownerId, String ownerName, EstateType type, Estate zone) {
+        String name = type.displayName() + " de " + ownerName;
+        if (zone != null && zone.hasArea()) {
+            return createEstate(ownerId, name, "adv-" + type.key(), null, false, type,
+                    zone.areaWorld(), zone.areaX(), zone.areaY(), zone.areaZ(), zone.areaRadius());
+        }
+        return createEstate(ownerId, name, "adv-" + type.key(), null, false, type,
+                null, 0, 0, 0, 0);
+    }
 }

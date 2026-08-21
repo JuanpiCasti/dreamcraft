@@ -137,25 +137,53 @@ Admin: `dreamcraft.city.admin` (default: op).
 
 Grupos temporales para instancias de aventura.
 
+Tipos de aventura: `end` (portal del End con instancia privada) y
+`trial_chamber` (cámara de pruebas con vaults reservados). `standard` es un
+grupo sin mecánicas de mundo.
+
 | Comando | Descripción |
 |---|---|
 | `/estate` | Muestra la ayuda |
 | `/estate create <id>` | Crea un Estate propio |
-| `/estate discover <tipo>` | Descubre un Estate de aventura no persistente y abre su menú |
+| `/estate discover <tipo>` | Genera tu propio Estate de aventura (`end`, `trial_chamber`) con vos como líder y abre su menú |
 | `/estate invite <jugador>` | Invita un miembro (solo owner) |
 | `/estate join <id>` | Te une a un Estate por ID |
 | `/estate leave` | Salís del Estate (el owner no puede salir: debe transferir o disolver) |
-| `/estate start` | Inicia la instancia del Estate (solo owner; una activa a la vez) |
+| `/estate start` | Inicia la instancia del Estate (solo owner; en estates END pre-crea el mundo con la dragona) |
 | `/estate transfer <jugador>` | Transfiere el ownership a un miembro (solo owner) |
-| `/estate info` | Owner, miembros, aventura, instancia y persistencia |
+| `/estate info` | Tipo, owner, miembros, aventura, área, mundo End y persistencia |
 | `/estate menu` | Abre el menú gráfico del Estate |
-| `/estate disband` | Disuelve el Estate (solo owner) |
+| `/estate disband` | Disuelve el Estate (solo owner; reinicia su instancia End si tiene) |
 
 ### Admin
 
+Requieren `dreamcraft.protection.admin`.
+
 | Comando | Descripción |
 |---|---|
-| `/estate admin create <id> <tipo>` | Crea un Estate administrativo persistente. Requiere `dreamcraft.protection.admin` |
+| `/estate admin create <id> <tipo> [radio]` | Crea un Estate administrativo persistente y fija su **área** donde estás parado (default r=32). Parate dentro de la estructura del portal/cámara antes de ejecutarlo |
+| `/estate admin area <id> [radio]` | Mueve/re-ancla el área del estate a tu posición actual |
+| `/estate admin reset <id>` | Reinicia la instancia End: borra el mundo privado y deja la dragona lista |
+
+### Cómo funciona una aventura de tipo `end`
+
+1. Un admin se para junto a la estructura del portal (frames + sala) y corre
+   `/estate admin create <nombre> end 32`. Eso define la **zona** del área.
+2. Cada jugador que entra a la zona (o corre `/estate discover end`) obtiene su
+   **propio estate de party**: queda como líder, hereda el área de la zona y
+   puede invitar a su grupo con `/estate invite <jugador>`.
+3. Los frames solo aceptan ojos de miembros de alguna party de la zona; al
+   cruzar el portal, cada party viaja a su **mundo End privado**
+   (`dc_end_<id>`) con plataforma de obsidiana y dragona fresca — varias
+   parties pueden estar peleando en paralelo sin chocarse, y el
+   `world_the_end` compartido queda intacto.
+4. El primer ingreso de cada party avisa quién ya está "del otro lado" y, tras
+   un período de gracia configurable, los ojos del portal de entrada se
+   retiran: la próxima party debe volver a armarlo.
+5. Cuando el último miembro de una party sale (portal de salida, muerte,
+   desconexión), su mundo se descarga y se borra: **el mapa vuelve a su estado
+   previo al jefe y la dragona reaparece** para esa party. Las demás parties
+   siguen peleando en sus propios mundos.
 
 ---
 

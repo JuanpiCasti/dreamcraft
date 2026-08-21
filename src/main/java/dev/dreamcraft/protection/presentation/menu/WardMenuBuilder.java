@@ -47,7 +47,7 @@ public final class WardMenuBuilder {
                                 : "&7Sin ciudad"
                 )));
 
-        // Slot 10 — Upkeep deposit
+        // Slot 10 — Upkeep vault opener
         List<String> upkeepLore = new ArrayList<>();
         upkeepLore.add("&7Balance actual: &f" + vm.upkeepBalance() + " unidades");
         if (!vm.upkeepMaterials().isEmpty()) {
@@ -58,11 +58,19 @@ public final class WardMenuBuilder {
             }
         }
         upkeepLore.add("");
-        upkeepLore.add(vm.canDeposit()
-                ? "&7Toma el ítem en mano y haz clic aquí"
-                : "&cNo puedes depositar en este Ward");
-        items.add(MenuItem.depositSlot(10, "icon.upkeep",
-                "&a&lDepositar Upkeep", upkeepLore));
+        if (vm.canDeposit()) {
+            upkeepLore.add("&7Clic para abrir la bóveda,");
+            upkeepLore.add("&7colocá los ítems y cerrala:");
+            upkeepLore.add("&ase contabilizan al salir");
+        } else {
+            upkeepLore.add("&cNo puedes depositar en este Ward");
+        }
+        if (vm.canDeposit()) {
+            items.add(MenuItem.button(10, "icon.upkeep", "&a&lBóveda de Upkeep", upkeepLore,
+                    MenuAction.of("ward.upkeep_vault")));
+        } else {
+            items.add(MenuItem.display(10, "icon.upkeep", "&8&lBóveda de Upkeep", upkeepLore));
+        }
 
         // Slot 12 — Score / upgrade
         List<String> scoreLore = new ArrayList<>();

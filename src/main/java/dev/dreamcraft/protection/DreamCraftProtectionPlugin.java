@@ -24,23 +24,14 @@ import dev.dreamcraft.protection.integration.worldedit.WorldEditAdapter;
 import dev.dreamcraft.protection.integration.worldedit.WorldEditAdapterImpl;
 import dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter;
 import dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapterImpl;
-import dev.dreamcraft.protection.listener.HopperProtectionListener;
-import dev.dreamcraft.protection.listener.PhysicsProtectionListener;
-import dev.dreamcraft.protection.listener.ProtectionListener;
-import dev.dreamcraft.protection.listener.RedstoneProtectionListener;
 import dev.dreamcraft.protection.listener.WardItemListener;
 import dev.dreamcraft.protection.persistence.ConfigWardTierProvider;
-import dev.dreamcraft.protection.persistence.ClaimRepository;
 import dev.dreamcraft.protection.persistence.YamlCityRepository;
 import dev.dreamcraft.protection.persistence.YamlEstateRepository;
 import dev.dreamcraft.protection.persistence.YamlWardRepository;
 import dev.dreamcraft.protection.presentation.MenuActionDispatcher;
 import dev.dreamcraft.protection.presentation.VanillaMenuProvider;
-import dev.dreamcraft.protection.service.*;
-import dev.dreamcraft.protection.ui.ProtectionMenu;
 import dev.dreamcraft.protection.ui.WardItems;
-import dev.dreamcraft.protection.ui.WardrobeItems;
-import org.bukkit.Material;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -50,17 +41,10 @@ import java.time.Duration;
 
 public final class DreamCraftProtectionPlugin extends JavaPlugin {
 
-    // ── Existing protection system ────────────────────────────────────────────
+    // ── Configuration ─────────────────────────────────────────────────────────
     private ProtectionConfig protectionConfig;
-    private ClaimManager claimManager;
-    private ClaimIndex claimIndex;
-    private BuildingCostService buildingCostService;
-    private UpkeepCalculator upkeepCalculator;
-    private UpkeepManager upkeepManager;
-    private WardrobeItems wardrobeItems;
     private WardItems wardItems;
-    private ProtectionChecker protectionChecker;
-    private ProtectionMenu protectionMenu;
+    private dev.dreamcraft.protection.persistence.CityTreasuryStore treasuryStore;
 
     // ── Integration layer ─────────────────────────────────────────────────────
     private CapabilityRegistry capabilityRegistry;
@@ -80,6 +64,10 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
     private CityService cityService;
     private EstateService estateService;
 
+    // ── Estate adventure instances (End / Trial Chamber) ─────────────────────
+    private dev.dreamcraft.protection.config.EndInstanceConfig endInstanceConfig;
+    private dev.dreamcraft.protection.service.EndInstanceService endInstanceService;
+
     // ── Presentation ──────────────────────────────────────────────────────────
     private VanillaMenuProvider menuProvider;
 
@@ -95,6 +83,7 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
     public WardService        wardService()          { return wardService; }
     public CityService        cityService()          { return cityService; }
     public EstateService      estateService()        { return estateService; }
+    public dev.dreamcraft.protection.service.EndInstanceService endInstanceService() { return endInstanceService; }
     public VanillaMenuProvider menuProvider()        { return menuProvider; }
 
     @Override
@@ -114,8 +103,13 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         chunkyAdapter      = new ChunkyAdapterImpl(capabilityRegistry, getLogger());
         packetEventsAdapter = new PacketEventsAdapterImpl(capabilityRegistry, getLogger());
 
-        // 3. Boot existing protection services
+        // 3. Boot configuration + items
         bootServices();
+
+        // 3b. Estate adventure instancing (End / Trial Chamber) — created once,
+        //     survives /protection reload via the lazy EstateService supplier.
+        endInstanceService = new dev.dreamcraft.protection.service.EndInstanceService(
+                this, this::estateService, endInstanceConfig, essentialsAdapter);
 
         // 4. Domain persistence
         bootDomainPersistence();
@@ -123,30 +117,20 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         // 5. Presentation
         menuProvider = new VanillaMenuProvider();
 
-        // 6. Register Bukkit listeners
+        // 6. Register Bukkit listeners (menu provider only)
         var pm = getServer().getPluginManager();
-        ProtectionChecker checker = protectionChecker();
-        ProtectionMenu menu = protectionMenu();
-
-        pm.registerEvents(new ProtectionListener(
-                wardrobeItems(), claimManager, checker, menu, upkeepManager()), this);
-        pm.registerEvents(menu, this);
-        pm.registerEvents(new PhysicsProtectionListener(checker), this);
-        pm.registerEvents(new RedstoneProtectionListener(checker), this);
-        pm.registerEvents(new HopperProtectionListener(checker), this);
         pm.registerEvents(menuProvider, this);
 
-        // 7. Upkeep tick (legacy claims)
-        new UpkeepTickTask(claimManager, upkeepManager(), upkeepCalculator, protectionConfig, this).register();
-
-        // 8. Unified Ward mechanic — shared services, menu façade and commands
+        // 7. Unified Ward mechanic — shared services, menu façade and commands
         WardTierProvider tierProvider = new ConfigWardTierProvider(getConfig());
         dev.dreamcraft.protection.service.WardUpgradeService upgradeService =
                 new dev.dreamcraft.protection.service.WardUpgradeService(tierProvider, protectionConfig);
         dev.dreamcraft.protection.service.WardUpkeepService upkeepService =
                 new dev.dreamcraft.protection.service.WardUpkeepService(protectionConfig, wardService);
         dev.dreamcraft.protection.service.CityLevelService cityLevelService =
-                new dev.dreamcraft.protection.service.CityLevelService(wardService, protectionConfig);
+                new dev.dreamcraft.protection.service.CityLevelService(wardService,
+                        protectionConfig.cityLevels(),
+                        cityTreasuryStore());
 
         java.util.List<String> upkeepLines = new java.util.ArrayList<>();
         upkeepService.acceptedMaterials().forEach((mat, units) ->
@@ -155,14 +139,16 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                 new dev.dreamcraft.protection.command.WardMenuFacade(
                         tierProvider, cityService, upgradeService, menuProvider, upkeepLines);
 
-        // 8a. Wire the action + deposit dispatchers to the vanilla menu provider
+        // 7a. Wire the action + deposit dispatchers to the vanilla menu provider
         MenuActionDispatcher dispatcher = new MenuActionDispatcher(
                 wardService, cityService, estateService, worldGuardAdapter, upgradeService, upkeepService);
         dispatcher.setWardMenuReopener(wardMenuFacade::open);
         menuProvider.setActionHandler(dispatcher);
         menuProvider.setDepositHandler(dispatcher);
+        dispatcher.setCityTreasuryStore(cityTreasuryStore());
+        dispatcher.setEndInstanceService(endInstanceService());
 
-        // 8b. Commands: /protection delegates to the same Ward mechanic as /ward
+        // 7b. Commands: /protection delegates to the same Ward mechanic as /ward
         PluginCommand command = getCommand("protection");
         if (command != null) {
             ProtectionCommand executor = new ProtectionCommand(
@@ -187,23 +173,23 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         }
         PluginCommand estateCmd = getCommand("estate");
         if (estateCmd != null) {
-            EstateCommand estateExecutor = new EstateCommand(estateService, menuProvider);
+            EstateCommand estateExecutor = new EstateCommand(estateService, menuProvider,
+                    worldGuardAdapter, endInstanceService());
             estateCmd.setExecutor(estateExecutor);
             estateCmd.setTabCompleter(estateExecutor);
         }
 
-        // 8c. Ward block listener — placing the ward item founds a Ward centered on it
+        // 7c. Ward block listener — placing the ward item founds a Ward centered on it
         pm.registerEvents(new WardItemListener(
                 wardItems(),
                 wardService,
-                claimManager,
                 worldGuardAdapter,
                 wardExecutor::openWardMenu,
                 wardExecutor::canOpenWardMenu,
                 this::saveDomainData
         ), this);
 
-        // 8d. Ward upkeep tick + tier-gated blocks + region entry action bar
+        // 7d. Ward upkeep tick + tier-gated blocks + region entry action bar
         new dev.dreamcraft.protection.service.WardUpkeepTickTask(
                 wardService, tierProvider, wardRepository,
                 protectionConfig.upkeepInterval(), this).register();
@@ -211,16 +197,25 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                 wardService, tierProvider, protectionConfig), this);
         pm.registerEvents(new dev.dreamcraft.protection.listener.WardRegionListener(wardService), this);
 
+        // 7e. Ward upkeep vault — settles contents when the vault inventory closes
+        pm.registerEvents(new dev.dreamcraft.protection.listener.WardUpkeepVaultListener(
+                wardService, upkeepService, this::saveDomainData), this);
+
+        // 7f. City treasury vault — persists contents when the vault inventory closes
+        pm.registerEvents(new dev.dreamcraft.protection.listener.CityTreasuryVaultListener(
+                cityTreasuryStore(), this::flushDomainData), this);
+
+        // 8. Estate adventure areas — gated portals + private End instances
+        pm.registerEvents(new dev.dreamcraft.protection.listener.EstatePortalListener(
+                estateService, endInstanceService(), worldGuardAdapter), this);
+
         getLogger().info("[DreamCraft] Domain layer active — Ward/City/Estate ready.");
     }
 
     @Override
     public void onDisable() {
-        // Save existing claim data
-        if (claimManager != null) {
-            try { claimManager.save(); }
-            catch (IOException e) { getLogger().severe("No se pudo guardar claims: " + e.getMessage()); }
-        }
+        // Unload estate instance worlds without saving (folders are cleaned lazily)
+        if (endInstanceService != null) endInstanceService.shutdown();
         // Save domain data
         flushDomainData();
     }
@@ -231,24 +226,15 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         reloadConfig();
         this.protectionConfig = ProtectionConfig.load(getConfig());
         validateConfig(protectionConfig);
-        this.claimIndex = new ClaimIndex();
-        this.buildingCostService = new BuildingCostService(protectionConfig);
-        this.upkeepCalculator = new UpkeepCalculator(protectionConfig);
-        this.upkeepManager = new UpkeepManager(protectionConfig, upkeepCalculator);
-        this.claimManager = new ClaimManager(
-                protectionConfig,
-                claimIndex,
-                new ClaimRepository(new File(getDataFolder(), "claims.yml")),
-                buildingCostService
-        );
-        this.wardrobeItems = new WardrobeItems(this, protectionConfig);
+        this.endInstanceConfig = dev.dreamcraft.protection.config.EndInstanceConfig.load(getConfig());
+        if (endInstanceService != null) {
+            endInstanceService.applyConfig(endInstanceConfig);
+        }
         this.wardItems = new WardItems(this, protectionConfig);
-        this.protectionChecker = new ProtectionChecker(protectionConfig, claimManager.claimIndex());
-        Material depositMat = protectionConfig.upkeepResourceMaterial() != null
-                ? protectionConfig.upkeepResourceMaterial() : Material.DIAMOND;
-        this.protectionMenu = new ProtectionMenu(
-                upkeepCalculator, claimManager, depositMat, protectionConfig.upkeepUnitsPerItem());
-        this.claimManager.load();
+        this.treasuryStore = new dev.dreamcraft.protection.persistence.CityTreasuryStore(
+                new File(getDataFolder(), "treasuries.yml"),
+                protectionConfig.wardUpkeepMaterials());
+        this.treasuryStore.loadAll();
     }
 
     private void bootDomainPersistence() {
@@ -280,6 +266,7 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
             if (wardRepository  != null) wardRepository.flush();
             if (cityRepository  != null) cityRepository.flush();
             if (estateRepository != null) estateRepository.flush();
+            if (treasuryStore   != null) treasuryStore.flush();
         } catch (IOException e) {
             getLogger().severe("[DreamCraft] Failed to save domain data: " + e.getMessage());
         }
@@ -291,59 +278,27 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
     }
 
     private void reloadPluginConfig() {
-        try { claimManager.save(); }
-        catch (IOException e) { getLogger().warning("No se pudo guardar antes del reload: " + e.getMessage()); }
         bootServices();
         bootDomainPersistence();
         getLogger().info("[DreamCraftProtection] Recarga completada.");
     }
 
-    // ── Config validation (unchanged) ─────────────────────────────────────────
+    // ── Config validation ─────────────────────────────────────────────────────
 
     private void validateConfig(ProtectionConfig cfg) {
-        if (cfg.defaultRadius() <= 0)
-            getLogger().warning("[Config] protection.default-radius debe ser > 0. Usando 16.");
-        if (cfg.defaultBuildRadius() <= 0)
-            getLogger().warning("[Config] protection.default-build-radius debe ser > 0. Usando 16.");
-        if (cfg.inventorySize() % 9 != 0 || cfg.inventorySize() < 9 || cfg.inventorySize() > 54)
-            getLogger().warning("[Config] protection.inventory-size inválido (" + cfg.inventorySize() + "). Debe ser múltiplo de 9 (9–54).");
-        if (cfg.upkeepUnitsPerItem() <= 0)
-            getLogger().warning("[Config] upkeep.units-per-item debe ser > 0. Usando 64.");
         if (cfg.upkeepInterval().isZero() || cfg.upkeepInterval().isNegative())
             getLogger().warning("[Config] upkeep.interval debe ser > 0.");
-        if (cfg.warningThreshold().isNegative())
-            getLogger().warning("[Config] upkeep.warning-threshold negativo.");
-        if (cfg.expiringThreshold().isNegative())
-            getLogger().warning("[Config] upkeep.expiring-threshold negativo.");
-        if (cfg.gracePeriod().isNegative())
-            getLogger().warning("[Config] upkeep.grace-period negativo.");
-        if (cfg.destructionDelay().isNegative())
-            getLogger().warning("[Config] upkeep.destruction-delay negativo.");
-        if (cfg.upkeepResourceMaterial() == null)
-            getLogger().warning("[Config] upkeep.resource-material inválido. Usando DIAMOND.");
-        if (cfg.wardrobeMaterial() == null)
-            getLogger().warning("[Config] protection.wardrobe-material inválido. Usando LODESTONE.");
-        if (cfg.tiers().isEmpty())
-            getLogger().warning("[Config] No se encontraron tiers definidos en la configuración.");
-        cfg.tiers().forEach((key, tier) -> {
-            if (tier.radius() <= 0)
-                getLogger().warning("[Config] tier." + key + ".radius debe ser > 0.");
-            if (tier.buildRadius() <= 0)
-                getLogger().warning("[Config] tier." + key + ".build-radius debe ser > 0.");
-            if (tier.maxMembers() < 0)
-                getLogger().warning("[Config] tier." + key + ".max-members no puede ser negativo.");
-        });
-        cfg.categoryBaseCosts().forEach((cat, cost) -> {
-            if (cost <= 0)
-                getLogger().warning("[Config] building-cost.categories." + cat + ".base-cost debe ser > 0.");
-        });
-        getLogger().info("[Config] Configuración cargada. Tiers: " + cfg.tiers().keySet()
-                + " | Protección " + (cfg.enabled() ? "habilitada" : "DESHABILITADA") + ".");
+        if (cfg.wardMaterial() == null)
+            getLogger().warning("[Config] protection.ward-material inválido.");
+        if (cfg.wardUpkeepMaterials().isEmpty())
+            getLogger().warning("[Config] ward.upkeep-materials vacío: nadie podrá depositar upkeep.");
+        if (cfg.cityLevels().isEmpty())
+            getLogger().warning("[Config] city-levels.levels vacío: las ciudades no tendrán niveles.");
+        getLogger().info("[Config] Configuración cargada. Upkeep materials: "
+                + cfg.wardUpkeepMaterials().size()
+                + " | Niveles de ciudad: " + cfg.cityLevels().size() + ".");
     }
 
-    private WardrobeItems wardrobeItems()   { return wardrobeItems; }
-    private WardItems wardItems()           { return wardItems; }
-    private ProtectionChecker protectionChecker() { return protectionChecker; }
-    private ProtectionMenu protectionMenu() { return protectionMenu; }
-    private UpkeepManager upkeepManager()   { return upkeepManager; }
+    private WardItems wardItems() { return wardItems; }
+    private dev.dreamcraft.protection.persistence.CityTreasuryStore cityTreasuryStore() { return treasuryStore; }
 }

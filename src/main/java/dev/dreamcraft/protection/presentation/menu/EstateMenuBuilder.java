@@ -35,7 +35,9 @@ public final class EstateMenuBuilder {
                 List.of(
                         "&7Owner: &f" + vm.ownerName(),
                         "&7Miembros: &f" + vm.memberCount(),
+                        "&7Tipo: &f" + vm.typeLabel(),
                         vm.isAdventureLinked() ? "&7Aventura: &f" + vm.adventureId() : "&7Sin aventura",
+                        vm.hasArea() ? "&aÁrea de aventura activa" : "&7Sin área definida",
                         vm.persistent() ? "&7Persistente: &aSí" : "&7Persistente: &cNo",
                         "&7Creado: &f" + vm.createdAt()
                 )));

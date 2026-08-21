@@ -231,8 +231,8 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
                 info(player, WARD_PREFIX, "Aceptados: " + acceptedMaterialsList());
                 return true;
             }
-            org.bukkit.Material material = org.bukkit.Material.matchMaterial(args[2].toUpperCase(Locale.ROOT));
-            if (material == null || !upkeepService.isAccepted(material)) {
+            org.bukkit.Material material = upkeepService.matchAccepted(args[2]).orElse(null);
+            if (material == null) {
                 error(player, WARD_PREFIX, "Material no aceptado: " + args[2]);
                 info(player, WARD_PREFIX, "Aceptados: " + acceptedMaterialsList());
                 return true;

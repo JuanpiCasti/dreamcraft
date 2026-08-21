@@ -246,9 +246,20 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /**
+     * /city bank — admin-only raw credit adjustment (debug).
+     * The real treasury is the physical vault: click "Tesoro" in the city menu
+     * or use this command as an admin to correct balances manually.
+     */
     private boolean handleBank(Player player, String[] args) {
+        if (!player.hasPermission("dreamcraft.ward.admin")
+                && !player.hasPermission("dreamcraft.protection.admin")) {
+            error(player, CITY_PREFIX, "El tesoro se gestiona con ítems: abrilo desde el menú de la ciudad.");
+            info(player, CITY_PREFIX, "Menú de ciudad → slot §fTesoro§7 (requiere rol Council o superior).");
+            return true;
+        }
         if (args.length < 3) {
-            error(player, CITY_PREFIX, "Uso: /city bank <deposit|withdraw> <monto>");
+            error(player, CITY_PREFIX, "Uso: /city bank <deposit|withdraw> <monto> §8(admin)");
             return true;
         }
         City city = resolveCity(player);
@@ -450,7 +461,7 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
         player.sendMessage("§f/city invite <jugador>    §7— Invitar residente");
         player.sendMessage("§f/city kick <jugador>      §7— Expulsar residente");
         player.sendMessage("§f/city roles <jugador> <rol> §7— Asignar rol");
-        player.sendMessage("§f/city bank <deposit|withdraw> <monto> §7— Gestionar tesoro");
+        player.sendMessage("§f/city bank <deposit|withdraw> <monto> §7— Ajuste admin de créditos");
         player.sendMessage("§f/city policy set <politica> <on|off> §7— Cambiar política");
         player.sendMessage("§f/city transfer <jugador>  §7— Transferir gobernanza");
         player.sendMessage("§f/city delete              §7— Eliminar ciudad");

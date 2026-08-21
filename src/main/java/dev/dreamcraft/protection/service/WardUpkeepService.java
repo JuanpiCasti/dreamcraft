@@ -38,7 +38,12 @@ public final class WardUpkeepService {
     private final WardService wardService;
 
     public WardUpkeepService(ProtectionConfig config, WardService wardService) {
-        this.materialsByUnitValue = new LinkedHashMap<>(config.wardUpkeepMaterials());
+        this(config.wardUpkeepMaterials(), wardService);
+    }
+
+    /** Test-friendly constructor taking the raw material→units map. */
+    public WardUpkeepService(Map<Material, Integer> materialsByUnitValue, WardService wardService) {
+        this.materialsByUnitValue = new LinkedHashMap<>(materialsByUnitValue);
         this.wardService = wardService;
     }
 
@@ -55,6 +60,24 @@ public final class WardUpkeepService {
     /** @return accepted materials mapped to their per-item unit value (insertion order = config order). */
     public Map<Material, Integer> acceptedMaterials() {
         return new LinkedHashMap<>(materialsByUnitValue);
+    }
+
+    /**
+     * Lenient material resolution against the accepted set: tolerates missing
+     * underscores and spaces ("ironingot", "gold ingot" → GOLD_INGOT).
+     *
+     * @return the accepted material, or empty when nothing matches
+     */
+    public java.util.Optional<Material> matchAccepted(String input) {
+        if (input == null || input.isBlank()) return java.util.Optional.empty();
+        String normalized = input.trim().toUpperCase(java.util.Locale.ROOT).replace(' ', '_');
+        Material direct = Material.matchMaterial(normalized);
+        if (direct != null && isAccepted(direct)) return java.util.Optional.of(direct);
+        String compact = normalized.replace("_", "");
+        for (Material accepted : materialsByUnitValue.keySet()) {
+            if (accepted.name().replace("_", "").equals(compact)) return java.util.Optional.of(accepted);
+        }
+        return java.util.Optional.empty();
     }
 
     /**
