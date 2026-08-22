@@ -43,8 +43,8 @@ public final class WardMenuBuilder {
                         "&7Upkeep: &f" + vm.upkeepBalance(),
                         "&7Centro: &f" + vm.centerX() + ", " + vm.centerY() + ", " + vm.centerZ(),
                         vm.hasCityMembership()
-                                ? "&7Ciudad: &f" + vm.cityName()
-                                : "&7Sin ciudad"
+                                ? "&7Matriz: &f" + vm.cityName()
+                                : "&7Sin Matriz"
                 )));
 
         // Slot 10 — Upkeep vault opener
@@ -63,7 +63,7 @@ public final class WardMenuBuilder {
             upkeepLore.add("&7colocá los ítems y cerrala:");
             upkeepLore.add("&ase contabilizan al salir");
         } else {
-            upkeepLore.add("&cNo puedes depositar en este Ward");
+            upkeepLore.add("&cNo puedes depositar en este NÃºcleo");
         }
         if (vm.canDeposit()) {
             items.add(MenuItem.button(10, "icon.upkeep", "&a&lBóveda de Upkeep", upkeepLore,
@@ -103,11 +103,11 @@ public final class WardMenuBuilder {
                 scoreLore.add("&7Mejora disponible al siguiente tier");
                 scoreLore.add("&aClic para mejorar");
             }
-            items.add(MenuItem.button(12, "icon.ward.active", "&a&lMejorar Ward", scoreLore,
+            items.add(MenuItem.button(12, "icon.ward.active", "&a&lElevar Fase", scoreLore,
                     MenuAction.of("ward.upgrade")));
         } else {
             scoreLore.add("&8Tier máximo alcanzado");
-            items.add(MenuItem.display(12, "icon.ward.inactive", "&8&lMejorar Ward", scoreLore));
+            items.add(MenuItem.display(12, "icon.ward.inactive", "&8&lElevar Fase", scoreLore));
         }
 
         // Slot 14 — Permissions toggle
@@ -131,15 +131,15 @@ public final class WardMenuBuilder {
 
         // Slot 16 — City membership
         if (vm.hasCityMembership()) {
-            items.add(MenuItem.display(16, "icon.city.overview", "&a&lCiudad: " + vm.cityName(),
-                    List.of("&7Ward anexado a la ciudad", "&7" + vm.cityName())));
+            items.add(MenuItem.display(16, "icon.city.overview", "&a&lMatriz: " + vm.cityName(),
+                    List.of("&7NÃºcleo federado a la Matriz", "&7" + vm.cityName())));
         } else if (vm.canAnnexToCity()) {
-            items.add(MenuItem.button(16, "icon.city.overview", "&a&lAnexar a Ciudad",
-                    List.of("&7Clic para anexar a tu ciudad"),
+            items.add(MenuItem.button(16, "icon.city.overview", "&a&lFederar a Matriz",
+                    List.of("&7Clic para federar a tu Matriz"),
                     MenuAction.of("ward.annex_city")));
         } else {
             items.add(MenuItem.display(16, "icon.city.overview", "&8&lAnexar a Ciudad",
-                    List.of("&8Necesitas ser owner y no tener ciudad")));
+                    List.of("&8Necesitas ser owner y no tener Matriz")));
         }
 
         // Slot 19 — Transfer ownership
@@ -154,8 +154,8 @@ public final class WardMenuBuilder {
 
         // Slot 21 — Disband / delete
         if (vm.canDisband()) {
-            items.add(MenuItem.button(21, "icon.ward.inactive", "&c&lDisolver Ward",
-                    List.of("&cClic para eliminar este Ward", "&cEsta acción es irreversible"),
+            items.add(MenuItem.button(21, "icon.ward.inactive", "&c&lDespertar apagado",
+                    List.of("&cClic para eliminar este NÃºcleo", "&cEsta acción es irreversible"),
                     MenuAction.of("ward.disband")));
         } else {
             items.add(MenuItem.display(21, "icon.ward.inactive", "&8&lDisolver Ward",

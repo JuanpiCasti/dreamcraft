@@ -28,7 +28,7 @@ public final class CityMenuBuilder {
         List<String> overviewLore = new ArrayList<>();
         overviewLore.add("&7Gobernador: &f" + vm.governorName());
         overviewLore.add("&7Miembros: &f" + vm.memberCount());
-        overviewLore.add("&7Wards: &f" + vm.wardCount());
+        overviewLore.add("&7NÃºcleos: &f" + vm.wardCount());
         overviewLore.add("&7Tesoro: &a" + vm.treasury());
         overviewLore.add("&7City Score: &f" + vm.cityScore());
         if (vm.levelStatus() != null) {
@@ -36,7 +36,7 @@ public final class CityMenuBuilder {
         }
         overviewLore.add("&7Rol: &f" + roleLabel(vm));
         items.add(MenuItem.display(4, "icon.city.overview",
-                "&6&lCiudad: " + vm.name(), overviewLore));
+                "&6&lMatriz: " + vm.name(), overviewLore));
 
         // Slot 6 — City level progression (computed, not purchased)
         if (vm.levelStatus() != null) {
@@ -45,7 +45,7 @@ public final class CityMenuBuilder {
             levelLore.add("&7Nivel actual: &b" + lvl.levelName());
             levelLore.add("");
             levelLore.add("&7Progreso:");
-            levelLore.add("&8- &7Wards anexados: &f" + lvl.wards());
+            levelLore.add("&8- &7NÃºcleos federados: &f" + lvl.wards());
             levelLore.add("&8- &7Habitantes: &f" + lvl.members());
             levelLore.add("&8- &7Riqueza (score): &f" + lvl.wealth());
             if (lvl.maxed()) {
@@ -54,7 +54,7 @@ public final class CityMenuBuilder {
             } else {
                 levelLore.add("");
                 levelLore.add("&7Siguiente nivel: &b" + lvl.nextLevelName());
-                levelLore.add("&8- " + (lvl.needWards() == 0 ? "&a✔" : "&fFaltan " + lvl.needWards() + " wards"));
+                levelLore.add("&8- " + (lvl.needWards() == 0 ? "&a✔" : "&fFaltan " + lvl.needWards() + " nÃºcleos"));
                 levelLore.add("&8- " + (lvl.needMembers() == 0 ? "&a✔" : "&fFaltan " + lvl.needMembers() + " habitantes"));
                 levelLore.add("&8- " + (lvl.needWealth() == 0 ? "&a✔" : "&fFaltan " + lvl.needWealth() + " de riqueza"));
                 levelLore.add("");
@@ -62,7 +62,7 @@ public final class CityMenuBuilder {
                         ? "&aEl nivel se actualiza solo — ¡ya calificás!"
                         : "&7El nivel sube solo al cumplir los requisitos");
             }
-            items.add(MenuItem.display(6, "icon.ward.active", "&b&lNivel de Ciudad", levelLore));
+            items.add(MenuItem.display(6, "icon.ward.active", "&b&lNivel de la Matriz", levelLore));
         }
 
         // Slot 10 — Invite resident
@@ -97,13 +97,13 @@ public final class CityMenuBuilder {
 
         // Slot 16 — Treasury vault
         if (vm.canManageTreasury()) {
-            items.add(MenuItem.button(16, "icon.upkeep", "&6&lTesoro de la Ciudad",
+            items.add(MenuItem.button(16, "icon.upkeep", "&6&lTesoro de la Matriz",
                     List.of("&7Saldo (créditos): &a" + vm.treasury(),
                             "",
                             "&7Bóveda física: los ítems quedan",
                             "&7guardados y podés retirarlos cuando",
                             "&7quieras. Su valor suma riqueza",
-                            "&7para el nivel de la ciudad.",
+                            "&7para el nivel de la Matriz.",
                             "&aClic para abrir la bóveda"),
                     MenuAction.of("city.bank")));
         } else {
@@ -138,11 +138,11 @@ public final class CityMenuBuilder {
 
         // Slot 23 — Delete city
         if (vm.canDelete()) {
-            items.add(MenuItem.button(23, "icon.ward.inactive", "&c&lEliminar Ciudad",
-                    List.of("&cClic para eliminar la ciudad", "&cAcción irreversible"),
+            items.add(MenuItem.button(23, "icon.ward.inactive", "&c&lEliminar Matriz",
+                    List.of("&cClic para eliminar la Matriz", "&cAcción irreversible"),
                     MenuAction.of("city.delete")));
         } else {
-            items.add(MenuItem.display(23, "icon.ward.inactive", "&8&lEliminar Ciudad",
+            items.add(MenuItem.display(23, "icon.ward.inactive", "&8&lEliminar Matriz",
                     List.of("&8Solo el Gobernador")));
         }
 

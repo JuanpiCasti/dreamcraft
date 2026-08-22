@@ -31,7 +31,7 @@ public final class EstateMenuBuilder {
 
         // Slot 4 — Estate overview
         items.add(MenuItem.display(4, "icon.estate.overview",
-                "&d&lEstate: " + vm.name(),
+                "&d&lNexo: " + vm.name(),
                 List.of(
                         "&7Owner: &f" + vm.ownerName(),
                         "&7Miembros: &f" + vm.memberCount(),
@@ -55,7 +55,7 @@ public final class EstateMenuBuilder {
         // Slot 12 — Join
         if (vm.canJoin()) {
             items.add(MenuItem.button(12, "icon.members", "&a&lUnirse",
-                    List.of("&7Clic para unirte a este Estate"),
+                    List.of("&7Clic para unirte a este Nexo"),
                     MenuAction.of("estate.join")));
         } else {
             items.add(MenuItem.display(12, "icon.members", "&8&lUnirse",
@@ -65,7 +65,7 @@ public final class EstateMenuBuilder {
         // Slot 14 — Leave
         if (vm.canLeave()) {
             items.add(MenuItem.button(14, "icon.back", "&e&lSalir",
-                    List.of("&7Clic para salir del Estate"),
+                    List.of("&7Clic para salir del Nexo"),
                     MenuAction.of("estate.leave")));
         } else {
             items.add(MenuItem.display(14, "icon.back", "&8&lSalir",
@@ -95,7 +95,7 @@ public final class EstateMenuBuilder {
         // Slot 21 — Disband
         if (vm.canDisband()) {
             items.add(MenuItem.button(21, "icon.ward.inactive", "&c&lDisolver",
-                    List.of("&cClic para disolver el Estate", "&cAcción irreversible"),
+                    List.of("&cClic para disolver el Nexo", "&cAcción irreversible"),
                     MenuAction.of("estate.disband")));
         } else {
             items.add(MenuItem.display(21, "icon.ward.inactive", "&8&lDisolver",
