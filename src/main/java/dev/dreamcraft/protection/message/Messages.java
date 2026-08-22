@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -59,9 +60,18 @@ public final class Messages {
                 .replace("{cmd.protection}", dev.dreamcraft.protection.config.CommandNames.root("protection"));
     }
 
-    /** String list (e.g. help blocks); empty list when absent. */
+    /**
+     * String list (e.g. help blocks); empty list when absent.
+     * Each line gets the versioned root-command substitution applied
+     * ({@code {cmd.ward}} → raíz visible del servidor).
+     */
     public List<String> list(String key) {
-        return merged.getStringList(key);
+        List<String> raw = merged.getStringList(key);
+        List<String> out = new ArrayList<>(raw.size());
+        for (String line : raw) {
+            out.add(applyVersionedCommands(line));
+        }
+        return out;
     }
 
     /** Replaces {@code {name}} pairs in a template. */
