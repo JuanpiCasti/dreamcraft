@@ -1,6 +1,5 @@
 package dev.dreamcraft.protection.integration.worldguard;
 
-import dev.dreamcraft.protection.domain.model.City;
 import dev.dreamcraft.protection.domain.model.Estate;
 import dev.dreamcraft.protection.domain.model.Ward;
 
@@ -35,15 +34,15 @@ public interface WorldGuardAdapter {
     void removeRegion(Ward ward);
 
     /**
-     * Adds a player as a WorldGuard member of the Ward's region (not a DreamCraft member).
-     * Called by domain logic when WG-level membership is needed (e.g., build access).
+     * Replaces the Ward region's entire WG member list with the given set.
+     * This is the single write path for ward region membership: the domain
+     * layer computes the expected members (owner + annexed city residents)
+     * and WG's list becomes a pure projection of that state — no incremental
+     * add/remove bookkeeping that can drift from domain truth.
+     *
+     * @see dev.dreamcraft.protection.service.WardAccessSync
      */
-    void addMember(Ward ward, java.util.UUID playerId);
-
-    /**
-     * Removes a player from the WorldGuard member list of the Ward's region.
-     */
-    void removeMember(Ward ward, java.util.UUID playerId);
+    void replaceMembers(Ward ward, java.util.Collection<java.util.UUID> members);
 
     /**
      * Sets the region owner in WorldGuard to match the Ward's owner.
@@ -51,19 +50,19 @@ public interface WorldGuardAdapter {
     void syncOwner(Ward ward);
 
     /**
+     * Opens (or closes) the Ward's containers to the general public by flipping
+     * the WorldGuard {@code chest-access} flag. Owners and WG members are always
+     * exempt from region flags; this only changes what outsiders may do.
+     *
+     * @param allowed true → outsiders may open containers (public farm area);
+     *                false → containers closed for non-members
+     */
+    void setPublicContainerAccess(Ward ward, boolean allowed);
+
+    /**
      * Returns true if this adapter is operational (WorldGuard present and compatible).
      */
     boolean isAvailable();
-
-    /**
-     * Syncs city-level memberships and policies to the Ward's WorldGuard region.
-     * Called when a Ward is annexed to a City — all city members are added as WG
-     * region members, inheriting the city's access policies.
-     *
-     * @param ward the Ward whose region should receive the city memberships
-     * @param city the City whose members/policies to inherit
-     */
-    void syncCityMembership(Ward ward, City city);
 
     /**
      * Applies temporal access flags to the Ward's region for an active Estate instance.
@@ -84,10 +83,22 @@ public interface WorldGuardAdapter {
     void clearEstateInstanceFlags(Ward ward);
 
     /**
-     * Creates (or replaces) a WorldGuard region covering an Estate's gated area
-     * (full world height). The estate owner becomes the region owner and all
-     * estate members become region members, so only the adventuring group can
-     * build inside the portal / structure zone.
+     * Configures the vertical band applied to estate area regions (stealth).
+     * The region spans anchorY - below to anchorY + above instead of full world
+     * height, so surface players never fall inside a stronghold/chamber zone.
+     *
+     * @param below blocks under the area anchor Y included in the region
+     * @param above blocks over the area anchor Y included in the region
+     */
+    void setEstateAreaBand(int below, int above);
+
+    /**
+     * Creates (or replaces) the WorldGuard region covering an Estate's gated
+     * area. Vertically it is limited to the configured band around
+     * {@code estate.areaY()} — see {@link #setEstateAreaBand(int, int)}.
+     * The estate owner becomes the region owner and all estate members become
+     * region members, so only the adventuring group can build inside the
+     * portal / structure zone.
      *
      * @return the WorldGuard region ID, or null if creation failed or WG unavailable
      */

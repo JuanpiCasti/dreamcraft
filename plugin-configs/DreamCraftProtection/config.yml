@@ -8,6 +8,90 @@ protection:
   wardrobe-material: LODESTONE
   inventory-size: 27
 
+# ── Personalización de subcomandos por servidor ─────────────────────────────
+# aliases se añaden al tab-complete y al dispatch; enabled: false oculta el
+# subcomando. El renombre del comando raíz (/ward → /parcela) se hace con el
+# commands.yml del servidor (ver docs/COMMANDS.md y commands.example.yml).
+# ── Personalización de subcomandos · Lore «El Despertar y la Sincronicidad» ──
+# Raíces: /sync ≡ /ward, /nexo ≡ /estate (vía commands.yml del servidor).
+# Los aliases añaden el vocabulario del lore al dispatch y al tab-complete;
+# enabled: false oculta un subcomando en este servidor.
+commands:
+  ward:
+    subcommands:
+      create:
+        aliases: [despertar]        # /sync despertar
+      rename:
+        aliases: [renombrar]        # /sync renombrar <nombre>
+      info:
+        aliases: [estado]
+      permissions:
+        aliases: [permisos]
+      upkeep:
+        aliases: [alimentar]        # /sync alimentar deposit <mat> <n>
+      menu:
+        aliases: [nucleo]
+      tp:
+        aliases: []
+      abrir:
+        aliases: []
+      sintonizar:
+        aliases: []
+      expulsar:
+        aliases: []
+      give:
+        aliases: [dar]              # /sync dar
+      score:
+        aliases: [fase]             # /sync fase add <n>
+      delete:
+        aliases: [apagar]
+  city:
+    subcommands:
+      create:
+        aliases: [fundar]
+      annex:
+        aliases: [federar]
+      info:
+        aliases: []
+  estate:
+    subcommands:
+      discover:
+        aliases: []
+      create:
+        aliases: []
+  protection:
+    subcommands:
+      claim:
+        aliases: []
+      reload:
+        aliases: [recargar]         # /protection recargar
+      recalculate:
+        aliases: []
+
+# Presentación: auto = CMD solo con pack cargado; vanilla = sin CMD; rp = forzar.
+# Assets definidos en presentation-assets.yml (contrato con el equipo del RP).
+menus:
+  provider: auto
+
+# ── Nexos de Aventura (End / Trial Chamber) ──────────────────────────────────
+# Banda vertical de sigilo: la región WG y el descubrimiento de zona solo
+# aplican entre anclaY - band-below y anclaY + band-above. Un jugador en
+# superficie NO detecta la stronghold/cámara inferior (sin mensajes, sin estate
+# automático, sin protección sobre construcciones ajenas).
+estate-instances:
+  enabled: true
+  world-prefix: dc_end_
+  default-area-radius: 32
+  band-below: 16
+  band-above: 48
+  # Preservación de estructura: ores, frames, vaults y spawners son
+  # indestructibles dentro del nexo — ningún grupo agota la stronghold.
+  protect-structure: true
+  # Regeneración de zona: las modificaciones de los aventureros (colocados,
+  # bloques rotos, cubetas) se registran en zone-edits/ y se revierten al
+  # cerrar el nexo (portal de salida / reset) — chunks prístinos para todos.
+  regenerate-zone: true
+
 upkeep:
   interval: 24h
   warning-threshold: 24h

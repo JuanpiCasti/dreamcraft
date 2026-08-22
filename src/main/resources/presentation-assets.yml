@@ -1,0 +1,57 @@
+# ── presentation-assets.yml · CONTRATO plugin ↔ resource-packs ───────────────
+# Mapa de claves semánticas → assets visuales. El equipo del Resource Pack
+# (worktree resource-packs) desarrolla texturas/modelos apuntando a los cmd
+# aquí definidos SIN tocar el plugin; cada servidor puede remapearlos copiando
+# este archivo a plugin-configs/DreamCraftProtection/presentation-assets.yml.
+#
+# Reglas (MD §9/§23):
+#   - Toda entrada es opcional; lo ausente cae a vanilla sin romper nada.
+#   - "material"  → ítem base vanilla que siempre renderiza.
+#   - "cmd"       → CustomModelData aplicado SOLO si el jugador cargó el pack.
+#   - "fallback"  → material vanilla para jugadores SIN pack (opcional).
+#
+# Convención de claves: <dominio>.<concepto>  (ward.* city.* estate.* menu.*)
+
+options:
+  enabled: true
+
+icons:
+  # Ward — protección / propiedad
+  ward.icon:            { material: SHIELD,                   cmd: 41101, fallback: SHIELD }
+  ward.inactive:        { material: CRACKED_STONE_BRICKS,     cmd: 41102 }
+  ward.tier:            { material: NETHER_STAR,              cmd: 41103, fallback: BEACON }
+  ward.score:           { material: EXPERIENCE_BOTTLE,        cmd: 41104 }
+  ward.upkeep:          { material: CHEST,                    cmd: 41105, fallback: CHEST }
+  # City — comunidad / administración
+  city.icon:            { material: BEACON,                   cmd: 41201, fallback: BEACON }
+  city.members:         { material: PLAYER_HEAD,              cmd: 0 }
+  city.treasury:        { material: GOLD_BLOCK,               cmd: 41202 }
+  city.score:           { material: EMERALD,                  cmd: 41203 }
+  # Estate — aventura / grupo
+  estate.icon:          { material: BOOK,                     cmd: 41301, fallback: BOOK }
+  estate.adventure:     { material: ENDER_EYE,                cmd: 41302 }
+  estate.instance:      { material: END_PORTAL_FRAME,         cmd: 41303 }
+  estate.dragon:        { material: DRAGON_HEAD,              cmd: 41304 }
+  # Menú genérico
+  menu.deposit:         { material: LIME_STAINED_GLASS_PANE,  cmd: 41401 }
+  menu.filler:          { material: GRAY_STAINED_GLASS_PANE,  cmd: 0 }
+  menu.back:            { material: ARROW,                    cmd: 41402 }
+
+sounds:
+  # Claves vanilla por defecto; el pack podrá sustituirlas por sonidos custom.
+  menu.click: ui.button.click
+  menu.error: block.note_block.bass
+  menu.success: entity.experience_orb.pickup
+
+fonts:
+  # Fuentes del pack (claves Adventure namespace:key). Vacío hasta que el RP las defina.
+  dc.hud: "dreamcraft:hud"
+
+symbols:
+  # Glifos decorativos (barras, marcos) — requieren la fuente asociada.
+  bar.full: "\uE000"
+  bar.empty: "\uE001"
+
+particles:
+  # Partículas visuales de estado (nombre del enum Bukkit).
+  ward.active: ENCHANT

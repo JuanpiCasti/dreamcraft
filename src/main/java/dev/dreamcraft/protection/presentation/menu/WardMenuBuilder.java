@@ -114,10 +114,16 @@ public final class WardMenuBuilder {
         List<String> permLore = new ArrayList<>();
         permLore.add("&7Permisos públicos:");
         vm.permissions().forEach(p -> permLore.add("&7- &f" + p.name()));
+        boolean containersPublic = vm.permissions().stream()
+                .anyMatch(p -> p.name().equals("PUBLIC_CONTAINERS"));
+        permLore.add("");
+        permLore.add(containersPublic
+                ? "&7Contenedores: &aabiertos al público"
+                : "&7Contenedores: &csolo miembros");
         if (vm.canSetPermissions()) {
-            permLore.add("&aClic para alternar PUBLIC_BUILD");
+            permLore.add("&aClic para alternar PUBLIC_CONTAINERS");
             items.add(MenuItem.button(14, "icon.members", "&a&lPermisos", permLore,
-                    MenuAction.of("ward.toggle_permission", "PUBLIC_BUILD")));
+                    MenuAction.of("ward.toggle_permission", "PUBLIC_CONTAINERS")));
         } else {
             permLore.add("&8Solo el owner puede cambiar permisos");
             items.add(MenuItem.display(14, "icon.members", "&8&lPermisos", permLore));

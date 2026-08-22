@@ -1,0 +1,166 @@
+# ── Catálogo de mensajes (idioma único: es) ──────────────────────────────────
+# Resolución: plugins/DreamCraftProtection/messages.yml (override del servidor)
+#             → este archivo (default embebido) → fallback en código.
+# Soporta códigos & y placeholders {nombre}.
+#
+# Cada servidor puede re-marcar estos textos sin recompilar: copia este archivo
+# a plugin-configs/DreamCraftProtection/messages.yml y config-sync lo montará.
+
+prefixes:
+  global: "&5[DreamCraft]"
+  ward: "&b[Sincronía]"
+  city: "&b[Ciudad]"
+  estate: "&d[Nexo]"
+  protection: "&3[Protección]"
+
+common:
+  players-only: "&cEste comando solo puede ser usado por jugadores."
+  no-permission: "&cNo tienes permiso para usar este comando."
+  no-permission-action: "&cNo tienes permiso para este comando."
+  unknown-subcommand: "&cSubcomando desconocido: {sub}"
+  error: "&cError: {message}"
+  invalid-amount: "&cCantidad inválida: {amount}"
+  player-not-found: "&cJugador {player} no encontrado o no está en línea."
+  # Lore «El Despertar»: acciones de energía/fase exigen presencia física
+  physical-required: "&cDebes interactuar físicamente con tu Bloque de DreamCraft para esto."
+  physical-hint: "&7Acércate a tu Núcleo o consigue el &benlace remoto VIP&7 (&f/sync tp&7)."
+
+# Feedback específico del lore «El Despertar y la Sincronicidad»
+sync:
+  sintonized: "&aFrecuencia compartida: los constructores ya pueden edificar y usar contenedores."
+  desintonized: "&eFrecuencia cerrada: revocado el acceso público de construcción y contenedores."
+  tp-done: "✦ Sintonización completa: llegada al núcleo."
+  nucleus-not-found: "&cNúcleo no encontrado. Usa <id> o el nombre de un jugador online."
+
+help:
+  ward:
+    header: "&b&l✦ Sincronía · DreamCraft ✦"
+    subtitle: "&7Gestiona tu territorio despierto. &f/sync &7≡ &f/ward"
+    lines:
+      - "&f/sync despertar           &7— Despierta tu Núcleo en tu posición"
+      - "&f/sync info [id]           &7— Fase actual, letargo y coordenadas"
+      - "&f/sync renombrar <nombre>  &7— Renombra tu zona despierta"
+      - "&f/sync sintonizar          &7— Abre la frecuencia a constructores"
+      - "&f/sync expulsar            &7— Cierra la frecuencia compartida"
+      - "&f/sync permisos [p g|r]    &7— Flags públicos detallados"
+      - "&f/sync upkeep deposit <m> <n> &7— Alimenta el núcleo (junto al bloque)"
+      - "&f/sync score add <n>       &7— Suma score de fase (junto al bloque)"
+      - "&f/sync menu [id]           &7— Panel completo &8(VIPs/admins)"
+      - "&f/sync tp                  &7— Salta a tu núcleo &8(VIPs/owner)"
+      - "&f/sync transfer <jugador>  &7— Cede la propiedad del núcleo"
+      - "&f/sync city [annex|leave]  &7— Federarse a una Matriz (ciudad)"
+      - "&f/sync delete [id]         &7— Apaga el núcleo"
+      - "&8Staff: /sync abrir <id|jugador> · /sync dar · /protection recargar"
+  city:
+    header: "&6&lMatriz de Sincronía"
+    subtitle: "&7Gestiona tu Red — une núcleos bajo una frecuencia común. &f/sync city annex"
+    lines:
+      - "&f/city create <nombre>     &7— Crear ciudad"
+      - "&f/city info [nombre]      &7— Ver información"
+      - "&f/city menu                &7— Abrir menú de ciudad"
+      - "&f/city annex <wardId>      &7— Anexar un Ward"
+      - "&f/city invite <jugador>    &7— Invitar residente"
+      - "&f/city kick <jugador>      &7— Expulsar residente"
+      - "&f/city roles <jugador> <rol> &7— Asignar rol"
+      - "&f/city bank <deposit|withdraw> <monto> &7— Ajuste admin de créditos"
+      - "&f/city policy set <politica> <on|off> &7— Cambiar política"
+      - "&f/city transfer <jugador>  &7— Transferir gobernanza"
+      - "&f/city delete              &7— Eliminar ciudad"
+      - "&7Roles: GOVERNOR, COUNCIL, CITIZEN, ALLY"
+  estate:
+    header: "&d&lNexo de Aventura"
+    subtitle: "&7Zonas de expedición grupal. &f/nexo &7≡ &f/estate"
+    lines:
+      - "&f/estate create <id>          &7— Crear Estate"
+      - "&f/estate discover <tipo>      &7— Unirte a la aventura (end, trial_chamber)"
+      - "&f/estate admin create <id> <tipo> [radio|auto] &7— Crear estate; auto ancla a la estructura"
+      - "&f/estate admin area <id> [radio]  &7— Mover el área del estate aquí"
+      - "&f/estate admin reset <id>     &7— Reiniciar la instancia de End"
+      - "&f/estate invite <jugador>     &7— Invitar miembro"
+      - "&f/estate join <id>           &7— Unirse a un Estate"
+      - "&f/estate leave               &7— Salir del Estate"
+      - "&f/estate start               &7— Iniciar instancia"
+      - "&f/estate transfer <jugador>   &7— Transferir ownership"
+      - "&f/estate info                &7— Ver información"
+      - "&f/estate menu                &7— Abrir menú del Estate"
+      - "&f/estate disband             &7— Disolver Estate"
+  protection:
+    header: "&5&lDreamCraft Protection"
+    subtitle: "&7Gestiona tu Ward — misma mecánica que &f/ward&7."
+    lines:
+      - "&f/protection claim       &7— Abrir el menú del Ward &8(vips/gobernadores)"
+      - "&f/protection status      &7— Consultar el estado del Ward"
+      - "&f/protection rename <nombre> &7— Renombrar el Ward"
+      - "&f/protection upkeep [deposit <material> <n>] &7— Mantenimiento"
+      - "&f/protection permissions [perm grant|revoke] &7— Permisos públicos"
+      - "&f/protection upgrade     &7— Mejorar el tier del Ward"
+      - "&f/protection transfer <jugador> &7— Transferir ownership"
+      - "&f/protection members     &7— Info de miembros (vía Ciudad)"
+      - "&f/protection dissolve    &7— Disolver el Ward"
+    admin:
+      header: "&c&lAdmin:"
+      lines:
+        - "&f/protection give        &7— Recibir Baliza de Ward"
+        - "&f/protection reload      &7— Recargar configuración"
+        - "&f/protection recalculate &7— Re-sincronizar la región"
+        - "&f/protection integrations &7— Estado del Integration Registry"
+
+# Feedback de los menús (MenuActionDispatcher) — acción bar / chat.
+menu:
+  unknown-action: "&cAcción no reconocida: {action}"
+  internal-error: "Error interno"
+  # hints que redirigen a comandos
+  hint.ward-transfer: "Usa /ward transfer <jugador>"
+  hint.city-invite: "Usa /city invite <jugador>"
+  hint.city-kick: "Usa /city kick <jugador>"
+  hint.city-roles: "Usa /city roles <jugador> <rol>"
+  hint.estate-invite: "Usa /estate invite <jugador>"
+  # ward
+  ward.deposits-unavailable: "Depósitos no disponibles."
+  ward.cannot-deposit: "No puedes depositar upkeep en este Ward."
+  ward.item-not-accepted: "Ítem no válido para upkeep. Mira los aceptados en el menú."
+  ward.owner-only-upgrade: "Solo el owner puede mejorar el Ward."
+  ward.max-tier: "El Ward ya está en el tier máximo ({tier})."
+  ward.conflict-radius: "No puedes mejorar: el radio nuevo ({radius}) alcanzaría la Ward '{other}' de {owner}."
+  ward.conflict-radius-tier: "No puedes mejorar al tier {tier}: el radio nuevo ({radius}) alcanzaría la Ward '{other}' de {owner}."
+  ward.missing-items: "[Ward] Te faltan ítems para mejorar al tier {tier}:"
+  ward.upgraded: "Mejorado a "
+  ward.owner-only-permissions: "Solo el owner puede cambiar permisos."
+  ward.invalid-permission: "Permiso inválido: {perm}"
+  ward.permission-revoked: "Permiso {perm} revocado."
+  ward.permission-granted: "Permiso {perm} concedido."
+  ward.owner-only-annex: "Solo el owner puede anexar el Ward."
+  ward.already-in-city: "El Ward ya pertenece a una ciudad."
+  ward.not-in-city: "No eres miembro de ninguna ciudad."
+  ward.annexed: "Ward anexado a la ciudad {city}."
+  ward.owner-only-disband: "Solo el owner puede disolver el Ward."
+  ward.disbanded: "Ward disuelto."
+  ward.context-lost: "Contexto de Ward perdido."
+  ward.deposited: "Depositaste "
+  ward.deposited-units: " → +{units} unidades. Balance: {balance}"
+  # city
+  city.treasury-unavailable: "El tesoro no está disponible."
+  city.treasury-role-required: "Requerís rol Council o superior para el tesoro."
+  city.treasury-value-prefix: "Valor actual del tesoro: "
+  city.treasury-value-suffix: " unidades de riqueza"
+  city.owner-only-policy: "Solo el Gobernador puede cambiar políticas."
+  city.invalid-policy: "Política inválida: {policy}"
+  city.policy-on: "Política {policy} activada."
+  city.policy-off: "Política {policy} desactivada."
+  city.owner-only-delete: "Solo el Gobernador puede eliminar la ciudad."
+  city.deleted: "Ciudad {city} eliminada."
+  city.context-lost: "Contexto de Ciudad perdido."
+  # estate
+  estate.already-owner: "Ya eres el owner de este Estate."
+  estate.already-member: "Ya eres miembro del Estate."
+  estate.joined: "Te uniste al Estate {estate}."
+  estate.owner-cannot-leave: "El owner no puede salir; transfiere o disuelve el Estate."
+  estate.not-member: "No eres miembro del Estate."
+  estate.left: "Saliste del Estate {estate}."
+  estate.owner-only-start: "Solo el owner puede iniciar la instancia."
+  estate.instance-active: "El Estate ya tiene una instancia activa."
+  estate.instance-ready: " El End privado está listo con la dragona."
+  estate.started: "Instancia de {estate} iniciada."
+  estate.owner-only-disband: "Solo el owner puede disolver el Estate."
+  estate.disbanded: "Estate {estate} disuelto."
+  estate.context-lost: "Contexto de Estate perdido."

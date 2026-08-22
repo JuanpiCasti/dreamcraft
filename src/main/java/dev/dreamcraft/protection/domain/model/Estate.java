@@ -40,6 +40,21 @@ public final class Estate {
     private int areaZ;
     /** Gated area radius in blocks; 0 = no area. */
     private int areaRadius;
+    /**
+     * Compact snapshot of the vanilla portal frames captured at area creation,
+     * format {@code x,y,z|facing|eye}. Used by the runtime to regenerate the
+     * portal room between adventuring groups (broken frames come back, eyes
+     * are stripped). Pure data — interpretation lives in the runtime layer.
+     */
+    private java.util.List<String> portalFrames = java.util.List.of();
+    /**
+     * Compact registry of naturally-generated loot containers inside the area,
+     * format {@code x,y,z|blockType|lootTableKey}. On zone close each container
+     * is re-armed with its vanilla loot table under a FRESH random seed —
+     * every adventuring group finds different loot. Pure data; interpretation
+     * lives in the runtime layer.
+     */
+    private java.util.List<String> containerLoot = java.util.List.of();
 
     public Estate(
             UUID id,
@@ -105,6 +120,20 @@ public final class Estate {
     public int areaY() { return areaY; }
     public int areaZ() { return areaZ; }
     public int areaRadius() { return areaRadius; }
+
+    public java.util.List<String> portalFrames() { return portalFrames; }
+
+    /** Replaces the portal frame snapshot (immutable copy). Null clears it. */
+    public void portalFrames(java.util.List<String> snapshot) {
+        this.portalFrames = snapshot == null ? java.util.List.of() : java.util.List.copyOf(snapshot);
+    }
+
+    public java.util.List<String> containerLoot() { return containerLoot; }
+
+    /** Replaces the loot container registry (immutable copy). Null clears it. */
+    public void containerLoot(java.util.List<String> registry) {
+        this.containerLoot = registry == null ? java.util.List.of() : java.util.List.copyOf(registry);
+    }
 
     // ── Mutators ──────────────────────────────────────────────────────────────
 

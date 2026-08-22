@@ -89,6 +89,7 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        dev.dreamcraft.protection.message.Messages.load(this);
 
         // 1. Integration Registry — detect all optional plugins
         capabilityRegistry = new CapabilityRegistry(getServer().getPluginManager(), getLogger());
@@ -110,12 +111,40 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         //     survives /protection reload via the lazy EstateService supplier.
         endInstanceService = new dev.dreamcraft.protection.service.EndInstanceService(
                 this, this::estateService, endInstanceConfig, essentialsAdapter);
+        // Zone edit journal: records adventurer modifications inside adventure
+        // areas and restores them when the zone closes (chunk regeneration)
+        dev.dreamcraft.protection.service.EstateZoneJournal zoneJournal =
+                new dev.dreamcraft.protection.service.EstateZoneJournal(getDataFolder(), getLogger());
+        endInstanceService.setZoneJournal(zoneJournal);
 
         // 4. Domain persistence
         bootDomainPersistence();
 
-        // 5. Presentation
+        // 4b. Container protection migration — regions created before chest-access
+        //     was enforced get their flag state re-applied on every boot.
+        migrateContainerFlags();
+
+        // 5. Presentation — provider selector + asset contract + pack tracking
+        dev.dreamcraft.protection.config.PresentationOptions presentationOptions =
+                dev.dreamcraft.protection.config.PresentationOptions.load(getConfig());
+        dev.dreamcraft.protection.presentation.resourcepack.PresentationAssetRegistry assetRegistry =
+                dev.dreamcraft.protection.presentation.resourcepack.PresentationAssetRegistry.load(this);
         menuProvider = new VanillaMenuProvider();
+        switch (presentationOptions.assetMode()) {
+            case RP -> {
+                // Mandatory pack: every viewer is assumed to render CMD assets.
+                menuProvider.setAssetRegistry(assetRegistry);
+                menuProvider.setPackTracker(
+                        (dev.dreamcraft.protection.presentation.resourcepack.PackState) id -> true);
+            }
+            case AUTO -> {
+                menuProvider.setAssetRegistry(assetRegistry);
+                var tracker = new dev.dreamcraft.protection.presentation.resourcepack.PackStatusTracker();
+                getServer().getPluginManager().registerEvents(tracker, this);
+                menuProvider.setPackTracker(tracker);
+            }
+            case VANILLA -> { /* pure legacy rendering — golden rule MD §23 */ }
+        }
 
         // 6. Register Bukkit listeners (menu provider only)
         var pm = getServer().getPluginManager();
@@ -147,19 +176,27 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         menuProvider.setDepositHandler(dispatcher);
         dispatcher.setCityTreasuryStore(cityTreasuryStore());
         dispatcher.setEndInstanceService(endInstanceService());
+        // Menu sounds resolve through the presentation-assets.yml contract
+        dispatcher.setPresentationAssets(assetRegistry);
 
-        // 7b. Commands: /protection delegates to the same Ward mechanic as /ward
+        // 7b. Commands: /protection delegates to the same Ward mechanic as /ward.
+        //     Subcommand names/aliases come from config.yml (commands.*.subcommands).
+        dev.dreamcraft.protection.config.CommandOptions commandOptions =
+                dev.dreamcraft.protection.config.CommandOptions.load(getConfig());
         PluginCommand command = getCommand("protection");
         if (command != null) {
             ProtectionCommand executor = new ProtectionCommand(
                     wardService, cityService, worldGuardAdapter, wardItems(),
-                    upgradeService, upkeepService, wardMenuFacade, this::reloadPluginConfig);
+                    upgradeService, upkeepService, wardMenuFacade, this::reloadPluginConfig,
+                    commandOptions);
+            executor.setStatusSources(capabilityRegistry, assetRegistry, presentationOptions.assetMode());
             command.setExecutor(executor);
             command.setTabCompleter(executor);
         }
 
         WardCommand wardExecutor = new WardCommand(
-                wardService, cityService, worldGuardAdapter, wardItems(), wardMenuFacade, upkeepService);
+                wardService, cityService, worldGuardAdapter, wardItems(), wardMenuFacade, upkeepService,
+                commandOptions);
         PluginCommand wardCmd = getCommand("ward");
         if (wardCmd != null) {
             wardCmd.setExecutor(wardExecutor);
@@ -167,14 +204,15 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         }
         PluginCommand cityCmd = getCommand("city");
         if (cityCmd != null) {
-            CityCommand cityExecutor = new CityCommand(cityService, wardService, menuProvider, cityLevelService);
+            CityCommand cityExecutor = new CityCommand(cityService, wardService, menuProvider,
+                    cityLevelService, worldGuardAdapter, commandOptions);
             cityCmd.setExecutor(cityExecutor);
             cityCmd.setTabCompleter(cityExecutor);
         }
         PluginCommand estateCmd = getCommand("estate");
         if (estateCmd != null) {
             EstateCommand estateExecutor = new EstateCommand(estateService, menuProvider,
-                    worldGuardAdapter, endInstanceService());
+                    worldGuardAdapter, endInstanceService(), commandOptions);
             estateCmd.setExecutor(estateExecutor);
             estateCmd.setTabCompleter(estateExecutor);
         }
@@ -197,6 +235,10 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                 wardService, tierProvider, protectionConfig), this);
         pm.registerEvents(new dev.dreamcraft.protection.listener.WardRegionListener(wardService), this);
 
+        // 7d-bis. Container transfer gate — hoppers/droppers can't cross Ward
+        //         boundaries (WG alone does not stop hopper draining).
+        pm.registerEvents(new dev.dreamcraft.protection.listener.WardContainerProtectionListener(wardService), this);
+
         // 7e. Ward upkeep vault — settles contents when the vault inventory closes
         pm.registerEvents(new dev.dreamcraft.protection.listener.WardUpkeepVaultListener(
                 wardService, upkeepService, this::saveDomainData), this);
@@ -207,7 +249,13 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
 
         // 8. Estate adventure areas — gated portals + private End instances
         pm.registerEvents(new dev.dreamcraft.protection.listener.EstatePortalListener(
-                estateService, endInstanceService(), worldGuardAdapter), this);
+                estateService, endInstanceService(), worldGuardAdapter,
+                endInstanceConfig.areaBandBelow(), endInstanceConfig.areaBandAbove()), this);
+        // 8b. Structure preservation + zone journaling (regeneration on close)
+        pm.registerEvents(new dev.dreamcraft.protection.listener.EstateStructureListener(
+                estateService, endInstanceConfig.protectStructure(),
+                endInstanceConfig.regenerateZone(), zoneJournal,
+                endInstanceConfig.areaBandBelow(), endInstanceConfig.areaBandAbove()), this);
 
         getLogger().info("[DreamCraft] Domain layer active — Ward/City/Estate ready.");
     }
@@ -227,6 +275,12 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         this.protectionConfig = ProtectionConfig.load(getConfig());
         validateConfig(protectionConfig);
         this.endInstanceConfig = dev.dreamcraft.protection.config.EndInstanceConfig.load(getConfig());
+        // Stealth banding for adventure areas (End/Trial Chamber): keep surface
+        // players outside stronghold/chamber zones both in WG and discovery.
+        if (worldGuardAdapter != null) {
+            worldGuardAdapter.setEstateAreaBand(
+                    endInstanceConfig.areaBandBelow(), endInstanceConfig.areaBandAbove());
+        }
         if (endInstanceService != null) {
             endInstanceService.applyConfig(endInstanceConfig);
         }
@@ -261,6 +315,25 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                 + estateRepository.findAll().size() + " Estate(s).");
     }
 
+    /**
+     * Re-applies the chest-access flag to every Ward region: deny by default,
+     * allow when PUBLIC_CONTAINERS is granted. Fixes regions created before
+     * container protection existed (they had no flags at all).
+     */
+    private void migrateContainerFlags() {
+        if (!worldGuardAdapter.isAvailable() || wardService == null) return;
+        int applied = 0;
+        for (dev.dreamcraft.protection.domain.model.Ward ward : wardService.findAll()) {
+            if (ward.worldGuardRegionId() == null) continue;
+            worldGuardAdapter.setPublicContainerAccess(ward, ward.hasPermission(
+                    dev.dreamcraft.protection.domain.model.WardPermission.PUBLIC_CONTAINERS));
+            applied++;
+        }
+        if (applied > 0) {
+            getLogger().info("[DreamCraft] chest-access sincronizado en " + applied + " región(es) de Ward.");
+        }
+    }
+
     private void flushDomainData() {
         try {
             if (wardRepository  != null) wardRepository.flush();
@@ -280,6 +353,7 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
     private void reloadPluginConfig() {
         bootServices();
         bootDomainPersistence();
+        dev.dreamcraft.protection.message.Messages.load(this);
         getLogger().info("[DreamCraftProtection] Recarga completada.");
     }
 

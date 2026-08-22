@@ -226,6 +226,12 @@ public final class EndInstanceService {
         UUID estateId = estateByPlayer.remove(player.getUniqueId());
         if (estateId == null) return;
         Set<UUID> members = playersByEstate.get(estateId);
+        // Lore: every retreat through the exit portal regenerates the overworld
+        // portal room (frames restored, eyes stripped) for the next group.
+        Estate estate = estates().findById(estateId).orElse(null);
+        if (estate != null && estate.type().usesEndInstance()) {
+            schedulePortalRefresh(estate);
+        }
         if (members == null) return;
         members.remove(player.getUniqueId());
         if (members.isEmpty()) {
@@ -263,7 +269,8 @@ public final class EndInstanceService {
             pendingPortalResets.remove(estateId);
             Estate current = estates().findById(estateId).orElse(null);
             if (current != null && !playersByEstate.getOrDefault(estateId, Set.of()).isEmpty()) {
-                stripOverworldPortal(current);
+                rollbackZoneEdits(current);
+                regeneratePortal(current);
                 broadcastToSession(estateId, Component.text("[Estate] El portal de entrada se reinició.",
                         NamedTextColor.GRAY), null);
             }
@@ -280,6 +287,21 @@ public final class EndInstanceService {
             if (estate != null) resetInstance(estate);
         }, delayTicks);
         pendingWorldResets.put(estateId, task);
+    }
+
+    /** Short-delay portal regeneration after any member retreats to the overworld. */
+    private void schedulePortalRefresh(Estate estate) {
+        cancelPendingPortalReset(estate.id());
+        UUID estateId = estate.id();
+        BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            pendingPortalResets.remove(estateId);
+            Estate current = estates().findById(estateId).orElse(null);
+            if (current != null) {
+                rollbackZoneEdits(current);
+                regeneratePortal(current);
+            }
+        }, 40L); // 2s — enough for the exit teleport to settle
+        pendingPortalResets.put(estateId, task);
     }
 
     private void cancelPendingWorldReset(UUID estateId) {
@@ -316,7 +338,8 @@ public final class EndInstanceService {
             }
         }
 
-        stripOverworldPortal(estate);
+        regeneratePortal(estate);
+        rollbackZoneEdits(estate);
 
         String name = worldNameFor(estate);
         World world = Bukkit.getWorld(name);
@@ -335,18 +358,135 @@ public final class EndInstanceService {
                         NamedTextColor.GREEN)));
     }
 
+    /** Optional: edit journal — rolls zone blocks back to pristine on close. */
+    private EstateZoneJournal zoneJournal;
+
+    /** Registers the zone edit journal used for between-group regeneration. */
+    public void setZoneJournal(EstateZoneJournal journal) {
+        this.zoneJournal = journal;
+    }
+
+    /** Discards recorded edits without applying them (area re-anchored). */
+    public void clearZoneEdits(java.util.UUID estateId) {
+        if (zoneJournal != null) zoneJournal.clear(estateId);
+    }
+
+    /** Rolls back journaled edits so the next group finds pristine chunks. */
+    private void rollbackZoneEdits(Estate estate) {
+        if (zoneJournal != null && config.regenerateZone()) {
+            zoneJournal.rollback(estate.id());
+        }
+    }
+
     /**
-     * Removes every placed Eye of Ender from the portal frames inside the estate's
-     * area and closes any open end-portal blocks, resetting the entrance for the
-     * next group.
+     * Captures the adventure zone's regenerable state inside the estate's area
+     * (full circle ∩ vertical stealth band):
+     * <ul>
+     *   <li><b>portal frames</b> — "x,y,z|facing|eye" for exact repair;</li>
+     *   <li><b>natural loot containers</b> — "x,y,z|type|lootTableKey" for
+     *       re-arming each container with its vanilla loot table under a fresh
+     *       random seed on zone close, so every group finds DIFFERENT loot.</li>
+     * </ul>
+     * Only containers whose LootTable is still set qualify: vanilla clears the
+     * tag once filled, which is exactly how looted chests are detected.
      */
-    public void stripOverworldPortal(Estate estate) {
+    public void capturePortal(Estate estate) {
+        if (!config.enabled() || !estate.type().usesEndInstance() || !estate.hasArea()) return;
+        World world = Bukkit.getWorld(estate.areaWorld());
+        if (world == null) return;
+
+        int r = Math.max(4, estate.areaRadius());
+        long r2 = (long) r * r;
+        int yMin = Math.max(world.getMinHeight(), estate.areaY() - config.areaBandBelow());
+        int yMax = Math.min(world.getMaxHeight() - 1, estate.areaY() + config.areaBandAbove());
+
+        List<String> frames = new ArrayList<>();
+        List<String> containers = new ArrayList<>();
+        for (int x = estate.areaX() - r; x <= estate.areaX() + r; x++) {
+            for (int z = estate.areaZ() - r; z <= estate.areaZ() + r; z++) {
+                long dx = x - estate.areaX();
+                long dz = z - estate.areaZ();
+                if (dx * dx + dz * dz > r2) continue;
+                for (int y = yMin; y <= yMax; y++) {
+                    Block block = world.getBlockAt(x, y, z);
+                    if (block.getType() == Material.END_PORTAL_FRAME
+                            && block.getBlockData() instanceof EndPortalFrame frame) {
+                        frames.add(x + "," + y + "," + z
+                                + "|" + frame.getFacing().name()
+                                + "|" + frame.hasEye());
+                        continue;
+                    }
+                    Material type = block.getType();
+                    if (type == Material.CHEST || type == Material.TRAPPED_CHEST
+                            || type == Material.BARREL) {
+                        var state = block.getState();
+                        if (state instanceof org.bukkit.loot.Lootable lootable
+                                && lootable.getLootTable() != null) {
+                            containers.add(x + "," + y + "," + z
+                                    + "|" + type.name()
+                                    + "|" + lootable.getLootTable().getKey());
+                        }
+                    }
+                }
+            }
+        }
+        estate.portalFrames(frames);
+        estate.containerLoot(containers);
+        estates().save(estate);
+        plugin.getLogger().info("[EndInstance] Snapshot del nexo '" + estate.name()
+                + "' capturado: " + frames.size() + " frame(s), "
+                + containers.size() + " contenedor(es) de loot.");
+    }
+
+    /**
+     * Regenerates the overworld portal room between groups:
+     * <ul>
+     *   <li>restores every captured frame that was broken or removed;</li>
+     *   <li>strips placed Eyes so the next group must re-arm the portal;</li>
+     *   <li>closes any open end-portal blocks.</li>
+     * </ul>
+     * Estates without a snapshot keep the legacy eye-strip behavior.
+     */
+    public void regeneratePortal(Estate estate) {
         if (!estate.hasArea()) return;
         World world = Bukkit.getWorld(estate.areaWorld());
         if (world == null) return;
 
-        int r = Math.min(Math.max(4, config.frameScanRadius()), Math.max(4, estate.areaRadius()));
+        int repaired = 0;
         int stripped = 0;
+
+        // 1. Restore captured frames (broken frames come back)
+        for (String entry : estate.portalFrames()) {
+            String[] parts = entry.split("\\|");
+            String[] pos = parts[0].split(",");
+            try {
+                int x = Integer.parseInt(pos[0]);
+                int y = Integer.parseInt(pos[1]);
+                int z = Integer.parseInt(pos[2]);
+                Block block = world.getBlockAt(x, y, z);
+                EndPortalFrame data = null;
+                if (block.getBlockData() instanceof EndPortalFrame existing) {
+                    data = existing;
+                } else if (block.getType() != Material.END_PORTAL_FRAME) {
+                    block.setType(Material.END_PORTAL_FRAME);
+                    if (block.getBlockData() instanceof EndPortalFrame fresh) data = fresh;
+                    repaired++;
+                }
+                if (data != null) {
+                    boolean wantEye = Boolean.parseBoolean(parts.length > 2 ? parts[2] : "false");
+                    if (parts.length > 1) {
+                        try { data.setFacing(org.bukkit.block.BlockFace.valueOf(parts[1])); }
+                        catch (IllegalArgumentException ignored) {}
+                    }
+                    if (data.hasEye()) { data.setEye(false); stripped++; }
+                    if (wantEye && !data.hasEye()) data.setEye(true); // vanilla pristine state
+                    block.setBlockData(data);
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+
+        // 2. Legacy sweep: strip remaining eyes + close open portals in the scan area
+        int r = Math.min(Math.max(4, config.frameScanRadius()), Math.max(4, estate.areaRadius()));
         for (int x = estate.areaX() - r; x <= estate.areaX() + r; x++) {
             for (int y = estate.areaY() - r; y <= estate.areaY() + r; y++) {
                 if (y < world.getMinHeight() || y > world.getMaxHeight() - 1) continue;
@@ -365,9 +505,41 @@ public final class EndInstanceService {
                 }
             }
         }
-        if (stripped > 0) {
-            plugin.getLogger().info("[EndInstance] Portal del estate '" + estate.name()
-                    + "' reiniciado (" + stripped + " bloques restaurados).");
+        // 3. Re-arm natural loot containers: same vanilla table, FRESH random
+        //    seed — the next group finds different loot than the last one.
+        int rerolled = 0;
+        if (config.regenerateZone()) {
+            for (String entry : estate.containerLoot()) {
+                String[] parts = entry.split("\\|");
+                if (parts.length < 3) continue;
+                try {
+                    String[] pos = parts[0].split(",");
+                    Material type = Material.matchMaterial(parts[1]);
+                    org.bukkit.NamespacedKey key = org.bukkit.NamespacedKey.fromString(parts[2]);
+                    if (type == null || key == null) continue;
+                    Block block = world.getBlockAt(
+                            Integer.parseInt(pos[0]), Integer.parseInt(pos[1]), Integer.parseInt(pos[2]));
+                    if (block.getType() != type) block.setType(type);
+                    var state = block.getState();
+                    if (!(state instanceof org.bukkit.loot.Lootable lootable)) continue;
+                    org.bukkit.loot.LootTable table = Bukkit.getLootTable(key);
+                    if (table == null) continue;
+                    if (state instanceof org.bukkit.inventory.InventoryHolder holder) {
+                        holder.getInventory().clear();
+                    }
+                    lootable.setLootTable(table);
+                    lootable.setSeed(java.util.concurrent.ThreadLocalRandom.current().nextLong());
+                    state.update();
+                    rerolled++;
+                } catch (Exception ignored) {
+                    // Corrupt/legacy entry — skip, the rest still re-arms
+                }
+            }
+        }
+        if (repaired > 0 || stripped > 0 || rerolled > 0) {
+            plugin.getLogger().info("[EndInstance] Nexo '" + estate.name()
+                    + "' regenerado (" + repaired + " frames restaurados, "
+                    + stripped + " limpiados, " + rerolled + " loots re-armados).");
         }
     }
 

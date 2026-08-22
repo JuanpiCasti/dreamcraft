@@ -123,6 +123,38 @@ class DomainCommandFlowTest {
         assertFalse(ward.hasPermission(WardPermission.PUBLIC_BUILD));
     }
 
+    // ── Upgrade conflict validation ──────────────────────────────────────────
+
+    @Test
+    void upgradeConflictDetectsForeignWardInsideNewRadius() {
+        Ward ward = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 0, 64, 0);
+        // Foreign ward sits at the edge of the radius the upgrade would reach (42)
+        Ward neighbor = wardService.createWard(otherId, OwnerType.PLAYER, null, "world", 40, 64, 0);
+
+        int radiusAfter = wardService.computeRadiusAfter(ward, 100); // reinforced → 42
+        assertEquals(42, radiusAfter);
+
+        var conflict = wardService.findForeignConflict(ward, radiusAfter);
+        assertTrue(conflict.isPresent());
+        assertEquals(neighbor.id(), conflict.get().id());
+    }
+
+    @Test
+    void upgradeConflictIgnoresOwnWardsAndFarWards() {
+        Ward ward = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 0, 64, 0);
+        // Same owner inside the prospective radius → allowed (self-stacking is harmless)
+        wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 40, 64, 0);
+        assertTrue(wardService.findForeignConflict(ward, 42).isEmpty());
+
+        // Foreign ward in a different world → no conflict
+        wardService.createWard(otherId, OwnerType.PLAYER, null, "world_nether", 10, 64, 10);
+        assertTrue(wardService.findForeignConflict(ward, 42).isEmpty());
+
+        // Foreign ward beyond the prospective radius → no conflict
+        wardService.createWard(otherId, OwnerType.PLAYER, null, "world", 100, 64, 100);
+        assertTrue(wardService.findForeignConflict(ward, 42).isEmpty());
+    }
+
     // ── Ward rename ──────────────────────────────────────────────────────────
 
     @Test
@@ -608,10 +640,20 @@ class DomainCommandFlowTest {
         @Override public Collection<Ward> findByCityId(UUID cityId) {
             return cache.values().stream().filter(w -> cityId.equals(w.cityId())).collect(Collectors.toList());
         }
-        @Override public Optional<Ward> findAtLocation(String worldName, int x, int z) {
+        @Override
+        public Optional<Ward> findAtLocation(String worldName, int x, int z) {
             return cache.values().stream()
                     .filter(w -> w.worldName().equals(worldName))
                     .filter(w -> Math.abs(w.centerX() - x) <= w.radius() && Math.abs(w.centerZ() - z) <= w.radius())
+                    .findFirst();
+        }
+        @Override
+        public Optional<Ward> findConflicting(String worldName, int x, int z, int radius, UUID excludeId) {
+            return cache.values().stream()
+                    .filter(w -> w.worldName().equals(worldName))
+                    .filter(w -> !w.id().equals(excludeId))
+                    .filter(w -> Math.abs(w.centerX() - x) <= radius
+                            && Math.abs(w.centerZ() - z) <= radius)
                     .findFirst();
         }
         @Override public Optional<Ward> findByCenter(String worldName, int x, int y, int z) {

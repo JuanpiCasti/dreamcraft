@@ -1,0 +1,34 @@
+# ── presentation-assets.example.yml ──────────────────────────────────────────
+# PLANTILLA — no se usa tal cual. Copia este archivo como
+# presentation-assets.yml (aquí o en plugins/DreamCraftProtection/) y edita
+# los CMDs que tu resource pack realmente use.
+#
+# Contrato completo y convenciones: docs/presentation-assets.md
+# Reglas: toda entrada es opcional; sin pack → "fallback"; sin entrada → vanilla.
+
+options:
+  enabled: true
+
+icons:
+  ward.icon:     { material: SHIELD,              cmd: 41101, fallback: SHIELD }
+  ward.inactive: { material: CRACKED_STONE_BRICKS, cmd: 41102 }
+  ward.tier:     { material: NETHER_STAR,         cmd: 41103, fallback: BEACON }
+  city.icon:     { material: BEACON,              cmd: 41201, fallback: BEACON }
+  city.treasury: { material: GOLD_BLOCK,          cmd: 41202 }
+  estate.icon:   { material: BOOK,                cmd: 41301, fallback: BOOK }
+  estate.dragon: { material: DRAGON_HEAD,         cmd: 41304 }
+
+sounds:
+  menu.click:  ui.button.click
+  menu.error:  block.note_block.bass
+  menu.success: entity.experience_orb.pickup
+
+fonts:
+  dc.hud: "dreamcraft:hud"
+
+symbols:
+  bar.full:  "\uE000"
+  bar.empty: "\uE001"
+
+particles:
+  ward.active: ENCHANT

@@ -105,6 +105,29 @@ public final class WardService {
     }
 
     /**
+     * Radius the Ward would have after gaining {@code delta} base score,
+     * without mutating or persisting anything. Used to validate upgrades
+     * before they are applied.
+     */
+    public int computeRadiusAfter(Ward ward, int delta) {
+        int newScore = Math.max(0, ward.baseScore() + delta);
+        return tierProvider.resolveForScore(newScore).computeRadius(newScore);
+    }
+
+    /**
+     * First FOREIGN Ward (different owner) whose center would fall inside this
+     * Ward's area if its radius grew to {@code newRadius}. Wards owned by the
+     * same owner are ignored (self-stacking is harmless). Use this before any
+     * operation that grows the Ward's radius to refuse the change with a
+     * meaningful message instead of silently swallowing a neighbor.
+     */
+    public Optional<Ward> findForeignConflict(Ward ward, int newRadius) {
+        return wardRepository.findConflicting(
+                        ward.worldName(), ward.centerX(), ward.centerZ(), newRadius, ward.id())
+                .filter(other -> !other.ownerId().equals(ward.ownerId()));
+    }
+
+    /**
      * Deposits upkeep units and resets the next upkeep timestamp if the Ward was overdue.
      */
     public void depositUpkeep(Ward ward, int units) {

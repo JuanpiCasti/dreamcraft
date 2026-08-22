@@ -46,6 +46,12 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
     /** Optional: computed city levels (wards/members/wealth). */
     private final dev.dreamcraft.protection.service.CityLevelService levelService;
     private final CityViewModelBuilder viewModelBuilder;
+    /** Optional: WG adapter for region member sync on annex/kick/delete. */
+    private final dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter worldGuardAdapter;
+    /** Per-server subcommand aliases/enabled flags. */
+    private final dev.dreamcraft.protection.config.CommandOptions options;
+    /** Single source of truth for dispatch + tab completion. */
+    private final CommandRegistry registry;
 
     public CityCommand(CityService cityService, WardService wardService, MenuProvider menuProvider) {
         this(cityService, wardService, menuProvider, null);
@@ -53,50 +59,87 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
 
     public CityCommand(CityService cityService, WardService wardService, MenuProvider menuProvider,
                        dev.dreamcraft.protection.service.CityLevelService levelService) {
+        this(cityService, wardService, menuProvider, levelService, null,
+                dev.dreamcraft.protection.config.CommandOptions.empty());
+    }
+
+    public CityCommand(CityService cityService, WardService wardService, MenuProvider menuProvider,
+                       dev.dreamcraft.protection.service.CityLevelService levelService,
+                       dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter worldGuardAdapter) {
+        this(cityService, wardService, menuProvider, levelService, worldGuardAdapter,
+                dev.dreamcraft.protection.config.CommandOptions.empty());
+    }
+
+    public CityCommand(CityService cityService, WardService wardService, MenuProvider menuProvider,
+                       dev.dreamcraft.protection.service.CityLevelService levelService,
+                       dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter worldGuardAdapter,
+                       dev.dreamcraft.protection.config.CommandOptions options) {
         this.cityService = cityService;
         this.wardService = wardService;
         this.menuProvider = menuProvider;
         this.levelService = levelService;
+        this.worldGuardAdapter = worldGuardAdapter;
+        this.options = options;
         this.viewModelBuilder = new CityViewModelBuilder(this::resolveName, this::wardCountOf,
                 levelService != null ? levelService::statusOf : null);
+        this.registry = buildRegistry();
+    }
+
+    /**
+     * Builds the subcommand table: canonical names here, aliases merged from
+     * config.yml (commands.city.subcommands.&lt;name&gt;.aliases).
+     */
+    private CommandRegistry buildRegistry() {
+        return new CommandRegistry("city")
+                .register(SubcommandSpec.of("create", this::handleCreate)
+                        .withAliases(options.aliases("city", "create")))
+                .register(SubcommandSpec.of("annex", this::handleAnnex)
+                        .withAliases(options.aliases("city", "annex")))
+                .register(SubcommandSpec.of("invite", this::handleInvite)
+                        .withAliases(options.aliases("city", "invite")))
+                .register(SubcommandSpec.of("kick", this::handleKick)
+                        .withAliases(options.aliases("city", "kick")))
+                .register(SubcommandSpec.of("roles", this::handleRoles)
+                        .withAliases(options.aliases("city", "roles")))
+                .register(SubcommandSpec.admin("bank", this::handleBank)
+                        .withAliases(options.aliases("city", "bank")))
+                .register(SubcommandSpec.of("policy", this::handlePolicy)
+                        .withAliases(options.aliases("city", "policy")))
+                .register(SubcommandSpec.of("menu", (p, a) -> handleMenu(p))
+                        .withAliases(options.aliases("city", "menu")))
+                .register(SubcommandSpec.of("info", this::handleInfo)
+                        .withAliases(options.aliases("city", "info")))
+                .register(SubcommandSpec.of("transfer", this::handleTransfer)
+                        .withAliases(options.aliases("city", "transfer")))
+                .register(SubcommandSpec.of("delete", this::handleDelete)
+                        .withAliases(options.aliases("city", "delete")));
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cEste comando solo puede ser usado por jugadores.");
+            sender.sendMessage(tr("common.players-only", "§cEste comando solo puede ser usado por jugadores."));
             return true;
         }
         if (!player.hasPermission(USE_PERM)) {
-            error(player, CITY_PREFIX, "No tienes permiso para usar este comando.");
+            error(player, CITY_PREFIX, tr("common.no-permission", "No tienes permiso para usar este comando."));
             return true;
         }
         if (args.length == 0) {
             sendHelp(player);
             return true;
         }
+        SubcommandSpec spec = registry.resolve(args[0]);
+        if (spec == null || !options.isEnabled(registry.root(), spec.name())) {
+            error(player, CITY_PREFIX, tr("common.unknown-subcommand", "Subcomando desconocido: {sub}", "sub", args[0]));
+            sendHelp(player);
+            return true;
+        }
         try {
-            return switch (args[0].toLowerCase(Locale.ROOT)) {
-                case "create" -> handleCreate(player, args);
-                case "annex" -> handleAnnex(player, args);
-                case "invite" -> handleInvite(player, args);
-                case "kick" -> handleKick(player, args);
-                case "roles" -> handleRoles(player, args);
-                case "bank" -> handleBank(player, args);
-                case "policy" -> handlePolicy(player, args);
-                case "menu" -> handleMenu(player);
-                case "info" -> handleInfo(player, args);
-                case "transfer" -> handleTransfer(player, args);
-                case "delete" -> handleDelete(player, args);
-                default -> {
-                    error(player, CITY_PREFIX, "Subcomando desconocido: " + args[0]);
-                    sendHelp(player);
-                    yield true;
-                }
-            };
+            return spec.execute(player, args);
         } catch (RuntimeException e) {
             if (!handleDomainException(player, CITY_PREFIX, e)) {
-                error(player, CITY_PREFIX, "Error: " + e.getMessage());
+                error(player, CITY_PREFIX, tr("common.error", "Error: {message}", "message", e.getMessage()));
             }
             return true;
         }
@@ -144,6 +187,8 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         wardService.setCityMembership(ward, city.id());
+        // Project domain membership: all city residents gain region access
+        dev.dreamcraft.protection.service.WardAccessSync.project(ward, cityService, worldGuardAdapter);
         ok(player, CITY_PREFIX, "Ward anexado a la ciudad " + city.name() + ".");
         return true;
     }
@@ -166,6 +211,9 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
         }
         boolean added = cityService.addMember(city, target.getUniqueId());
         if (added) {
+            // New resident gains access to every annexed ward's region
+            dev.dreamcraft.protection.service.WardAccessSync.projectAll(
+                    wardService.findByCity(city.id()), cityService, worldGuardAdapter);
             ok(player, CITY_PREFIX, target.getName() + " invitado a la ciudad.");
             target.sendMessage(CITY_PREFIX.append(
                     Component.text("Fuiste invitado a la ciudad " + city.name() + ".", NamedTextColor.GREEN)));
@@ -197,6 +245,9 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
         }
         boolean removed = cityService.removeMember(city, targetId);
         if (removed) {
+            // Re-project: the ex-member loses access to every annexed ward's region
+            dev.dreamcraft.protection.service.WardAccessSync.projectAll(
+                    wardService.findByCity(city.id()), cityService, worldGuardAdapter);
             ok(player, CITY_PREFIX, "Miembro expulsado de la ciudad.");
         } else {
             warn(player, CITY_PREFIX, "Ese jugador no es miembro de la ciudad.");
@@ -391,8 +442,11 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
             error(player, CITY_PREFIX, "Solo el Gobernador puede eliminar la ciudad.");
             return true;
         }
+        // Disassociate all wards from this city, then re-project: their region
+        // member lists collapse to empty (city-granted access fully revoked)
         for (Ward ward : wardService.findByCity(city.id())) {
             wardService.setCityMembership(ward, null);
+            dev.dreamcraft.protection.service.WardAccessSync.project(ward, cityService, worldGuardAdapter);
         }
         cityService.delete(city);
         ok(player, CITY_PREFIX, "Ciudad " + city.name() + " eliminada.");
@@ -451,21 +505,7 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
     // ── Help ──────────────────────────────────────────────────────────────────
 
     private void sendHelp(Player player) {
-        player.sendMessage("§6§lDreamCraft Ciudad");
-        player.sendMessage("§7Gestiona tu ciudad.");
-        player.sendMessage(" ");
-        player.sendMessage("§f/city create <nombre>     §7— Crear ciudad");
-        player.sendMessage("§f/city info [nombre]      §7— Ver información");
-        player.sendMessage("§f/city menu                §7— Abrir menú de ciudad");
-        player.sendMessage("§f/city annex <wardId>      §7— Anexar un Ward");
-        player.sendMessage("§f/city invite <jugador>    §7— Invitar residente");
-        player.sendMessage("§f/city kick <jugador>      §7— Expulsar residente");
-        player.sendMessage("§f/city roles <jugador> <rol> §7— Asignar rol");
-        player.sendMessage("§f/city bank <deposit|withdraw> <monto> §7— Ajuste admin de créditos");
-        player.sendMessage("§f/city policy set <politica> <on|off> §7— Cambiar política");
-        player.sendMessage("§f/city transfer <jugador>  §7— Transferir gobernanza");
-        player.sendMessage("§f/city delete              §7— Eliminar ciudad");
-        player.sendMessage("§7Roles: GOVERNOR, COUNCIL, CITIZEN, ALLY");
+        helpBlock(player, "help.city");
     }
 
     // ── Tab completion ─────────────────────────────────────────────────────────
@@ -474,11 +514,11 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();
         if (args.length == 1) {
-            List<String> subs = List.of("create", "annex", "invite", "kick", "roles", "bank", "policy", "menu", "info", "transfer", "delete");
-            filter(subs, args[0]).forEach(completions::add);
+            filter(registry.completionTokens(args[0]), args[0]).forEach(completions::add);
             return completions;
         }
-        String sub = args[0].toLowerCase(Locale.ROOT);
+        SubcommandSpec resolved = registry.resolve(args[0]);
+        String sub = (resolved != null ? resolved.name() : args[0]).toLowerCase(Locale.ROOT);
         if (args.length == 2) {
             switch (sub) {
                 case "invite", "kick", "transfer" -> filter(onlinePlayers(args[1]), args[1]).forEach(completions::add);

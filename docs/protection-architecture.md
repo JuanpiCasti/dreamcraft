@@ -32,6 +32,28 @@
 - `CityLevelService` computes city levels purely from annexed wards, member count and wealth (sum of annexed wards' base scores) — never from direct deposits: `city-levels.levels` in `config.yml`.
 - City names can be changed with `/ward rename <nombre>` / `/protection rename <nombre>` (owner or admin, unique, ≤32 chars); epic default generated names are preserved until renamed.
 
+## Configurable Command & Presentation Layer (current)
+
+- **CommandSpec framework** (`command/SubcommandSpec` + `CommandRegistry`): every
+  subcommand is declared once; dispatch, tab completion and admin gating read the
+  same table — the old switch/tab-list duplication is gone.
+- Per-server customization without recompiling:
+  - root-command renaming via Bukkit's native `commands.yml`
+    (`plugin-configs/DreamCraftProtection/commands.example.yml`);
+  - subcommand aliases / enable-flags from `config.yml` (`commands.*.subcommands`);
+  - shared texts, prefixes, help blocks and all menu feedback externalized to
+    `messages.yml` (`message/Messages`, single locale es, legacy codes + `{placeholders}`,
+    server override → embedded default → code fallback).
+- **Resource pack port** (`presentation/resourcepack/`):
+  - `ResourcePackProvider` port with a dependency-free `PresentationAssetRegistry`
+    implementation (vanilla materials + CustomModelData);
+  - `presentation-assets.yml` is the formal contract between this plugin and the
+    future resource-pack worktree (`docs/presentation-assets.md`) — semantic keys
+    (`ward.icon`, sounds, fonts, symbols, particles) map to CMD values;
+  - per-player fallback: `menus.provider: auto|vanilla|rp` in config.yml decides
+    whether CustomModelData applies only when the viewer loaded the pack
+    (`PackStatusTracker`), always, or never — MD golden rule §23 holds.
+
 ## Estate Adventure Instances (End / Trial Chamber)
 
 - `Estate` gained an adventure `type` (`STANDARD`, `END`, `TRIAL_CHAMBER`) and an optional gated **area** (world + center XYZ + radius, persisted in `estates.yml` with legacy defaults).
@@ -46,12 +68,27 @@
 - **Gating** (`listener/EstatePortalListener`): inserting Eyes of Ender into frames inside an END/TRIAL_CHAMBER estate area requires membership of at least one estate covering the point; portal travel redirects each member to their own estate's private instance (preferring an already-active world) and cancels non-members. TRIAL_CHAMBER areas additionally gate VAULT/TRIAL_SPAWNER interactions to members.
 - **Party-per-leader flow**: stepping into a zone (or `/estate discover <tipo>`) without belonging to any of its estates auto-creates a personal party estate — the discoverer becomes its leader, inherits the zone's gated area (and gets a mirrored WG region), and invites their group via `/estate invite`. Multiple parties share one physical zone while each fights in its own private End world in parallel.
 - Config lives under `estate-instances` in config.yml (`config/EndInstanceConfig`): enabled flag, world prefix, default area radius, frame scan radius, reset delays, first-enter portal reset toggle.
-- Admin flow: stand inside the structure → `/estate admin create <id> end [radio]`; move the area later with `/estate admin area <id> [radio]`; force a reset with `/estate admin reset <id>`.
+- Admin flow: `/estate admin create <id> end [radio|auto]` — `auto` anchors the
+  area at the real vanilla structure (Registry.STRUCTURE lookup, stronghold /
+  trial chambers, 512-block search, r=48 default); move it later with
+  `/estate admin area <id> [radio]`; force a reset with `/estate admin reset <id>`.
+- **Vertical stealth band** (`estate-instances.band-below/band-above`, defaults
+  16/48): the WG area region spans anchorY-band…anchorY+band instead of full
+  world height, and zone discovery applies the same band — surface players
+  never learn a stronghold/chamber exists below. Legacy zones anchored at Y=0
+  must be re-anchored once via `/estate admin area`.
 - Instance worlds are runtime-only (never in bukkit.yml); stale folders are wiped before recreation and unloaded (no save) on plugin disable.
 
 ## Current Gaps
 
-- Resource Pack assets were not added in this worktree because the verified pack source lives in a separate branch/worktree and should be integrated there deliberately.
+- Resource Pack assets: the visual contract is now defined (`presentation-assets.yml`,
+  `docs/presentation-assets.md`) but the actual pack still lives in a separate
+  worktree and must be integrated there deliberately; CMD ranges are provisional.
+- Oraxen / DeluxeMenus adapters remain future work (port + detection ready, no
+  compile dependency — neither is installed in the current docker stack).
+- Deep per-handler command detail lines (e.g. `/ward info` field lines) are still
+  inline Spanish; the shared layer (prefixes, help, errors, menu feedback) is fully
+  catalog-driven and the `Messages.tr` fallback makes incremental migration trivial.
 - Docker runtime integration for auto-loading the locally built plugin JAR still needs a verified build artifact path and startup wiring.
 - Ward upkeep debt currently warns but does not suspend/dissolve the WG region yet.
 - Pre-existing Wards created before any given update remain valid: they live in `wards.yml` and load on boot; no migration needed.

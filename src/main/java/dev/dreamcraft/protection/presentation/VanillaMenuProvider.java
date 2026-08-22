@@ -55,6 +55,10 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
     );
 
     private final Map<String, String> iconMap;
+    /** Optional asset contract (presentation-assets.yml): CMD per viewer + fallbacks. */
+    private volatile dev.dreamcraft.protection.presentation.resourcepack.PresentationAssetRegistry assets;
+    /** Optional per-player resource pack state (menus.provider: auto). */
+    private volatile dev.dreamcraft.protection.presentation.resourcepack.PackState packState;
     private final Map<UUID, String> openMenus           = new ConcurrentHashMap<>();
     private final Map<UUID, MenuDefinition> openDefs    = new ConcurrentHashMap<>();
     private final Map<UUID, MenuContext> openContexts   = new ConcurrentHashMap<>();
@@ -89,6 +93,20 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
         this.depositHandler = Objects.requireNonNull(handler);
     }
 
+    /**
+     * Installs the asset contract (presentation-assets.yml). When present,
+     * icons gain CustomModelData for players with the resource pack and fall
+     * back to configured vanilla materials otherwise.
+     */
+    public void setAssetRegistry(dev.dreamcraft.protection.presentation.resourcepack.PresentationAssetRegistry registry) {
+        this.assets = registry;
+    }
+
+    /** Installs the per-player pack state used by {@code menus.provider: auto|rp}. */
+    public void setPackTracker(dev.dreamcraft.protection.presentation.resourcepack.PackState state) {
+        this.packState = state;
+    }
+
     // ── MenuProvider ──────────────────────────────────────────────────────────
 
     @Override
@@ -100,7 +118,7 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
         String rawTitle = definition.title() + TITLE_MAGIC + definition.menuId() + TITLE_SUFFIX;
         Component titleComp = LEGACY.deserialize(rawTitle);
         Inventory inv = Bukkit.createInventory(null, definition.size(), titleComp);
-        populate(inv, definition);
+        populate(inv, definition, context.viewerId());
 
         openMenus.put(context.viewerId(), definition.menuId());
         openDefs.put(context.viewerId(), definition);
@@ -116,7 +134,7 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
         MenuDefinition def = openDefs.get(context.viewerId());
         if (def == null) return;
         openContexts.put(context.viewerId(), context);
-        populate(player.getOpenInventory().getTopInventory(), def);
+        populate(player.getOpenInventory().getTopInventory(), def, context.viewerId());
     }
 
     @Override
@@ -190,17 +208,17 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
 
     // ── Render helpers ────────────────────────────────────────────────────────
 
-    private void populate(Inventory inv, MenuDefinition definition) {
+    private void populate(Inventory inv, MenuDefinition definition, UUID viewerId) {
         ItemStack filler = buildFiller();
         for (int i = 0; i < definition.size(); i++) inv.setItem(i, filler);
         for (MenuItem item : definition.items()) {
             if (item.slot() >= 0 && item.slot() < definition.size()) {
-                inv.setItem(item.slot(), buildItemStack(item));
+                inv.setItem(item.slot(), buildItemStack(item, viewerId));
             }
         }
     }
 
-    private ItemStack buildItemStack(MenuItem item) {
+    private ItemStack buildItemStack(MenuItem item, UUID viewerId) {
         Material mat = resolveIcon(item.iconKey());
         ItemStack stack = new ItemStack(mat);
         ItemMeta meta = stack.getItemMeta();
@@ -212,8 +230,22 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
                     .toList();
             meta.lore(loreLine);
         }
+        applyAssets(item.iconKey(), stack, meta, viewerId);
         stack.setItemMeta(meta);
         return stack;
+    }
+
+    /**
+     * Applies the asset contract for this icon: CustomModelData when the viewer
+     * loaded the pack, configured vanilla fallback otherwise. Respects the
+     * provider mode — {@code vanilla} never applies CMD.
+     */
+    private void applyAssets(String iconKey, ItemStack stack, ItemMeta meta, UUID viewerId) {
+        var registry = assets;
+        if (registry == null) return;
+        var state = packState;
+        boolean viewerHasPack = state != null && state.has(viewerId);
+        registry.applyTo(iconKey, stack, meta, viewerHasPack);
     }
 
     private ItemStack buildFiller() {

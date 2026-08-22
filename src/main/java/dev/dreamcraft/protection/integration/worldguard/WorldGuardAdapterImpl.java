@@ -4,10 +4,11 @@ import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.domains.DefaultDomain;
+import com.sk89q.worldguard.protection.flags.Flags;
+import com.sk89q.worldguard.protection.flags.StateFlag;
 import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
-import dev.dreamcraft.protection.domain.model.City;
 import dev.dreamcraft.protection.domain.model.Estate;
 import dev.dreamcraft.protection.domain.model.Ward;
 import dev.dreamcraft.protection.integration.registry.CapabilityRegistry;
@@ -61,6 +62,10 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
             ownerDomain.addPlayer(ward.ownerId());
             region.setOwners(ownerDomain);
 
+            // Containers (chests, barrels, furnaces, ...) stay closed for outsiders.
+            // Owners and WG members are exempt from region flags, so they keep full access.
+            region.setFlag(Flags.CHEST_ACCESS, StateFlag.State.DENY);
+
             rm.addRegion(region);
             return regionId;
         } catch (Exception e) {
@@ -107,24 +112,17 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
     }
 
     @Override
-    public void addMember(Ward ward, UUID playerId) {
+    public void replaceMembers(Ward ward, java.util.Collection<UUID> members) {
         if (!isAvailable() || ward.worldGuardRegionId() == null) return;
         try {
             ProtectedRegion region = getRegion(ward);
-            if (region != null) region.getMembers().addPlayer(playerId);
+            if (region == null) return;
+            DefaultDomain memberDomain = new DefaultDomain();
+            for (UUID memberId : members) memberDomain.addPlayer(memberId);
+            // Owners domain is untouched â€” the owner keeps access regardless.
+            region.setMembers(memberDomain);
         } catch (Exception e) {
-            logger.warning("[WorldGuard] addMember failed for ward " + ward.id() + ": " + e.getMessage());
-        }
-    }
-
-    @Override
-    public void removeMember(Ward ward, UUID playerId) {
-        if (!isAvailable() || ward.worldGuardRegionId() == null) return;
-        try {
-            ProtectedRegion region = getRegion(ward);
-            if (region != null) region.getMembers().removePlayer(playerId);
-        } catch (Exception e) {
-            logger.warning("[WorldGuard] removeMember failed for ward " + ward.id() + ": " + e.getMessage());
+            logger.warning("[WorldGuard] replaceMembers failed for ward " + ward.id() + ": " + e.getMessage());
         }
     }
 
@@ -143,18 +141,15 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
     }
 
     @Override
-    public void syncCityMembership(Ward ward, City city) {
+    public void setPublicContainerAccess(Ward ward, boolean allowed) {
         if (!isAvailable() || ward.worldGuardRegionId() == null) return;
         try {
             ProtectedRegion region = getRegion(ward);
             if (region == null) return;
-            // Add all city members as WG region members (inheritance of city access)
-            DefaultDomain members = region.getMembers();
-            for (UUID memberId : city.members().keySet()) {
-                members.addPlayer(memberId);
-            }
+            region.setFlag(Flags.CHEST_ACCESS,
+                    allowed ? StateFlag.State.ALLOW : StateFlag.State.DENY);
         } catch (Exception e) {
-            logger.warning("[WorldGuard] syncCityMembership failed for ward " + ward.id() + ": " + e.getMessage());
+            logger.warning("[WorldGuard] setPublicContainerAccess failed for ward " + ward.id() + ": " + e.getMessage());
         }
     }
 
@@ -182,9 +177,8 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
         try {
             ProtectedRegion region = getRegion(ward);
             if (region == null) return;
-            // Restore priority to a neutral value; members are left intact (they may
-            // have legitimate access outside the instance). The caller can removeMember
-            // for estate-only members if needed.
+            // Restore priority to a neutral value; members are left intact here â€”
+            // the next WardAccessSync.project re-derives them from domain truth.
             if (region.getPriority() >= 100) {
                 region.setPriority(0);
             }
@@ -193,7 +187,17 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
         }
     }
 
-    // ── Estate area regions ───────────────────────────────────────────────────
+    // â”€â”€ Estate area regions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    /** Vertical band (stealth): region spans anchorY - below … anchorY + above. */
+    private int estateBandBelow = 16;
+    private int estateBandAbove = 48;
+
+    @Override
+    public void setEstateAreaBand(int below, int above) {
+        this.estateBandBelow = Math.max(0, below);
+        this.estateBandAbove = Math.max(4, above);
+    }
 
     @Override
     public String createEstateAreaRegion(Estate estate, String worldName, int centerX, int centerZ, int radius) {
@@ -205,8 +209,13 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
             String regionId = estateRegionId(estate);
             rm.removeRegion(regionId);
 
-            BlockVector3 min = BlockVector3.at(centerX - radius, -64, centerZ - radius);
-            BlockVector3 max = BlockVector3.at(centerX + radius, 320, centerZ + radius);
+            // Stealth banding: the zone hugs the structure vertically, so a
+            // player walking the surface stays outside the region and never
+            // learns the stronghold/chamber exists below.
+            int minY = Math.max(-64, estate.areaY() - estateBandBelow);
+            int maxY = Math.min(320, estate.areaY() + estateBandAbove);
+            BlockVector3 min = BlockVector3.at(centerX - radius, minY, centerZ - radius);
+            BlockVector3 max = BlockVector3.at(centerX + radius, maxY, centerZ + radius);
             ProtectedCuboidRegion region = new ProtectedCuboidRegion(regionId, min, max);
 
             DefaultDomain owners = new DefaultDomain();
@@ -218,6 +227,7 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
             }
             region.setMembers(members);
             region.setPriority(10); // above default claims so the adventure zone stays intact
+            region.setFlag(Flags.CHEST_ACCESS, StateFlag.State.DENY);
 
             rm.addRegion(region);
             return regionId;
@@ -264,7 +274,7 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
         return "dc_estate_" + estate.id().toString().replace("-", "").substring(0, 12);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private RegionManager getRegionManager(String worldName) {
         World world = Bukkit.getWorld(worldName);

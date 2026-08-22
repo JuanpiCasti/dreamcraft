@@ -39,8 +39,11 @@ el claim en el que estás parado.
 | `/protection dissolve` | Elimina el claim y levanta la protección (alias: `abandon`; solo owner) |
 
 **Permisos públicos válidos para claims**: `PUBLIC_BUILD`, `PUBLIC_BREAK`,
-`PUBLIC_INTERACT`. Se guardan en la configuración del claim y permiten que
-jugadores ajenos construyan/rompan/interactúen dentro del claim.
+`PUBLIC_CONTAINERS`. Se guardan en la configuración del claim. `PUBLIC_CONTAINERS`
+abre los contenedores (cofres, barriles, hornos) a no-miembros — espeja el flag
+`chest-access` de la región WG, que por defecto está en `deny` para outsiders
+(owner y miembros siempre tienen acceso). Los ítems además no pueden cruzar el
+borde del claim vía hoppers/droppers (`InventoryMoveItemEvent`).
 
 ### Acceso al menú
 
@@ -83,9 +86,9 @@ en `config.yml` (sección `ward:`).
 | `/ward give` | Entrega la Baliza de Ward (admin) |
 | `/ward info [id]` | Nombre, ID, owner, tier, score, radio, upkeep y centro |
 | `/ward menu [id]` | Abre el menú gráfico del Ward (requiere `dreamcraft.ward.menu` o admin; ver abajo) |
-| `/ward score [add <n>]` | Consulta el score; con `add` suma puntos (solo owner) y redimensiona la región |
+| `/ward score [add <n>]` | Consulta el score; con `add` suma puntos (solo owner) y redimensiona la región — rechaza crecimientos que alcanzarían una Ward ajena |
 | `/ward upkeep [deposit <n>]` | Consulta el upkeep; con `deposit` deposita unidades |
-| `/ward upgrade` | Mejora el Ward al siguiente tier descontando los ítems definidos en `ward-upgrade-costs` (solo owner) |
+| `/ward upgrade` | Mejora el Ward al siguiente tier descontando los ítems definidos en `ward-upgrade-costs` (solo owner). Falla si el radio nuevo alcanzaría la Ward de otro jugador |
 | `/ward transfer <jugador>` | Transfiere el ownership a un jugador online (solo owner) |
 | `/ward permissions` | Lista los permisos públicos actuales |
 | `/ward permissions <permiso> grant` | Concede un permiso público (solo owner) |
@@ -96,7 +99,11 @@ en `config.yml` (sección `ward:`).
 | `/ward delete [id]` | Elimina el Ward y su región (solo owner o admin) |
 
 **Permisos públicos válidos** (`WardPermission`): `PUBLIC_BUILD`, `PUBLIC_BREAK`,
-`PUBLIC_INTERACT`, `PUBLIC_UPKEEP_DEPOSIT`, `PUBLIC_STATUS_VIEW`.
+`PUBLIC_CONTAINERS`, `PUBLIC_UPKEEP_DEPOSIT`, `PUBLIC_STATUS_VIEW`.
+`PUBLIC_CONTAINERS` alterna el flag WG `chest-access` de la región (deny por
+defecto al fundar el Ward; grant = allow). Los hoppers/droppers externos no
+pueden drenar contenedores dentro del Ward (ni empujar hacia afuera), salvo
+entre Wards del mismo dueño o de la misma ciudad.
 
 Admin: `dreamcraft.ward.admin` (default: op) permite borrar/modificar Wards ajenos.
 Menú: `dreamcraft.ward.menu` (default: false, pensado para VIPs) habilita
@@ -161,14 +168,54 @@ Requieren `dreamcraft.protection.admin`.
 
 | Comando | Descripción |
 |---|---|
-| `/estate admin create <id> <tipo> [radio]` | Crea un Estate administrativo persistente y fija su **área** donde estás parado (default r=32). Parate dentro de la estructura del portal/cámara antes de ejecutarlo |
-| `/estate admin area <id> [radio]` | Mueve/re-ancla el área del estate a tu posición actual |
+| `/estate admin create <id> <tipo> [radio\|auto]` | Crea un Estate administrativo persistente y fija su **área** donde estás parado (default r=32). Con `auto` localiza la estructura vanilla real (stronghold / trial chambers, búsqueda de 512 bloques) y ancla ahí con r=48. Parate dentro de la estructura antes de usar radio manual |
+| `/estate admin area <id> [radio]` | Mueve/re-ancla el área del estate a tu posición actual (re-ancla también la banda vertical) |
 | `/estate admin reset <id>` | Reinicia la instancia End: borra el mundo privado y deja la dragona lista |
+
+### Sigilo vertical (band-below / band-above)
+
+Las áreas END/TRIAL_CHAMBER **no cubren toda la altura del mundo**:
+
+- La región WG abarca `anclaY - band-below … anclaY + band-above`
+  (`estate-instances.band-*` en config.yml; defaults 16/48).
+- El descubrimiento de zona usa la misma banda: quien camina por la
+  **superficie** sobre una stronghold no recibe mensajes, no dispara la
+  creación automática de party y no queda dentro de ninguna región — no
+  puede saber que la estructura está abajo.
+- Solo a la altura correcta (dentro de la banda) se activan los gates:
+  frames/vaults para no-miembros y el aviso de descubrimiento.
+- **Regeneración del portal**: al anclar un área (`admin create/area`) se
+  captura un snapshot de los frames vanilla. Cada vez que alguien **sale por
+  el portal de salida** (y también en el reset programado o `admin reset`),
+  la sala del portal se regenera: frames rotos/extraídos vuelven a su sitio,
+  los ojos colocados se retiran y los portales abiertos se cierran — la zona
+  queda lista para el siguiente grupo.
+- **Loot re-armado con re-roll** (parte de `regenerate-zone`): el snapshot
+  también registra los contenedores con LootTable vanilla activa. Al cerrar
+  el nexo cada cofre se limpia y se vuelve a armar con su MISMA tabla pero
+  semilla aleatoria nueva — cada grupo encuentra loot distinto al anterior.
+- **Ores y estructura indestructibles** (`estate-instances.protect-structure`,
+  default on): dentro del nexo no se puede minar ningún `_ORE` ni
+  ANCIENT_DEBRIS, ni romper frames, vaults, trial spawners, spawners o
+  contenedores de loot — ningún grupo agota la stronghold para el siguiente.
+- **Regeneración de chunks al cerrar** (`regenerate-zone`, default on):
+  toda otra modificación (bloques colocados/rotos, cubetas) se journala en
+  `zone-edits/<estateId>.log` con su estado original; al salir por el portal
+  de salida, en el reset programado o con `admin reset` el journal se aplica
+  en orden inverso y los chunks quedan como recién generados. Las explosiones
+  no afectan bloques de la zona. Se eligió journaling sobre
+  `World.regenerateChunk` porque las columnas pueden llegar hasta bases en
+  superficie — el journal solo toca lo que los aventureros modificaron.
+- Zonas creadas antes de este cambio quedaron con anclaje Y=0: re-anclarlas
+  una vez con `/estate admin area <id>` para posicionar la banda (y capturar
+  el snapshot del portal).
 
 ### Cómo funciona una aventura de tipo `end`
 
-1. Un admin se para junto a la estructura del portal (frames + sala) y corre
-   `/estate admin create <nombre> end 32`. Eso define la **zona** del área.
+1. Un admin corre
+   `/estate admin create <nombre> end auto` (localiza la stronghold) o se
+   paró junto al portal y usa `… end 32`. Eso define la **zona** del área,
+   acotada verticalmente por la banda de sigilo.
 2. Cada jugador que entra a la zona (o corre `/estate discover end`) obtiene su
    **propio estate de party**: queda como líder, hereda el área de la zona y
    puede invitar a su grupo con `/estate invite <jugador>`.
@@ -213,3 +260,79 @@ Claims, Wards, ciudades y Estates generan nombres amigables al crearse
 (ej.: "Atalaya del Alba"); si hay colisión se agrega un numeral romano.
 El nombre se muestra en menús, `/protection status`, `/ward info` y títulos,
 y puede cambiar con el tiempo sin afectar el ID interno.
+
+---
+
+## Personalización por servidor (sin recompilar)
+
+### Renombrar comandos raíz — `commands.yml` de Bukkit
+
+Los comandos raíz (`/ward`, `/city`, `/estate`, `/protection`) se renombran
+con el archivo `commands.yml` del servidor, sin tocar el plugin:
+
+```yaml
+# server commands.yml
+parcela: ward $1-
+ciudad:  city $1-
+grupo:   estate $1-
+```
+
+El alias hereda dispatch, tab-complete de nivel 2+ y permisos. Plantillas
+listas en `plugin-configs/DreamCraftProtection/commands.example.yml`.
+Limitación: renombra la invocación; el texto de ayuda interno sigue citando
+el comando canónico (edítalo en `messages.yml`).
+
+### Aliases y alta/baja de subcomandos — `config.yml`
+
+```yaml
+commands:
+  ward:
+    subcommands:
+      create: { aliases: [fundar] }   # /ward fundar ≡ /ward create
+      menu:   { enabled: false }      # responde "subcomando desconocido"
+```
+
+Los aliases participan del dispatch y del tab-complete de nivel 1. Los
+subcomandos admin (`give`, `reload`, `recalculate`, `integrations`,
+`estate admin`) se ocultan del tab-complete para quien no tenga el permiso.
+
+### Textos — `messages.yml`
+
+Prefijos (`[Ward]`, `[Ciudad]`…), errores comunes, bloques de ayuda completos
+y todo el feedback de menús viven en `messages.yml` (códigos `&` y
+placeholders `{nombre}`). Copia el embebido a
+`plugin-configs/DreamCraftProtection/messages.yml` para re-marcar textos por
+servidor. Resolución: override del servidor → default embebido → fallback en
+código.
+
+### Estado de integraciones
+
+`/protection integrations` (permiso `dreamcraft.integrations.status`) muestra
+infraestructura (WG, LP, CP…) **y** presentación: modo de assets, proveedor,
+iconos en contrato y detección de Oraxen/DeluxeMenus.
+
+---
+
+## Servidor «El Despertar y la Sincronicidad» (lore activo)
+
+Este worktree despliega el lore de marca. Mapeo completo:
+
+| Lore | Implementación | Dónde |
+|---|---|---|
+| `/sync`, `/sincronia` ≡ Ward | `commands.yml`: `sync: ward $1-` | servidor |
+| `despertar`, `renombrar`, `alimentar`, `fase`, `dar`, `apagar`, `nucleo` | aliases por subcomando | `config.yml` → `commands.ward.*` |
+| `/nexo` ≡ Estate · `/matriz` ≡ City | `commands.yml` | servidor |
+| Presencia física obligatoria para alimentar/mejorar | gate por distancia al centro del Ward (+2 bloques) | `WardCommand.ensurePresence` / `ProtectionCommand.ensurePresence` |
+| Enlace dimensional remoto VIP | permiso `dreamcraft.ward.remote` (admins bypass) — alimenta, mejora y `/sync tp` desde cualquier lugar | LuckPerms → grupo VIP |
+| `/sync sintonizar` / `/sync expulsar` | concede/revoca flags públicos BUILD+CONTAINERS con sync WG | `WardCommand.handleSintonize/handleExpulsar` |
+| `/sync tp` | teletransporte al núcleo; owner o enlace remoto | `WardCommand.handleTp` |
+| `/sync abrir <id\|jugador>` | inspección staff: abre el menú de cualquier núcleo | `WardCommand.handleAdminOpen` |
+
+**Nota de diseño**: los Wards no llevan lista de miembros individual
+(el acceso se modela vía flags públicos + membresía de Ciudad), así que
+`sintonizar/expulsar` operan sobre la frecuencia pública del territorio;
+la membresía nominal vive en la Matriz (`/ciudad invitar/expulsar`).
+
+**Pendiente del lore** (requiere dominio): estado de Letargo forzado
+(`/sync admin letargo`) y depósito remoto genérico `/sync alimentar [cantidad]`
+sin argumentos de material.

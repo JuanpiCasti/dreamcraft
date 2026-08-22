@@ -24,12 +24,12 @@ commands:
   protection:
     description: Gestiona tu Ward (misma mecánica que /ward)
     aliases: [prot, claim]
-    usage: /protection [claim|status|rename|upkeep|permissions|upgrade|transfer|members|dissolve|give|reload|recalculate]
+    usage: /protection [claim|status|rename|upkeep|permissions|upgrade|transfer|members|dissolve|give|reload|recalculate|integrations]
     permission: dreamcraft.protection.use
   ward:
-    description: Gestiona tu Ward (territorio DreamCraft)
+    description: Gestiona tu Núcleo de Sincronía (lore «El Despertar»)
     aliases: [w]
-    usage: /ward [create|rename|info|delete|score|upkeep|transfer|permissions|city|menu|give]
+    usage: /ward [create|info|rename|sintonizar|expulsar|permissions|upkeep|score|menu|tp|city|transfer|delete|abrir|give]
     permission: dreamcraft.ward.use
   city:
     description: Gestiona tu Ciudad
@@ -60,6 +60,9 @@ permissions:
     default: op
   dreamcraft.ward.menu:
     description: Abrir el menú del Ward (/ward menu y clic derecho en la baliza). Conceder al grupo VIP.
+    default: false
+  dreamcraft.ward.remote:
+    description: 'Lore «El Despertar»: enlace dimensional remoto — alimentar/mejorar/tp sin estar junto al bloque. Conceder al grupo VIP.'
     default: false
   dreamcraft.city.use:
     description: Acceso a comandos de Ciudad

@@ -53,13 +53,31 @@ public final class EstatePortalListener implements Listener {
     private final WorldGuardAdapter worldGuardAdapter;
     /** playerId → last zone estate they were inside (absent = outside). */
     private final Map<UUID, UUID> lastZoneByPlayer = new ConcurrentHashMap<>();
+    /**
+     * Vertical stealth band: a location only counts as "inside the zone" when
+     * it sits within anchorY - bandBelow … anchorY + bandAbove. Surface players
+     * passing above a stronghold/chamber therefore never trigger discovery,
+     * gating messages or automatic party creation.
+     */
+    private final int bandBelow;
+    private final int bandAbove;
 
     public EstatePortalListener(EstateService estateService,
                                 EndInstanceService instanceService,
                                 WorldGuardAdapter worldGuardAdapter) {
+        this(estateService, instanceService, worldGuardAdapter, 16, 48);
+    }
+
+    public EstatePortalListener(EstateService estateService,
+                                EndInstanceService instanceService,
+                                WorldGuardAdapter worldGuardAdapter,
+                                int areaBandBelow,
+                                int areaBandAbove) {
         this.estateService = estateService;
         this.instanceService = instanceService;
         this.worldGuardAdapter = worldGuardAdapter;
+        this.bandBelow = Math.max(0, areaBandBelow);
+        this.bandAbove = Math.max(4, areaBandAbove);
     }
 
     // ── Eye insertion + trial vault gating ────────────────────────────────────
@@ -76,7 +94,9 @@ public final class EstatePortalListener implements Listener {
         if (!isFrame && !isTrialBlock) return;
 
         Player player = event.getPlayer();
-        List<Estate> zones = adventureAreasAt(clicked.getLocation());
+        List<Estate> zones = adventureAreasAt(clicked.getLocation()).stream()
+                .filter(e -> withinVerticalBand(clicked.getLocation(), e))
+                .toList();
         if (zones.isEmpty()) return;
 
         Estate zone = zones.get(0);
@@ -132,6 +152,7 @@ public final class EstatePortalListener implements Listener {
         // estate's world, preferring one that is already active (mid-fight).
         List<Estate> candidates = adventureAreasAt(event.getFrom()).stream()
                 .filter(e -> e.type().usesEndInstance())
+                .filter(e -> withinVerticalBand(event.getFrom(), e))
                 .toList();
         if (candidates.isEmpty()) return;
 
@@ -223,7 +244,9 @@ public final class EstatePortalListener implements Listener {
         World world = location.getWorld();
         if (world == null) return;
         List<Estate> zones = new java.util.ArrayList<>(estateService.findInstancedAreasAt(
-                world.getName(), location.getBlockX(), location.getBlockZ()));
+                        world.getName(), location.getBlockX(), location.getBlockZ()).stream()
+                .filter(e -> withinVerticalBand(location, e))
+                .toList());
         UUID playerId = player.getUniqueId();
 
         if (zones.isEmpty()) {
@@ -264,6 +287,12 @@ public final class EstatePortalListener implements Listener {
         if (world == null) return List.of();
         return new java.util.ArrayList<>(estateService.findInstancedAreasAt(
                 world.getName(), location.getBlockX(), location.getBlockZ()));
+    }
+
+    /** Stealth band check: |y - anchorY| within the configured vertical band. */
+    private boolean withinVerticalBand(Location location, Estate estate) {
+        double dy = location.getY() - estate.areaY();
+        return dy >= -bandBelow && dy <= bandAbove;
     }
 
     private static boolean isMember(Estate estate, java.util.UUID playerId) {

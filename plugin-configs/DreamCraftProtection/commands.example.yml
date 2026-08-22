@@ -1,0 +1,51 @@
+# ── commands.example.yml ─────────────────────────────────────────────────────
+# RENOMBRE DE COMANDOS RAÍZ POR SERVIDOR (sin recompilar el plugin)
+#
+# Este archivo NO se copia al servidor: es una plantilla. Copia las líneas que
+# necesites en <servidor>/commands.yml (junto a bukkit.yml) y reinicia.
+#
+# Sintaxis Bukkit: <nuevo-alias>: <comando-real> $1-
+#
+# ══════════════════════════════════════════════════════════════════════════
+# BLOQUE ACTIVO · Servidor «El Despertar y la Sincronicidad» (Survival)
+# ══════════════════════════════════════════════════════════════════════════
+
+sync: ward $1-
+sincronia: ward $1-
+nexo: estate $1-
+matriz: city $1-
+proteccion: protection $1-
+
+# Resultado:
+#   /sync despertar            → funda el Núcleo (= /ward create)
+#   /sync sintonizar|expulsar  → abre/cierra la frecuencia pública
+#   /sync alimentar deposit…   → energía de sintonía (junto al bloque; VIP remoto)
+#   /sync tp                   → salto de resonancia al núcleo (VIP/owner)
+#   /nexo discover end         → Nexo de Aventura (= /estate)
+#   /matriz fundar             → nueva Red/Matriz (= /city create)
+
+# ══════════════════════════════════════════════════════════════════════════
+# PLANTILLAS ALTERNATIVAS (otros servidores de la Network)
+# ══════════════════════════════════════════════════════════════════════════
+
+# Español genérico
+# parcela: ward $1-
+# ciudad: city $1-
+# grupo: estate $1-
+# terreno: protection $1-
+
+# Servidor medieval
+# feudo: ward $1-
+# reino: city $1-
+# compania: estate $1-
+
+# NOTAS
+# - Los aliases de SUBCOMANDO (/sync despertar, /sync dar) van en config.yml:
+#     commands:
+#       ward:
+#         subcommands:
+#           create: { aliases: [despertar] }
+# - El comando raíz original (/ward) sigue funcionando; para ocultarlo del
+#   tab-complete general del cliente usa un gestor de comandos
+#   (p. ej. CommandWhitelist) si lo necesitas.
+

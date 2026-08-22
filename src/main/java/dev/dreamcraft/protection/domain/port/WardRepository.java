@@ -23,6 +23,13 @@ public interface WardRepository {
     /** Find the Ward whose center is in the given world at or near (x, z) within radius. */
     Optional<Ward> findAtLocation(String worldName, int x, int z);
 
+    /**
+     * Find the first Ward (excluding {@code excludeId}) whose center lies within
+     * the square of half-width {@code radius} around (x, z) in the given world.
+     * Used to detect conflicts before growing a Ward's area.
+     */
+    Optional<Ward> findConflicting(String worldName, int x, int z, int radius, UUID excludeId);
+
     /** Find the Ward whose special center block sits exactly at the given position. */
     Optional<Ward> findByCenter(String worldName, int x, int y, int z);
 

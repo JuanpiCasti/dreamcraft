@@ -124,7 +124,7 @@ public final class YamlEstateRepository implements EstateRepository {
                     ? EstateType.parse(adv.substring(adv.indexOf('-') + 1))
                     : EstateType.STANDARD;
         }
-        return new Estate(
+        Estate estate = new Estate(
                 UUID.fromString(key),
                 UUID.fromString(s.getString("owner-id")),
                 members,
@@ -140,6 +140,9 @@ public final class YamlEstateRepository implements EstateRepository {
                 s.getInt("area-z", 0),
                 s.getInt("area-radius", 0)
         );
+        estate.portalFrames(s.getStringList("portal-frames"));
+        estate.containerLoot(s.getStringList("containers-loot"));
+        return estate;
     }
 
     private void writeEstate(ConfigurationSection s, Estate e) {
@@ -157,6 +160,12 @@ public final class YamlEstateRepository implements EstateRepository {
             s.set("area-y", e.areaY());
             s.set("area-z", e.areaZ());
             s.set("area-radius", e.areaRadius());
+        }
+        if (!e.portalFrames().isEmpty()) {
+            s.set("portal-frames", e.portalFrames());
+        }
+        if (!e.containerLoot().isEmpty()) {
+            s.set("containers-loot", e.containerLoot());
         }
     }
 }

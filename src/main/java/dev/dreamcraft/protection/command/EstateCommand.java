@@ -43,6 +43,10 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
     private final dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter worldGuardAdapter;
     /** Optional: manages private End instances for END-type estates. */
     private final dev.dreamcraft.protection.service.EndInstanceService instanceService;
+    /** Per-server subcommand aliases/enabled flags. */
+    private final dev.dreamcraft.protection.config.CommandOptions options;
+    /** Single source of truth for dispatch + tab completion. */
+    private final CommandRegistry registry;
 
     public EstateCommand(EstateService estateService, MenuProvider menuProvider) {
         this(estateService, menuProvider, null, null);
@@ -52,49 +56,79 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
                          MenuProvider menuProvider,
                          dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter worldGuardAdapter,
                          dev.dreamcraft.protection.service.EndInstanceService instanceService) {
+        this(estateService, menuProvider, worldGuardAdapter, instanceService,
+                dev.dreamcraft.protection.config.CommandOptions.empty());
+    }
+
+    public EstateCommand(EstateService estateService,
+                         MenuProvider menuProvider,
+                         dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter worldGuardAdapter,
+                         dev.dreamcraft.protection.service.EndInstanceService instanceService,
+                         dev.dreamcraft.protection.config.CommandOptions options) {
         this.estateService = estateService;
         this.menuProvider = menuProvider;
         this.worldGuardAdapter = worldGuardAdapter;
         this.instanceService = instanceService;
+        this.options = options;
         this.viewModelBuilder = new EstateViewModelBuilder(this::resolveName);
+        this.registry = buildRegistry();
+    }
+
+    /**
+     * Builds the subcommand table: canonical names here, aliases merged from
+     * config.yml (commands.estate.subcommands.&lt;name&gt;.aliases).
+     */
+    private CommandRegistry buildRegistry() {
+        return new CommandRegistry("estate")
+                .register(SubcommandSpec.of("create", this::handleCreate)
+                        .withAliases(options.aliases("estate", "create")))
+                .register(SubcommandSpec.of("discover", this::handleDiscover)
+                        .withAliases(options.aliases("estate", "discover")))
+                .register(SubcommandSpec.admin("admin", this::handleAdmin)
+                        .withAliases(options.aliases("estate", "admin")))
+                .register(SubcommandSpec.of("invite", this::handleInvite)
+                        .withAliases(options.aliases("estate", "invite")))
+                .register(SubcommandSpec.of("join", this::handleJoin)
+                        .withAliases(options.aliases("estate", "join")))
+                .register(SubcommandSpec.of("leave", (p, a) -> handleLeave(p, a))
+                        .withAliases(options.aliases("estate", "leave")))
+                .register(SubcommandSpec.of("disband", (p, a) -> handleDisband(p, a))
+                        .withAliases(options.aliases("estate", "disband")))
+                .register(SubcommandSpec.of("start", (p, a) -> handleStart(p, a))
+                        .withAliases(options.aliases("estate", "start")))
+                .register(SubcommandSpec.of("transfer", this::handleTransfer)
+                        .withAliases(options.aliases("estate", "transfer")))
+                .register(SubcommandSpec.of("info", this::handleInfo)
+                        .withAliases(options.aliases("estate", "info")))
+                .register(SubcommandSpec.of("menu", this::handleMenu)
+                        .withAliases(options.aliases("estate", "menu")));
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cEste comando solo puede ser usado por jugadores.");
+            sender.sendMessage(tr("common.players-only", "§cEste comando solo puede ser usado por jugadores."));
             return true;
         }
         if (!player.hasPermission(USE_PERM)) {
-            error(player, ESTATE_PREFIX, "No tienes permiso para usar este comando.");
+            error(player, ESTATE_PREFIX, tr("common.no-permission", "No tienes permiso para usar este comando."));
             return true;
         }
         if (args.length == 0) {
             sendHelp(player);
             return true;
         }
+        SubcommandSpec spec = registry.resolve(args[0]);
+        if (spec == null || !options.isEnabled(registry.root(), spec.name())) {
+            error(player, ESTATE_PREFIX, tr("common.unknown-subcommand", "Subcomando desconocido: {sub}", "sub", args[0]));
+            sendHelp(player);
+            return true;
+        }
         try {
-            return switch (args[0].toLowerCase(Locale.ROOT)) {
-                case "create" -> handleCreate(player, args);
-                case "discover" -> handleDiscover(player, args);
-                case "admin" -> handleAdmin(player, args);
-                case "invite" -> handleInvite(player, args);
-                case "join" -> handleJoin(player, args);
-                case "leave" -> handleLeave(player, args);
-                case "disband" -> handleDisband(player, args);
-                case "start" -> handleStart(player, args);
-                case "transfer" -> handleTransfer(player, args);
-                case "info" -> handleInfo(player, args);
-                case "menu" -> handleMenu(player, args);
-                default -> {
-                    error(player, ESTATE_PREFIX, "Subcomando desconocido: " + args[0]);
-                    sendHelp(player);
-                    yield true;
-                }
-            };
+            return spec.execute(player, args);
         } catch (RuntimeException e) {
             if (!handleDomainException(player, ESTATE_PREFIX, e)) {
-                error(player, ESTATE_PREFIX, "Error: " + e.getMessage());
+                error(player, ESTATE_PREFIX, tr("common.error", "Error: {message}", "message", e.getMessage()));
             }
             return true;
         }
@@ -155,7 +189,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         if (args.length < 2) {
-            error(player, ESTATE_PREFIX, "Uso: /estate admin create <id> <tipo> [radio] | "
+            error(player, ESTATE_PREFIX, "Uso: /estate admin create <id> <tipo> [radio|auto] | "
                     + "/estate admin area <id> [radio] | /estate admin reset <id>");
             return true;
         }
@@ -178,25 +212,71 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
      */
     private boolean handleAdminCreate(Player player, String[] args) {
         if (args.length < 4) {
-            error(player, ESTATE_PREFIX, "Uso: /estate admin create <id> <tipo> [radio]");
+            error(player, ESTATE_PREFIX, "Uso: /estate admin create <id> <tipo> [radio|auto]");
             return true;
         }
         String id = args[2];
         EstateType type = EstateType.parse(args[3]);
-        int radius = args.length >= 5 ? parseRadius(args[4]) : defaultAreaRadius();
+
+        // «auto» estimates the zone from the real structure (stronghold /
+        // trial chamber) via vanilla structure location, anchoring the area at
+        // its actual coordinates instead of the admin's position.
+        boolean auto = args.length >= 5 && "auto".equalsIgnoreCase(args[4]);
+        org.bukkit.Location anchor;
+        int radius;
+        if (auto) {
+            anchor = locateStructure(player, type);
+            if (anchor == null) {
+                error(player, ESTATE_PREFIX, "No se encontró estructura cercana (búsqueda de 512 bloques). "
+                        + "Colócate dentro de la estructura o usa un radio manual.");
+                return true;
+            }
+            radius = args.length >= 6 ? parseRadius(args[5]) : Math.max(48, defaultAreaRadius());
+        } else {
+            anchor = player.getLocation();
+            radius = args.length >= 5 ? parseRadius(args[4]) : defaultAreaRadius();
+        }
 
         Estate estate = estateService.createEstate(
                 player.getUniqueId(), id, "adv-" + type.key(), null, true, type,
                 null, 0, 0, 0, 0);
         if (player.getWorld() != null && radius > 0) {
-            applyArea(estate, player.getLocation(), radius);
+            applyArea(estate, anchor, radius);
             ok(player, ESTATE_PREFIX, "Estate admin '" + estate.name() + "' creado (persistente, tipo "
-                    + type.displayName() + ", área r=" + radius + ").");
+                    + type.displayName() + ", área r=" + radius
+                    + (auto ? ", anclada a la estructura @ " + anchor.getBlockX() + "/"
+                    + anchor.getBlockY() + "/" + anchor.getBlockZ() : "") + ").");
         } else {
             ok(player, ESTATE_PREFIX, "Estate admin '" + estate.name() + "' creado (persistente, tipo "
                     + type.displayName() + "). Define su área con /estate admin area " + estate.id());
         }
         return true;
+    }
+
+    /**
+     * Estimates an adventure zone by locating the real vanilla structure:
+     * END → stronghold, TRIAL_CHAMBER → trial chambers. Uses the modern
+     * {@link org.bukkit.Registry#STRUCTURE} lookup (the legacy StructureType
+     * constants predate trial chambers). Returns the located anchor or null.
+     */
+    private org.bukkit.Location locateStructure(Player player, EstateType type) {
+        try {
+            if (player.getWorld() == null) return null;
+            org.bukkit.NamespacedKey key = switch (type.key()) {
+                case "end" -> org.bukkit.NamespacedKey.minecraft("stronghold");
+                case "trial_chamber" -> org.bukkit.NamespacedKey.minecraft("trial_chambers");
+                default -> null;
+            };
+            if (key == null) return null;
+            org.bukkit.generator.structure.Structure structure =
+                    org.bukkit.Registry.STRUCTURE.get(key);
+            if (structure == null) return null;
+            var result = player.getWorld()
+                    .locateNearestStructure(player.getLocation(), structure, 512, true);
+            return result == null ? null : result.getLocation();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /** Moves/re-anchors the estate's gated area at the player's position. */
@@ -245,6 +325,13 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         if (worldGuardAdapter != null && worldGuardAdapter.isAvailable()) {
             worldGuardAdapter.createEstateAreaRegion(estate, estate.areaWorld(),
                     estate.areaX(), estate.areaZ(), estate.areaRadius());
+        }
+        // Snapshot the vanilla portal frames so the room can regenerate
+        // between groups (broken frames restored, eyes stripped) and discard
+        // any stale edit journal from the previous anchor
+        if (instanceService != null) {
+            instanceService.clearZoneEdits(estate.id());
+            instanceService.capturePortal(estate);
         }
     }
 
@@ -486,22 +573,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
     // ── Help ──────────────────────────────────────────────────────────────────
 
     private void sendHelp(Player player) {
-        player.sendMessage("§d§lDreamCraft Estate");
-        player.sendMessage("§7Gestiona tu grupo de aventura.");
-        player.sendMessage(" ");
-        player.sendMessage("§f/estate create <id>          §7— Crear Estate");
-        player.sendMessage("§f/estate discover <tipo>      §7— Unirte a la aventura (end, trial_chamber)");
-        player.sendMessage("§f/estate admin create <id> <tipo> [radio] §7— Crear estate admin con área aquí");
-        player.sendMessage("§f/estate admin area <id> [radio]  §7— Mover el área del estate aquí");
-        player.sendMessage("§f/estate admin reset <id>     §7— Reiniciar la instancia de End");
-        player.sendMessage("§f/estate invite <jugador>     §7— Invitar miembro");
-        player.sendMessage("§f/estate join <id>           §7— Unirse a un Estate");
-        player.sendMessage("§f/estate leave               §7— Salir del Estate");
-        player.sendMessage("§f/estate start               §7— Iniciar instancia");
-        player.sendMessage("§f/estate transfer <jugador>   §7— Transferir ownership");
-        player.sendMessage("§f/estate info                §7— Ver información");
-        player.sendMessage("§f/estate menu                §7— Abrir menú del Estate");
-        player.sendMessage("§f/estate disband             §7— Disolver Estate");
+        helpBlock(player, "help.estate");
     }
 
     // ── Tab completion ─────────────────────────────────────────────────────────
@@ -510,11 +582,11 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();
         if (args.length == 1) {
-            List<String> subs = List.of("create", "discover", "admin", "invite", "join", "leave", "disband", "start", "transfer", "info", "menu");
-            filter(subs, args[0]).forEach(completions::add);
+            filter(registry.completionTokens(args[0]), args[0]).forEach(completions::add);
             return completions;
         }
-        String sub = args[0].toLowerCase(Locale.ROOT);
+        SubcommandSpec resolved = registry.resolve(args[0]);
+        String sub = (resolved != null ? resolved.name() : args[0]).toLowerCase(Locale.ROOT);
         if (args.length == 2) {
             switch (sub) {
                 case "invite", "transfer" -> filter(onlinePlayers(args[1]), args[1]).forEach(completions::add);

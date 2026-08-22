@@ -11,8 +11,13 @@ public enum WardPermission {
     PUBLIC_BUILD,
     /** Allow non-members to break blocks inside the Ward boundary. */
     PUBLIC_BREAK,
-    /** Allow non-members to interact with containers/doors inside the Ward. */
-    PUBLIC_INTERACT,
+    /**
+     * Allow non-members to open containers (chests, barrels, furnaces, ...)
+     * inside the Ward — mirrors the WorldGuard {@code chest-access} flag.
+     * When granted, the flag flips to {@code allow}; when revoked, back to
+     * {@code deny} (owners and members are always exempt).
+     */
+    PUBLIC_CONTAINERS,
     /** Allow non-members to deposit upkeep resources. */
     PUBLIC_UPKEEP_DEPOSIT,
     /** Allow non-members to view Ward status information. */

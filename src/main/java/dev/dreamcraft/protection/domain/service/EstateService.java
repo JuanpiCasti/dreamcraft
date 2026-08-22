@@ -220,10 +220,23 @@ public final class EstateService {
     public Estate createPartyEstate(UUID ownerId, String ownerName, EstateType type, Estate zone) {
         String name = type.displayName() + " de " + ownerName;
         if (zone != null && zone.hasArea()) {
-            return createEstate(ownerId, name, "adv-" + type.key(), null, false, type,
+            Estate party = createEstate(ownerId, name, "adv-" + type.key(), null, false, type,
                     zone.areaWorld(), zone.areaX(), zone.areaY(), zone.areaZ(), zone.areaRadius());
+            // Inherit the regeneration snapshots so every party gets the same
+            // portal repair and loot re-roll guarantees as the zone template
+            if (!zone.portalFrames().isEmpty() || !zone.containerLoot().isEmpty()) {
+                party.portalFrames(zone.portalFrames());
+                party.containerLoot(zone.containerLoot());
+                estateRepository.save(party);
+            }
+            return party;
         }
         return createEstate(ownerId, name, "adv-" + type.key(), null, false, type,
                 null, 0, 0, 0, 0);
+    }
+
+    /** Persists any direct mutation done outside the service (e.g. frame snapshots). */
+    public void save(Estate estate) {
+        estateRepository.save(estate);
     }
 }

@@ -69,6 +69,15 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
     private final WardUpkeepService upkeepService;
     private final WardMenuFacade menuFacade;
     private final Runnable reloadAction;
+    /** Per-server subcommand aliases/enabled flags. */
+    private final dev.dreamcraft.protection.config.CommandOptions options;
+    /** Single source of truth for dispatch + tab completion. */
+    private final CommandRegistry registry;
+    /** Optional: integration + presentation status reporting (/protection integrations). */
+    private dev.dreamcraft.protection.integration.registry.CapabilityRegistry capabilityRegistry;
+    private dev.dreamcraft.protection.presentation.resourcepack.PresentationAssetRegistry assetRegistry;
+    private dev.dreamcraft.protection.config.PresentationOptions.Mode assetMode =
+            dev.dreamcraft.protection.config.PresentationOptions.Mode.AUTO;
 
     public ProtectionCommand(WardService wardService,
                              CityService cityService,
@@ -78,6 +87,19 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
                              WardUpkeepService upkeepService,
                              WardMenuFacade menuFacade,
                              Runnable reloadAction) {
+        this(wardService, cityService, worldGuardAdapter, wardItems, upgradeService, upkeepService,
+                menuFacade, reloadAction, dev.dreamcraft.protection.config.CommandOptions.empty());
+    }
+
+    public ProtectionCommand(WardService wardService,
+                             CityService cityService,
+                             WorldGuardAdapter worldGuardAdapter,
+                             dev.dreamcraft.protection.ui.WardItems wardItems,
+                             WardUpgradeService upgradeService,
+                             WardUpkeepService upkeepService,
+                             WardMenuFacade menuFacade,
+                             Runnable reloadAction,
+                             dev.dreamcraft.protection.config.CommandOptions options) {
         this.wardService = wardService;
         this.cityService = cityService;
         this.worldGuardAdapter = worldGuardAdapter;
@@ -86,45 +108,87 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
         this.upkeepService = upkeepService;
         this.menuFacade = menuFacade;
         this.reloadAction = reloadAction;
+        this.options = options;
+        this.registry = buildRegistry();
+    }
+
+    /** Installs the status sources for /protection integrations. */
+    public void setStatusSources(dev.dreamcraft.protection.integration.registry.CapabilityRegistry capabilities,
+                                 dev.dreamcraft.protection.presentation.resourcepack.PresentationAssetRegistry assets,
+                                 dev.dreamcraft.protection.config.PresentationOptions.Mode mode) {
+        this.capabilityRegistry = capabilities;
+        this.assetRegistry = assets;
+        this.assetMode = mode;
+    }
+
+    /**
+     * Builds the subcommand table: canonical names here, aliases merged from
+     * config.yml (commands.protection.subcommands.&lt;name&gt;.aliases). Several
+     * canonical tokens may share one handler (e.g. claim/menu).
+     */
+    private CommandRegistry buildRegistry() {
+        return new CommandRegistry("protection")
+                .register(SubcommandSpec.of("claim", (p, a) -> handleClaim(p))
+                        .withAliases(options.aliases("protection", "claim")))
+                .register(SubcommandSpec.of("menu", (p, a) -> handleClaim(p))
+                        .withAliases(options.aliases("protection", "menu")))
+                .register(SubcommandSpec.of("status", (p, a) -> handleStatus(p))
+                        .withAliases(options.aliases("protection", "status")))
+                .register(SubcommandSpec.of("info", (p, a) -> handleStatus(p))
+                        .withAliases(options.aliases("protection", "info")))
+                .register(SubcommandSpec.of("rename", this::handleRename)
+                        .withAliases(options.aliases("protection", "rename")))
+                .register(SubcommandSpec.of("upkeep", this::handleUpkeep)
+                        .withAliases(options.aliases("protection", "upkeep")))
+                .register(SubcommandSpec.of("permissions", this::handlePermissions)
+                        .withAliases(options.aliases("protection", "permissions")))
+                .register(SubcommandSpec.of("upgrade", (p, a) -> handleUpgrade(p))
+                        .withAliases(options.aliases("protection", "upgrade")))
+                .register(SubcommandSpec.of("transfer", this::handleTransfer)
+                        .withAliases(options.aliases("protection", "transfer")))
+                .register(SubcommandSpec.of("members", (p, a) -> handleMembers(p))
+                        .withAliases(options.aliases("protection", "members")))
+                .register(SubcommandSpec.of("abandon", (p, a) -> handleAbandon(p))
+                        .withAliases(options.aliases("protection", "abandon")))
+                .register(SubcommandSpec.of("dissolve", (p, a) -> handleAbandon(p))
+                        .withAliases(options.aliases("protection", "dissolve")))
+                .register(SubcommandSpec.of("delete", (p, a) -> handleAbandon(p))
+                        .withAliases(options.aliases("protection", "delete")))
+                .register(SubcommandSpec.admin("give", (p, a) -> handleGive(p))
+                        .withAliases(options.aliases("protection", "give")))
+                .register(SubcommandSpec.admin("reload", (p, a) -> handleReload(p))
+                        .withAliases(options.aliases("protection", "reload")))
+                .register(SubcommandSpec.admin("recalculate", (p, a) -> handleRecalculate(p))
+                        .withAliases(options.aliases("protection", "recalculate")))
+                .register(SubcommandSpec.admin("integrations", (p, a) -> handleIntegrations(p))
+                        .withAliases(options.aliases("protection", "integrations")));
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cEste comando solo puede ser usado por jugadores.");
+            sender.sendMessage(tr("common.players-only", "§cEste comando solo puede ser usado por jugadores."));
             return true;
         }
         if (!player.hasPermission(USE_PERM)) {
-            error(player, WARD_PREFIX, "No tienes permiso para usar este comando.");
+            error(player, WARD_PREFIX, tr("common.no-permission", "No tienes permiso para usar este comando."));
             return true;
         }
         if (args.length == 0) {
             sendHelp(player);
             return true;
         }
+        SubcommandSpec spec = registry.resolve(args[0]);
+        if (spec == null || !options.isEnabled(registry.root(), spec.name())) {
+            error(player, WARD_PREFIX, tr("common.unknown-subcommand", "Subcomando desconocido: {sub}", "sub", args[0]));
+            sendHelp(player);
+            return true;
+        }
         try {
-            return switch (args[0].toLowerCase(Locale.ROOT)) {
-                case "claim", "menu" -> handleClaim(player);
-                case "status", "info" -> handleStatus(player);
-                case "rename" -> handleRename(player, args);
-                case "upkeep" -> handleUpkeep(player, args);
-                case "permissions" -> handlePermissions(player, args);
-                case "upgrade" -> handleUpgrade(player);
-                case "transfer" -> handleTransfer(player, args);
-                case "members" -> handleMembers(player);
-                case "abandon", "dissolve", "delete" -> handleAbandon(player);
-                case "give" -> handleGive(player);
-                case "reload" -> handleReload(player);
-                case "recalculate", "rebuildstats" -> handleRecalculate(player);
-                default -> {
-                    error(player, WARD_PREFIX, "Subcomando desconocido: " + args[0]);
-                    sendHelp(player);
-                    yield true;
-                }
-            };
+            return spec.execute(player, args);
         } catch (RuntimeException e) {
             if (!handleDomainException(player, WARD_PREFIX, e)) {
-                error(player, WARD_PREFIX, "Error: " + e.getMessage());
+                error(player, WARD_PREFIX, tr("common.error", "Error: {message}", "message", e.getMessage()));
             }
             return true;
         }
@@ -133,24 +197,9 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
     // ── Help ──────────────────────────────────────────────────────────────────
 
     private void sendHelp(Player player) {
-        player.sendMessage("§5§lDreamCraft Protection");
-        player.sendMessage("§7Gestiona tu Ward — misma mecánica que §f/ward§7.");
-        player.sendMessage(" ");
-        player.sendMessage("§f/protection claim       §7— Abrir el menú del Ward §8(vips/gobernadores)");
-        player.sendMessage("§f/protection status      §7— Consultar el estado del Ward");
-        player.sendMessage("§f/protection rename <nombre> §7— Renombrar el Ward");
-        player.sendMessage("§f/protection upkeep [deposit <material> <n>] §7— Mantenimiento");
-        player.sendMessage("§f/protection permissions [perm grant|revoke] §7— Permisos públicos");
-        player.sendMessage("§f/protection upgrade     §7— Mejorar el tier del Ward");
-        player.sendMessage("§f/protection transfer <jugador> §7— Transferir ownership");
-        player.sendMessage("§f/protection members     §7— Info de miembros (vía Ciudad)");
-        player.sendMessage("§f/protection dissolve    §7— Disolver el Ward");
+        helpBlock(player, "help.protection");
         if (player.hasPermission(ADMIN_PERM)) {
-            player.sendMessage(" ");
-            player.sendMessage("§c§lAdmin:");
-            player.sendMessage("§f/protection give        §7— Recibir Baliza de Ward");
-            player.sendMessage("§f/protection reload      §7— Recargar configuración");
-            player.sendMessage("§f/protection recalculate §7— Re-sincronizar la región");
+            helpAdminSection(player, "help.protection.admin");
         }
     }
 
@@ -231,6 +280,8 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
                 error(player, WARD_PREFIX, "Depósitos no disponibles.");
                 return true;
             }
+            // Lore: feeding the nucleus requires the physical block (or remote link)
+            if (!ensurePresence(player, ward)) return true;
             if (args.length < 4) {
                 error(player, WARD_PREFIX, "Uso: /protection upkeep deposit <material> <cantidad>");
                 info(player, WARD_PREFIX, "Aceptados: " + acceptedMaterialsList());
@@ -310,7 +361,7 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
                 perm = WardPermission.valueOf(args[1].toUpperCase(Locale.ROOT));
             } catch (IllegalArgumentException e) {
                 error(player, WARD_PREFIX, "Permiso inválido: " + args[1]);
-                info(player, WARD_PREFIX, "Válidos: PUBLIC_BUILD, PUBLIC_BREAK, PUBLIC_INTERACT, "
+                info(player, WARD_PREFIX, "Válidos: PUBLIC_BUILD, PUBLIC_BREAK, PUBLIC_CONTAINERS, "
                         + "PUBLIC_UPKEEP_DEPOSIT, PUBLIC_STATUS_VIEW");
                 return true;
             }
@@ -318,11 +369,13 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
                 case "grant" -> {
                     ward.grantPermission(perm);
                     persistPermissions(ward);
+                    syncContainerFlag(ward, perm);
                     ok(player, WARD_PREFIX, "Permiso §f" + perm.name() + "§a concedido al público.");
                 }
                 case "revoke" -> {
                     ward.revokePermission(perm);
                     persistPermissions(ward);
+                    syncContainerFlag(ward, perm);
                     warn(player, WARD_PREFIX, "Permiso §f" + perm.name() + "§e revocado.");
                 }
                 default -> error(player, WARD_PREFIX, "Uso: /protection permissions <perm> <grant|revoke>");
@@ -342,6 +395,13 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
         wardService.assignWorldGuardRegion(ward, ward.worldGuardRegionId()); // persists via repository
     }
 
+    /** Flips the WG chest-access flag when the container permission changes. */
+    private void syncContainerFlag(Ward ward, WardPermission perm) {
+        if (perm == WardPermission.PUBLIC_CONTAINERS) {
+            worldGuardAdapter.setPublicContainerAccess(ward, ward.hasPermission(perm));
+        }
+    }
+
     /** /protection upgrade — moves the Ward to the next tier, charging item costs. */
     private boolean handleUpgrade(Player player) {
         Ward ward = resolveWard(player);
@@ -350,12 +410,25 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
             error(player, WARD_PREFIX, "Solo el owner puede mejorar el Ward.");
             return true;
         }
+        // Lore «El Despertar»: raising a phase requires the physical nucleus
+        if (!ensurePresence(player, ward)) return true;
         var quoteOpt = upgradeService.quoteNext(ward);
         if (quoteOpt.isEmpty()) {
             warn(player, WARD_PREFIX, "El Ward ya está en el tier máximo (§b" + ward.tier() + "§e).");
             return true;
         }
         var quote = quoteOpt.get();
+
+        // Refuse the upgrade when the new radius would reach a foreign Ward
+        var conflictOpt = wardService.findForeignConflict(ward, quote.radiusAfter());
+        if (conflictOpt.isPresent()) {
+            Ward other = conflictOpt.get();
+            error(player, WARD_PREFIX, "No puedes mejorar al tier §b" + quote.targetTierKey()
+                    + "§c: el radio nuevo (§f" + quote.radiusAfter() + "§c) alcanzaría la Ward §f"
+                    + other.name() + "§c de " + ownerName(other) + ".");
+            return true;
+        }
+
         var missing = upgradeService.missingItems(player, quote);
         if (!missing.isEmpty()) {
             error(player, WARD_PREFIX, "Te faltan ítems para mejorar al tier §b" + quote.targetTierKey() + "§c:");
@@ -467,7 +540,67 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /**
+     * /protection integrations — MD §19: reports infrastructure AND presentation
+     * integrations with their capabilities (perm: dreamcraft.integrations.status).
+     */
+    private boolean handleIntegrations(Player player) {
+        if (!player.hasPermission("dreamcraft.integrations.status")) {
+            error(player, WARD_PREFIX, tr("common.no-permission-action", "No tienes permiso para este comando."));
+            return true;
+        }
+        info(player, WARD_PREFIX, "Integration Registry (infraestructura):");
+        if (capabilityRegistry != null) {
+            for (var entry : capabilityRegistry.allStatuses().entrySet()) {
+                var status = entry.getValue();
+                String mark = status.available() ? "&a✓" : (status.present() ? "&e!" : "&c✗");
+                StringBuilder line = new StringBuilder(mark + " &f" + entry.getKey().name());
+                if (status.detectedVersion() != null) line.append(" &7v").append(status.detectedVersion());
+                if (status.unavailableReason() != null) line.append(" &8— ").append(status.unavailableReason());
+                info(player, WARD_PREFIX, line.toString());
+            }
+        }
+        info(player, WARD_PREFIX, "Presentación:");
+        info(player, WARD_PREFIX, "- modo de assets: &f" + assetMode.name().toLowerCase(Locale.ROOT));
+        if (assetRegistry != null && !assetRegistry.providerName().isBlank()) {
+            info(player, WARD_PREFIX, "- proveedor de assets: &f" + assetRegistry.providerName()
+                    + (assetRegistry.isAvailable() ? " &a(disponible)" : " &c(sin entradas)"));
+            info(player, WARD_PREFIX, "- iconos en contrato: &f" + assetRegistry.iconCount());
+            info(player, WARD_PREFIX, "- capabilities: custom-models=&f"
+                    + (assetRegistry.isAvailable() ? "sí" : "no")
+                    + "&7, custom-sounds=&f" + (assetRegistry.sound("menu.click") != null ? "sí" : "no"));
+        }
+        if (capabilityRegistry != null) {
+            info(player, WARD_PREFIX, "- Oraxen detectado: &f"
+                    + (capabilityRegistry.isAvailable(dev.dreamcraft.protection.integration.registry.IntegrationKey.ORAXEN) ? "sí" : "no")
+                    + "&7 | DeluxeMenus detectado: &f"
+                    + (capabilityRegistry.isAvailable(dev.dreamcraft.protection.integration.registry.IntegrationKey.DELUXE_MENUS) ? "sí" : "no"));
+        }
+        return true;
+    }
+
     // ── Ward resolution ───────────────────────────────────────────────────────
+
+    /**
+     * Lore gate: feeding the nucleus and raising phases require standing next
+     * to the DreamCraft block — unless the viewer holds the remote link
+     * ({@code dreamcraft.ward.remote}, admins bypass).
+     */
+    private boolean ensurePresence(Player player, Ward ward) {
+        if (player.hasPermission(WardCommand.REMOTE_PERM) || player.hasPermission(ADMIN_PERM)) return true;
+        if (player.getWorld().getName().equals(ward.worldName())) {
+            double r = ward.radius() + 2;
+            double dx = player.getLocation().getX() - (ward.centerX() + 0.5);
+            double dz = player.getLocation().getZ() - (ward.centerZ() + 0.5);
+            double dy = player.getLocation().getY() - (ward.centerY() + 0.5);
+            if (dx * dx + dz * dz <= r * r && Math.abs(dy) <= r) return true;
+        }
+        error(player, WARD_PREFIX, tr("common.physical-required",
+                "Debes interactuar físicamente con tu Bloque de DreamCraft para esto."));
+        info(player, WARD_PREFIX, tr("common.physical-hint",
+                "Acércate a tu Núcleo o consigue el enlace remoto VIP con /sync tp."));
+        return false;
+    }
 
     /** Resolves the ward: explicit UUID arg → ward at location → owner's first ward. */
     private Ward resolveWard(Player player) {
@@ -484,22 +617,26 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
 
     // ── Tab completion ────────────────────────────────────────────────────────
 
+    /** Display name of a Ward's owner for messages (online, offline or fallback). */
+    private String ownerName(Ward ward) {
+        String name = Bukkit.getOfflinePlayer(ward.ownerId()).getName();
+        return name != null ? name : "desconocido";
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!(sender instanceof Player player)) return List.of();
 
         List<String> completions = new ArrayList<>();
         if (args.length == 1) {
-            List<String> subs = new ArrayList<>(List.of("claim", "menu", "status", "rename", "upkeep",
-                    "permissions", "upgrade", "transfer", "members", "abandon", "dissolve"));
-            if (player.hasPermission(ADMIN_PERM)) {
-                subs.addAll(List.of("give", "reload", "recalculate"));
-            }
-            filter(subs, args[0]).forEach(completions::add);
+            // Admin-only tokens stay hidden unless the sender has the admin node
+            filter(registry.completionTokens(args[0], spec ->
+                    !spec.isAdminOnly() || player.hasPermission(ADMIN_PERM)), args[0]).forEach(completions::add);
             return completions;
         }
+        SubcommandSpec resolved = registry.resolve(args[0]);
+        String sub = (resolved != null ? resolved.name() : args[0]).toLowerCase(Locale.ROOT);
         if (args.length == 2) {
-            String sub = args[0].toLowerCase(Locale.ROOT);
             switch (sub) {
                 case "transfer" -> filter(onlinePlayers(args[1]), args[1]).forEach(completions::add);
                 case "permissions" -> {
@@ -512,7 +649,6 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
             return completions;
         }
         if (args.length == 3) {
-            String sub = args[0].toLowerCase(Locale.ROOT);
             if ("upkeep".equals(sub) && "deposit".equalsIgnoreCase(args[1]) && upkeepService != null) {
                 upkeepService.acceptedMaterials().keySet().stream()
                         .map(Enum::name)

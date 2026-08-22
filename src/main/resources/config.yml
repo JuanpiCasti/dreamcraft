@@ -3,6 +3,45 @@
 upkeep:
   interval: 24h
 
+# ── Personalización de subcomandos por servidor ─────────────────────────────
+# Cada subcomando acepta "aliases" (se añaden al tab-complete y al dispatch)
+# y "enabled" (false = el subcomando responde como desconocido).
+# El renombre del COMANDO RAÍZ (/ward → /parcela) se hace con commands.yml
+# del servidor: ver docs/COMMANDS.md.
+commands:
+  ward:
+    subcommands:
+      create:
+        aliases: []
+      menu:
+        aliases: []
+      # menu:
+      #   enabled: false   # ejemplo: ocultar /ward menu en servidores sin VIP
+  city:
+    subcommands:
+      create:
+        aliases: []
+  estate:
+    subcommands:
+      discover:
+        aliases: []
+  protection:
+    subcommands:
+      claim:
+        aliases: []
+
+# ── Presentación de menús ───────────────────────────────────────────────────
+# provider:
+#   vanilla — GUIs vanilla puras, nunca aplica CustomModelData.
+#   rp      — aplica CMD del contrato presentation-assets.yml a todos
+#             (servidores que exigen el resource pack).
+#   auto    — CMD solo para jugadores con el pack cargado; el resto ve los
+#             materiales vanilla configurados como fallback.
+# Los assets (iconos/sonidos/fuentes/símbolos/partículas) se definen en
+# presentation-assets.yml — contrato con el equipo del resource pack.
+menus:
+  provider: auto
+
 # Bloque especial que crea un Ward al colocarlo.
 # La protección del Ward es un radio alrededor de este bloque (su centro).
 ward:
@@ -47,6 +86,22 @@ estate-instances:
   world-prefix: dc_end_
   # Radio por defecto del área al crear un estate admin sin radio explícito
   default-area-radius: 32
+  # ── Banda vertical (sigilo) ──
+  # La región WG y el descubrimiento de zona solo aplican entre
+  #   anclaY - band-below  y  anclaY + band-above.
+  # Así un jugador en superficie NO detecta la stronghold/cámara que pasa por
+  # debajo: sin mensajes, sin estate automático y sin protección sobre su base.
+  # Si la estructura sobresale hacia arriba, sube band-above; para re-anclar
+  # zonas legacy usa /nexo admin area <id>.
+  band-below: 16
+  band-above: 48
+  # Preservación de estructura: ores, frames, vaults y spawners son
+  # indestructibles dentro del nexo — ningún grupo agota la stronghold.
+  protect-structure: true
+  # Regeneración de zona: las modificaciones de los aventureros (colocados,
+  # bloques rotos, cubetas) se registran en zone-edits/ y se revierten al
+  # cerrar el nexo (portal de salida / reset) — chunks prístinos para todos.
+  regenerate-zone: true
   # Radio de escaneo alrededor del ancla del área para resetear ojos del portal
   frame-scan-radius: 24
   # Segundos entre que sale el último miembro y se reinicia el mundo de la instancia

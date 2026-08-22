@@ -47,6 +47,8 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     private java.util.function.BiConsumer<Player, Ward> wardMenuReopener = null;
     /** Optional: manages private End instances for END-type estates. */
     private dev.dreamcraft.protection.service.EndInstanceService endInstanceService = null;
+    /** Optional: asset contract — resolves menu sounds (presentation-assets.yml). */
+    private volatile dev.dreamcraft.protection.presentation.resourcepack.PresentationAssetRegistry presentationAssets;
 
     public MenuActionDispatcher(WardService wardService,
                                 CityService cityService,
@@ -92,6 +94,12 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         this.endInstanceService = service;
     }
 
+    /** Registers the asset registry used to resolve menu sounds. */
+    public void setPresentationAssets(
+            dev.dreamcraft.protection.presentation.resourcepack.PresentationAssetRegistry assets) {
+        this.presentationAssets = assets;
+    }
+
     @Override
     public void accept(MenuContext ctx, MenuAction action) {
         Player player = Bukkit.getPlayer(ctx.viewerId());
@@ -106,25 +114,38 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                 case "ward.annex_city" -> handleWardAnnexCity(player, ctx);
                 case "ward.disband" -> handleWardDisband(player, ctx);
                 case "ward.upkeep_vault" -> handleOpenUpkeepVault(player, ctx);
-                case "ward.transfer" -> feedback(player, "Usa /ward transfer <jugador>", NamedTextColor.YELLOW);
-                case "city.invite" -> feedback(player, "Usa /city invite <jugador>", NamedTextColor.YELLOW);
-                case "city.kick" -> feedback(player, "Usa /city kick <jugador>", NamedTextColor.YELLOW);
-                case "city.roles" -> feedback(player, "Usa /city roles <jugador> <rol>", NamedTextColor.YELLOW);
+                case "ward.transfer" -> feedback(player, msg("menu.hint.ward-transfer",
+                        "Usa /ward transfer <jugador>"), NamedTextColor.YELLOW);
+                case "city.invite" -> feedback(player, msg("menu.hint.city-invite",
+                        "Usa /city invite <jugador>"), NamedTextColor.YELLOW);
+                case "city.kick" -> feedback(player, msg("menu.hint.city-kick",
+                        "Usa /city kick <jugador>"), NamedTextColor.YELLOW);
+                case "city.roles" -> feedback(player, msg("menu.hint.city-roles",
+                        "Usa /city roles <jugador> <rol>"), NamedTextColor.YELLOW);
                 case "city.bank" -> handleOpenCityTreasury(player, ctx);
                 case "city.policy" -> handleCityPolicy(player, ctx, action);
                 case "city.delete" -> handleCityDelete(player, ctx);
-                case "estate.invite" -> feedback(player, "Usa /estate invite <jugador>", NamedTextColor.YELLOW);
+                case "estate.invite" -> feedback(player, msg("menu.hint.estate-invite",
+                        "Usa /estate invite <jugador>"), NamedTextColor.YELLOW);
                 case "estate.join" -> handleEstateJoin(player, ctx);
                 case "estate.leave" -> handleEstateLeave(player, ctx);
                 case "estate.start" -> handleEstateStart(player, ctx);
                 case "estate.disband" -> handleEstateDisband(player, ctx);
-                default -> feedback(player, "Acción no reconocida: " + id, NamedTextColor.RED);
+                default -> feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                        msg("menu.unknown-action", "Acción no reconocida: {action}"),
+                        "action", id), NamedTextColor.RED);
             }
         } catch (RuntimeException e) {
             player.sendMessage(Component.text("[DreamCraft] ", NamedTextColor.DARK_PURPLE)
-                    .append(Component.text(e.getMessage() != null ? e.getMessage() : "Error interno", NamedTextColor.RED)));
+                    .append(Component.text(e.getMessage() != null ? e.getMessage()
+                            : msg("menu.internal-error", "Error interno"), NamedTextColor.RED)));
             playError(player);
         }
+    }
+
+    /** Catalog lookup with inline fallback (see {@link dev.dreamcraft.protection.message.Messages}). */
+    private static String msg(String key, String fallback, Object... placeholders) {
+        return dev.dreamcraft.protection.message.Messages.get().tr(key, fallback, placeholders);
     }
 
     // ── Ward actions ──────────────────────────────────────────────────────────
@@ -136,14 +157,14 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
      */
     private void handleOpenUpkeepVault(Player player, MenuContext ctx) {
         if (upkeepService == null) {
-            feedback(player, "Depósitos no disponibles.", NamedTextColor.RED);
+            feedback(player, msg("menu.ward.deposits-unavailable", "Depósitos no disponibles."), NamedTextColor.RED);
             playError(player);
             return;
         }
         Ward ward = resolveWard(player, ctx);
         if (ward == null) return;
         if (!upkeepService.canDeposit(player, ward)) {
-            feedback(player, "No puedes depositar upkeep en este Ward.", NamedTextColor.RED);
+            feedback(player, msg("menu.ward.cannot-deposit", "No puedes depositar upkeep en este Ward."), NamedTextColor.RED);
             playError(player);
             return;
         }
@@ -170,31 +191,32 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         Player player = Bukkit.getPlayer(ctx.viewerId());
         if (player == null) return;
         if (upkeepService == null) {
-            feedback(player, "Depósitos no disponibles.", NamedTextColor.RED);
+            feedback(player, msg("menu.ward.deposits-unavailable", "Depósitos no disponibles."), NamedTextColor.RED);
             playError(player);
             return;
         }
         Ward ward = resolveWard(player, ctx);
         if (ward == null) return;
         if (!upkeepService.canDeposit(player, ward)) {
-            feedback(player, "No puedes depositar upkeep en este Ward.", NamedTextColor.RED);
+            feedback(player, msg("menu.ward.cannot-deposit", "No puedes depositar upkeep en este Ward."), NamedTextColor.RED);
             playError(player);
             return;
         }
         if (!upkeepService.isAccepted(material)) {
-            feedback(player, "Ítem no válido para upkeep. Mira los aceptados en el menú.",
-                    NamedTextColor.RED);
+            feedback(player, msg("menu.ward.item-not-accepted",
+                    "Ítem no válido para upkeep. Mira los aceptados en el menú."), NamedTextColor.RED);
             playError(player);
             return;
         }
         var receipt = upkeepService.deposit(ward, player, material, amount);
         consume.run();
         player.sendMessage(Component.text("[Ward] ", NamedTextColor.DARK_AQUA)
-                .append(Component.text("Depositaste ", NamedTextColor.GREEN))
+                .append(Component.text(msg("menu.ward.deposited", "Depositaste "), NamedTextColor.GREEN))
                 .append(Component.text(receipt.amount() + "x "
                         + upkeepService.displayName(receipt.material()), NamedTextColor.WHITE))
-                .append(Component.text(" → +" + receipt.unitsCredited()
-                        + " unidades. Balance: " + receipt.newBalance(), NamedTextColor.GREEN)));
+                .append(Component.text(dev.dreamcraft.protection.message.Messages.apply(
+                        msg("menu.ward.deposited-units", " → +{units} unidades. Balance: {balance}"),
+                        "units", receipt.unitsCredited(), "balance", receipt.newBalance()), NamedTextColor.GREEN)));
         playSuccess(player);
         reopenWardMenu(player, ward);
     }
@@ -214,12 +236,23 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         Ward ward = resolveWard(player, ctx);
         if (ward == null) return;
         if (!ward.ownerId().equals(player.getUniqueId())) {
-            feedback(player, "Solo el owner puede mejorar el Ward.", NamedTextColor.RED);
+            feedback(player, msg("menu.ward.owner-only-upgrade", "Solo el owner puede mejorar el Ward."), NamedTextColor.RED);
             playError(player);
             return;
         }
         if (upgradeService == null) {
             // Fallback: no cost service wired — behave as before
+            int radiusAfter = wardService.computeRadiusAfter(ward, 100);
+            var conflictOpt = wardService.findForeignConflict(ward, radiusAfter);
+            if (conflictOpt.isPresent()) {
+                Ward other = conflictOpt.get();
+                feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                        msg("menu.ward.conflict-radius",
+                                "No puedes mejorar: el radio nuevo ({radius}) alcanzaría la Ward '{other}' de {owner}."),
+                        "radius", radiusAfter, "other", other.name(), "owner", ownerName(other)), NamedTextColor.RED);
+                playError(player);
+                return;
+            }
             wardService.addBaseScore(ward, 100);
             worldGuardAdapter.resizeRegion(ward, -64, 320);
             feedback(player, "Ward mejorado a " + ward.tier() + " (radio " + ward.radius() + ")", NamedTextColor.GREEN);
@@ -231,17 +264,33 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         // 1. Quote the next tier
         var quoteOpt = upgradeService.quoteNext(ward);
         if (quoteOpt.isEmpty()) {
-            feedback(player, "El Ward ya está en el tier máximo (" + ward.tier() + ").", NamedTextColor.YELLOW);
+            feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                    msg("menu.ward.max-tier", "El Ward ya está en el tier máximo ({tier})."),
+                    "tier", ward.tier()), NamedTextColor.YELLOW);
             playError(player);
             return;
         }
         var quote = quoteOpt.get();
 
+        // 2. Refuse the upgrade when the new radius would reach a foreign Ward
+        var conflictOpt = wardService.findForeignConflict(ward, quote.radiusAfter());
+        if (conflictOpt.isPresent()) {
+            Ward other = conflictOpt.get();
+            feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                    msg("menu.ward.conflict-radius-tier",
+                            "No puedes mejorar al tier {tier}: el radio nuevo ({radius}) alcanzaría la Ward '{other}' de {owner}."),
+                    "tier", quote.targetTierKey(), "radius", quote.radiusAfter(),
+                    "other", other.name(), "owner", ownerName(other)), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+
         // 2. Verify the player can pay the item cost
         var missing = upgradeService.missingItems(player, quote);
         if (!missing.isEmpty()) {
-            player.sendMessage(Component.text("[Ward] Te faltan ítems para mejorar al tier "
-                    + quote.targetTierKey() + ":", NamedTextColor.RED));
+            player.sendMessage(Component.text(dev.dreamcraft.protection.message.Messages.apply(
+                    msg("menu.ward.missing-items", "[Ward] Te faltan ítems para mejorar al tier {tier}:"),
+                    "tier", quote.targetTierKey()), NamedTextColor.RED));
             missing.forEach(player::sendMessage);
             playError(player);
             return;
@@ -266,22 +315,31 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         Ward ward = resolveWard(player, ctx);
         if (ward == null) return;
         if (!ward.ownerId().equals(player.getUniqueId())) {
-            feedback(player, "Solo el owner puede cambiar permisos.", NamedTextColor.RED);
+            feedback(player, msg("menu.ward.owner-only-permissions", "Solo el owner puede cambiar permisos."), NamedTextColor.RED);
             return;
         }
         WardPermission perm;
         try {
             perm = WardPermission.valueOf(action.payload());
         } catch (IllegalArgumentException e) {
-            feedback(player, "Permiso inválido: " + action.payload(), NamedTextColor.RED);
+            feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                    msg("menu.ward.invalid-permission", "Permiso inválido: {perm}"),
+                    "perm", action.payload()), NamedTextColor.RED);
             return;
         }
         if (ward.hasPermission(perm)) {
             ward.revokePermission(perm);
-            feedback(player, "Permiso " + perm.name() + " revocado.", NamedTextColor.YELLOW);
+            feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                    msg("menu.ward.permission-revoked", "Permiso {perm} revocado."),
+                    "perm", perm.name()), NamedTextColor.YELLOW);
         } else {
             ward.grantPermission(perm);
-            feedback(player, "Permiso " + perm.name() + " concedido.", NamedTextColor.GREEN);
+            feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                    msg("menu.ward.permission-granted", "Permiso {perm} concedido."),
+                    "perm", perm.name()), NamedTextColor.GREEN);
+        }
+        if (perm == WardPermission.PUBLIC_CONTAINERS) {
+            worldGuardAdapter.setPublicContainerAccess(ward, ward.hasPermission(perm));
         }
         wardService.assignWorldGuardRegion(ward, ward.worldGuardRegionId()); // persist
         playSuccess(player);
@@ -292,24 +350,26 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         Ward ward = resolveWard(player, ctx);
         if (ward == null) return;
         if (!ward.ownerId().equals(player.getUniqueId())) {
-            feedback(player, "Solo el owner puede anexar el Ward.", NamedTextColor.RED);
+            feedback(player, msg("menu.ward.owner-only-annex", "Solo el owner puede anexar el Ward."), NamedTextColor.RED);
             return;
         }
         if (ward.hasCityMembership()) {
-            feedback(player, "El Ward ya pertenece a una ciudad.", NamedTextColor.YELLOW);
+            feedback(player, msg("menu.ward.already-in-city", "El Ward ya pertenece a una ciudad."), NamedTextColor.YELLOW);
             return;
         }
         // Find the city the player is a member of
         var optCity = cityService.findByMember(player.getUniqueId());
         if (optCity.isEmpty()) {
-            feedback(player, "No eres miembro de ninguna ciudad.", NamedTextColor.RED);
+            feedback(player, msg("menu.ward.not-in-city", "No eres miembro de ninguna ciudad."), NamedTextColor.RED);
             return;
         }
         City city = optCity.get();
         wardService.setCityMembership(ward, city.id());
-        // Sync WorldGuard: inherit city policies/memberships via region membership
-        syncCityMembershipToRegion(ward, city);
-        feedback(player, "Ward anexado a la ciudad " + city.name() + ".", NamedTextColor.GREEN);
+        // Project domain membership onto the WG region (single reconciliation path)
+        dev.dreamcraft.protection.service.WardAccessSync.project(ward, cityService, worldGuardAdapter);
+        feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                msg("menu.ward.annexed", "Ward anexado a la ciudad {city}."),
+                "city", city.name()), NamedTextColor.GREEN);
         playSuccess(player);
         reopenWardMenu(player, ward);
     }
@@ -318,13 +378,13 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         Ward ward = resolveWard(player, ctx);
         if (ward == null) return;
         if (!ward.ownerId().equals(player.getUniqueId())) {
-            feedback(player, "Solo el owner puede disolver el Ward.", NamedTextColor.RED);
+            feedback(player, msg("menu.ward.owner-only-disband", "Solo el owner puede disolver el Ward."), NamedTextColor.RED);
             return;
         }
         worldGuardAdapter.removeRegion(ward);
         wardService.delete(ward);
         player.closeInventory();
-        feedback(player, "Ward disuelto.", NamedTextColor.GREEN);
+        feedback(player, msg("menu.ward.disbanded", "Ward disuelto."), NamedTextColor.GREEN);
         playSuccess(player);
     }
 
@@ -338,7 +398,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
      */
     private void handleOpenCityTreasury(Player player, MenuContext ctx) {
         if (treasuryStore == null) {
-            feedback(player, "El tesoro no está disponible.", NamedTextColor.RED);
+            feedback(player, msg("menu.city.treasury-unavailable", "El tesoro no está disponible."), NamedTextColor.RED);
             playError(player);
             return;
         }
@@ -347,7 +407,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         CityRole role = city.roleOf(player.getUniqueId());
         boolean council = city.isGovernor(player.getUniqueId()) || role == CityRole.COUNCIL;
         if (!council) {
-            feedback(player, "Requerís rol Council o superior para el tesoro.", NamedTextColor.RED);
+            feedback(player, msg("menu.city.treasury-role-required", "Requerís rol Council o superior para el tesoro."), NamedTextColor.RED);
             playError(player);
             return;
         }
@@ -362,8 +422,8 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                             NamedTextColor.GOLD));
             online.openInventory(holder.getInventory());
             online.sendMessage(Component.text("[Ciudad] ", NamedTextColor.GOLD)
-                    .append(Component.text("Valor actual del tesoro: ", NamedTextColor.GRAY))
-                    .append(Component.text(value + " unidades de riqueza", NamedTextColor.YELLOW)));
+                    .append(Component.text(msg("menu.city.treasury-value-prefix", "Valor actual del tesoro: "), NamedTextColor.GRAY))
+                    .append(Component.text(value + msg("menu.city.treasury-value-suffix", " unidades de riqueza"), NamedTextColor.YELLOW)));
         });
     }
 
@@ -371,20 +431,24 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         City city = resolveCity(player, ctx);
         if (city == null) return;
         if (!city.isGovernor(player.getUniqueId())) {
-            feedback(player, "Solo el Gobernador puede cambiar políticas.", NamedTextColor.RED);
+            feedback(player, msg("menu.city.owner-only-policy", "Solo el Gobernador puede cambiar políticas."), NamedTextColor.RED);
             return;
         }
         CityPolicy policy;
         try {
             policy = CityPolicy.valueOf(action.payload());
         } catch (IllegalArgumentException e) {
-            feedback(player, "Política inválida: " + action.payload(), NamedTextColor.RED);
+            feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                    msg("menu.city.invalid-policy", "Política inválida: {policy}"),
+                    "policy", action.payload()), NamedTextColor.RED);
             return;
         }
         boolean newState = !city.hasPolicy(policy);
         cityService.setPolicy(city, policy, newState);
-        feedback(player, "Política " + policy.name() + " " + (newState ? "activada" : "desactivada") + ".",
-                NamedTextColor.GREEN);
+        feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                newState ? msg("menu.city.policy-on", "Política {policy} activada.")
+                         : msg("menu.city.policy-off", "Política {policy} desactivada."),
+                "policy", policy.name()), NamedTextColor.GREEN);
         playSuccess(player);
     }
 
@@ -392,16 +456,20 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         City city = resolveCity(player, ctx);
         if (city == null) return;
         if (!city.isGovernor(player.getUniqueId())) {
-            feedback(player, "Solo el Gobernador puede eliminar la ciudad.", NamedTextColor.RED);
+            feedback(player, msg("menu.city.owner-only-delete", "Solo el Gobernador puede eliminar la ciudad."), NamedTextColor.RED);
             return;
         }
-        // Disassociate all wards from this city
+        // Disassociate all wards from this city, then re-project: their region
+        // member lists collapse to empty (city-granted access fully revoked)
         for (Ward ward : wardService.findByCity(city.id())) {
             wardService.setCityMembership(ward, null);
+            dev.dreamcraft.protection.service.WardAccessSync.project(ward, cityService, worldGuardAdapter);
         }
         cityService.delete(city);
         player.closeInventory();
-        feedback(player, "Ciudad " + city.name() + " eliminada.", NamedTextColor.GREEN);
+        feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                msg("menu.city.deleted", "Ciudad {city} eliminada."),
+                "city", city.name()), NamedTextColor.GREEN);
         playSuccess(player);
     }
 
@@ -411,16 +479,18 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         Estate estate = resolveEstate(player, ctx);
         if (estate == null) return;
         if (estate.isOwner(player.getUniqueId())) {
-            feedback(player, "Ya eres el owner de este Estate.", NamedTextColor.YELLOW);
+            feedback(player, msg("menu.estate.already-owner", "Ya eres el owner de este Estate."), NamedTextColor.YELLOW);
             return;
         }
         if (estate.isMember(player.getUniqueId())) {
-            feedback(player, "Ya eres miembro del Estate.", NamedTextColor.YELLOW);
+            feedback(player, msg("menu.estate.already-member", "Ya eres miembro del Estate."), NamedTextColor.YELLOW);
             return;
         }
         estateService.addMember(estate, player.getUniqueId());
         worldGuardAdapter.syncEstateMembers(estate);
-        feedback(player, "Te uniste al Estate " + estate.name() + ".", NamedTextColor.GREEN);
+        feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                msg("menu.estate.joined", "Te uniste al Estate {estate}."),
+                "estate", estate.name()), NamedTextColor.GREEN);
         playSuccess(player);
     }
 
@@ -428,17 +498,19 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         Estate estate = resolveEstate(player, ctx);
         if (estate == null) return;
         if (estate.isOwner(player.getUniqueId())) {
-            feedback(player, "El owner no puede salir; transfiere o disuelve el Estate.", NamedTextColor.RED);
+            feedback(player, msg("menu.estate.owner-cannot-leave", "El owner no puede salir; transfiere o disuelve el Estate."), NamedTextColor.RED);
             return;
         }
         if (!estate.isMember(player.getUniqueId())) {
-            feedback(player, "No eres miembro del Estate.", NamedTextColor.RED);
+            feedback(player, msg("menu.estate.not-member", "No eres miembro del Estate."), NamedTextColor.RED);
             return;
         }
         estateService.removeMember(estate, player.getUniqueId());
         worldGuardAdapter.syncEstateMembers(estate);
         player.closeInventory();
-        feedback(player, "Saliste del Estate " + estate.name() + ".", NamedTextColor.GREEN);
+        feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                msg("menu.estate.left", "Saliste del Estate {estate}."),
+                "estate", estate.name()), NamedTextColor.GREEN);
         playSuccess(player);
     }
 
@@ -446,21 +518,23 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         Estate estate = resolveEstate(player, ctx);
         if (estate == null) return;
         if (!estate.isOwner(player.getUniqueId())) {
-            feedback(player, "Solo el owner puede iniciar la instancia.", NamedTextColor.RED);
+            feedback(player, msg("menu.estate.owner-only-start", "Solo el owner puede iniciar la instancia."), NamedTextColor.RED);
             return;
         }
         String instanceId = "inst-" + estate.id().toString().substring(0, 8);
         boolean started = estateService.startInstance(estate, instanceId);
         if (!started) {
-            feedback(player, "El Estate ya tiene una instancia activa.", NamedTextColor.YELLOW);
+            feedback(player, msg("menu.estate.instance-active", "El Estate ya tiene una instancia activa."), NamedTextColor.YELLOW);
             return;
         }
         // END-type estates pre-open their private End world + dragon right away
         String extra = "";
         if (endInstanceService != null && endInstanceService.preopen(estate)) {
-            extra = " El End privado está listo con la dragona.";
+            extra = msg("menu.estate.instance-ready", " El End privado está listo con la dragona.");
         }
-        feedback(player, "Instancia de " + estate.name() + " iniciada." + extra, NamedTextColor.GREEN);
+        feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                msg("menu.estate.started", "Instancia de {estate} iniciada."),
+                "estate", estate.name()) + extra, NamedTextColor.GREEN);
         playSuccess(player);
     }
 
@@ -468,7 +542,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         Estate estate = resolveEstate(player, ctx);
         if (estate == null) return;
         if (!estate.isOwner(player.getUniqueId())) {
-            feedback(player, "Solo el owner puede disolver el Estate.", NamedTextColor.RED);
+            feedback(player, msg("menu.estate.owner-only-disband", "Solo el owner puede disolver el Estate."), NamedTextColor.RED);
             return;
         }
         if (endInstanceService != null && estate.type().usesEndInstance()) {
@@ -477,11 +551,19 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         worldGuardAdapter.removeEstateAreaRegion(estate);
         estateService.delete(estate);
         player.closeInventory();
-        feedback(player, "Estate " + estate.name() + " disuelto.", NamedTextColor.GREEN);
+        feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                msg("menu.estate.disbanded", "Estate {estate} disuelto."),
+                "estate", estate.name()), NamedTextColor.GREEN);
         playSuccess(player);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /** Display name of a Ward's owner for messages (online, offline or fallback). */
+    private String ownerName(Ward ward) {
+        String name = Bukkit.getOfflinePlayer(ward.ownerId()).getName();
+        return name != null ? name : "desconocido";
+    }
 
     private void handleClose(Player player) {
         player.closeInventory();
@@ -490,7 +572,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     private Ward resolveWard(Player player, MenuContext ctx) {
         UUID wardId = ctx.get("wardId");
         if (wardId == null) {
-            feedback(player, "Contexto de Ward perdido.", NamedTextColor.RED);
+            feedback(player, msg("menu.ward.context-lost", "Contexto de Ward perdido."), NamedTextColor.RED);
             return null;
         }
         return wardService.findById(wardId).orElse(null);
@@ -499,7 +581,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     private City resolveCity(Player player, MenuContext ctx) {
         UUID cityId = ctx.get("cityId");
         if (cityId == null) {
-            feedback(player, "Contexto de Ciudad perdido.", NamedTextColor.RED);
+            feedback(player, msg("menu.city.context-lost", "Contexto de Ciudad perdido."), NamedTextColor.RED);
             return null;
         }
         return cityService.findById(cityId).orElse(null);
@@ -508,21 +590,10 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     private Estate resolveEstate(Player player, MenuContext ctx) {
         UUID estateId = ctx.get("estateId");
         if (estateId == null) {
-            feedback(player, "Contexto de Estate perdido.", NamedTextColor.RED);
+            feedback(player, msg("menu.estate.context-lost", "Contexto de Estate perdido."), NamedTextColor.RED);
             return null;
         }
         return estateService.findById(estateId).orElse(null);
-    }
-
-    /**
-     * Syncs city membership to the Ward's WorldGuard region by adding all city
-     * members as WG region members (inheritance of permissions).
-     */
-    private void syncCityMembershipToRegion(Ward ward, City city) {
-        if (!worldGuardAdapter.isAvailable()) return;
-        for (UUID memberId : city.members().keySet()) {
-            worldGuardAdapter.addMember(ward, memberId);
-        }
     }
 
     private void feedback(Player player, String message, NamedTextColor color) {
@@ -530,10 +601,27 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     }
 
     private void playSuccess(Player player) {
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.7f, 1.2f);
+        player.playSound(player.getLocation(),
+                resolveSound("menu.click", Sound.UI_BUTTON_CLICK), 0.7f, 1.2f);
     }
 
     private void playError(Player player) {
-        player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.7f, 0.8f);
+        player.playSound(player.getLocation(),
+                resolveSound("menu.error", Sound.BLOCK_NOTE_BLOCK_BASS), 0.7f, 0.8f);
+    }
+
+    /** Resolves a sound asset key via presentation-assets.yml; falls back to vanilla. */
+    private Sound resolveSound(String assetKey, Sound fallback) {
+        var registry = presentationAssets;
+        String raw = registry == null ? null : registry.sound(assetKey);
+        if (raw == null || raw.isBlank()) return fallback;
+        String normalized = raw.toLowerCase(java.util.Locale.ROOT).replace('_', '.');
+        if (!normalized.contains(".")) normalized = "minecraft." + normalized;
+        org.bukkit.NamespacedKey key = org.bukkit.NamespacedKey.fromString(normalized);
+        if (key != null) {
+            Sound viaRegistry = org.bukkit.Registry.SOUNDS.get(key);
+            if (viaRegistry != null) return viaRegistry;
+        }
+        return fallback;
     }
 }
