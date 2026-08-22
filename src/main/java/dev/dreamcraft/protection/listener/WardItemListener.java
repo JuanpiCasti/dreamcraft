@@ -1,10 +1,12 @@
 package dev.dreamcraft.protection.listener;
 
+import dev.dreamcraft.protection.command.CommandMessages;
 import dev.dreamcraft.protection.domain.model.OwnerType;
 import dev.dreamcraft.protection.domain.model.Ward;
 import dev.dreamcraft.protection.domain.service.WardService;
 import dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter;
 import dev.dreamcraft.protection.ui.WardItems;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -67,7 +69,8 @@ public final class WardItemListener implements Listener {
         // No founding a Ward inside another Ward's radius
         if (wardService.findAtLocation(world, block.getX(), block.getZ()).isPresent()) {
             event.setCancelled(true);
-            player.sendMessage("§c[Ward] Esta área ya pertenece a otro Ward.");
+            player.sendMessage(CommandMessages.prefixed("ward",
+                    "Esta área ya pertenece a otro Núcleo.", NamedTextColor.Red));
             return;
         }
 
@@ -84,8 +87,10 @@ public final class WardItemListener implements Listener {
             wardService.assignWorldGuardRegion(ward, regionId);
         }
         saveAction.run();
-        player.sendMessage("§a[Ward] Ward §f" + ward.name() +
-                "§a fundado (tier " + ward.tier() + ", radio " + ward.radius() + ").");
+        player.sendMessage(CommandMessages.prefixed("ward",
+                "Núcleo §f" + ward.name() + "§a despertado (fase " + ward.tier()
+                        + ", radio " + ward.radius() + ").",
+                NamedTextColor.Green));
     }
 
     // ── Block break ───────────────────────────────────────────────────────────
@@ -108,7 +113,9 @@ public final class WardItemListener implements Listener {
         worldGuardAdapter.removeRegion(ward);
         wardService.delete(ward);
         saveAction.run();
-        player.sendMessage("§a[Ward] Ward §f" + ward.name() + "§a disuelto. Área liberada.");
+        player.sendMessage(CommandMessages.prefixed("ward",
+                "Núcleo §f" + ward.name() + "§a desactivado. Área liberada.",
+                NamedTextColor.Green));
     }
 
     // ── Right-click ───────────────────────────────────────────────────────────
@@ -126,7 +133,8 @@ public final class WardItemListener implements Listener {
         event.setCancelled(true);
         Player player = event.getPlayer();
         if (!menuAccess.test(player)) {
-            player.sendMessage("§c[Ward] El menú del Ward está reservado a admins y VIPs.");
+            player.sendMessage(CommandMessages.prefixed("ward",
+                    "El menú del Núcleo está reservado a admins y VIPs.", NamedTextColor.Red));
             return;
         }
         menuOpener.accept(player, center.get());

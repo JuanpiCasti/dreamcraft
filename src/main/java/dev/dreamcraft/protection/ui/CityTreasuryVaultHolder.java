@@ -24,8 +24,21 @@ public final class CityTreasuryVaultHolder implements InventoryHolder {
 
     /** Creates the holder together with its backing 27-slot chest inventory. */
     public static CityTreasuryVaultHolder create(UUID cityId, net.kyori.adventure.text.Component title) {
+        return create(cityId, title, null);
+    }
+
+    /**
+     * Creates the vault seeded with the persisted contents — without this,
+     * every reopen would show an empty chest even though the close listener
+     * saved everything correctly.
+     */
+    public static CityTreasuryVaultHolder create(UUID cityId, net.kyori.adventure.text.Component title,
+                                                 org.bukkit.inventory.ItemStack[] contents) {
         CityTreasuryVaultHolder holder = new CityTreasuryVaultHolder(cityId);
         holder.inventory = Bukkit.createInventory(holder, 27, title);
+        if (contents != null && contents.length == 27) {
+            holder.inventory.setContents(contents);
+        }
         return holder;
     }
 

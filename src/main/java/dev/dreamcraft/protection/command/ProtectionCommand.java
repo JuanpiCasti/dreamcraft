@@ -261,7 +261,7 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
         Ward ward = resolveWard(player);
         if (ward == null) return true;
         if (!ward.ownerId().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
-            error(player, WARD_PREFIX, "Solo el owner puede renombrar el Ward.");
+            error(player, WARD_PREFIX, "Solo el owner puede renombrar el NÃºcleo.");
             return true;
         }
         String newName = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length)).trim();
@@ -409,7 +409,7 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
         Ward ward = resolveWard(player);
         if (ward == null) return true;
         if (!ward.ownerId().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
-            error(player, WARD_PREFIX, "Solo el owner puede mejorar el Ward.");
+            error(player, WARD_PREFIX, "Solo el owner puede mejorar el NÃºcleo.");
             return true;
         }
         // Lore «El Despertar»: raising a phase requires the physical nucleus
@@ -455,7 +455,7 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
         Ward ward = resolveWard(player);
         if (ward == null) return true;
         if (!ward.ownerId().equals(player.getUniqueId())) {
-            error(player, WARD_PREFIX, "Solo el owner puede transferir el Ward.");
+            error(player, WARD_PREFIX, "Solo el owner puede transferir el NÃºcleo.");
             return true;
         }
         Player target = Bukkit.getPlayerExact(args[1]);
@@ -497,7 +497,7 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
         Ward ward = resolveWard(player);
         if (ward == null) return true;
         if (!ward.ownerId().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
-            error(player, WARD_PREFIX, "Solo el owner puede disolver el Ward.");
+            error(player, WARD_PREFIX, "Solo el owner puede disolver el NÃºcleo.");
             return true;
         }
         worldGuardAdapter.removeRegion(ward);

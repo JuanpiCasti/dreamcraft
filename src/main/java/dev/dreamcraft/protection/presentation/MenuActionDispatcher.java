@@ -423,7 +423,8 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
             if (online == null) return;
             var holder = dev.dreamcraft.protection.ui.CityTreasuryVaultHolder.create(cityId,
                     net.kyori.adventure.text.Component.text("★ Tesoro de " + cityName,
-                            NamedTextColor.GOLD));
+                            NamedTextColor.GOLD),
+                    treasuryStore.get(cityId));
             online.openInventory(holder.getInventory());
             online.sendMessage(CommandMessages.CITY_PREFIX
                     .append(Component.text(msg("menu.city.treasury-value-prefix", "Valor actual del tesoro: "), NamedTextColor.GRAY))
