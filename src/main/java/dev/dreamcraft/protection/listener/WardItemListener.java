@@ -70,7 +70,7 @@ public final class WardItemListener implements Listener {
         if (wardService.findAtLocation(world, block.getX(), block.getZ()).isPresent()) {
             event.setCancelled(true);
             player.sendMessage(CommandMessages.prefixed("ward",
-                    "Esta área ya pertenece a otro Núcleo.", NamedTextColor.Red));
+                    "Esta área ya pertenece a otro Núcleo.", NamedTextColor.RED));
             return;
         }
 
@@ -90,7 +90,7 @@ public final class WardItemListener implements Listener {
         player.sendMessage(CommandMessages.prefixed("ward",
                 "Núcleo §f" + ward.name() + "§a despertado (fase " + ward.tier()
                         + ", radio " + ward.radius() + ").",
-                NamedTextColor.Green));
+                NamedTextColor.GREEN));
     }
 
     // ── Block break ───────────────────────────────────────────────────────────
@@ -115,7 +115,7 @@ public final class WardItemListener implements Listener {
         saveAction.run();
         player.sendMessage(CommandMessages.prefixed("ward",
                 "Núcleo §f" + ward.name() + "§a desactivado. Área liberada.",
-                NamedTextColor.Green));
+                NamedTextColor.GREEN));
     }
 
     // ── Right-click ───────────────────────────────────────────────────────────
@@ -134,7 +134,7 @@ public final class WardItemListener implements Listener {
         Player player = event.getPlayer();
         if (!menuAccess.test(player)) {
             player.sendMessage(CommandMessages.prefixed("ward",
-                    "El menú del Núcleo está reservado a admins y VIPs.", NamedTextColor.Red));
+                    "El menú del Núcleo está reservado a admins y VIPs.", NamedTextColor.RED));
             return;
         }
         menuOpener.accept(player, center.get());
