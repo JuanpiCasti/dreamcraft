@@ -43,19 +43,27 @@ public final class CommandMessages {
 
     /**
      * Reloads the prefixes from the message catalog.
-     * Values use legacy & codes; blank/missing keys keep the built-in default.
+     * Values use legacy & codes and support the versioned placeholders
+     * ({code {name.ward}} → "sync", …); blank/missing keys keep a
+     * CommandNames-derived default so bare config.yml rebrands too.
      */
     public static void reloadPrefixes(FileConfiguration messages) {
-        PREFIX = parse(messages, "prefixes.global", "[DreamCraft] ", NamedTextColor.DARK_PURPLE);
-        WARD_PREFIX = parse(messages, "prefixes.ward", "[Ward] ", NamedTextColor.DARK_AQUA);
-        CITY_PREFIX = parse(messages, "prefixes.city", "[Ciudad] ", NamedTextColor.AQUA);
-        ESTATE_PREFIX = parse(messages, "prefixes.estate", "[Estate] ", NamedTextColor.LIGHT_PURPLE);
+        PREFIX = parse(messages, "prefixes.global",
+                "[DreamCraft] ", NamedTextColor.DARK_PURPLE);
+        WARD_PREFIX = parse(messages, "prefixes.ward",
+                "[" + dev.dreamcraft.protection.config.CommandNames.root("ward") + "] ", NamedTextColor.DARK_AQUA);
+        CITY_PREFIX = parse(messages, "prefixes.city",
+                "[" + dev.dreamcraft.protection.config.CommandNames.root("city") + "] ", NamedTextColor.AQUA);
+        ESTATE_PREFIX = parse(messages, "prefixes.estate",
+                "[" + dev.dreamcraft.protection.config.CommandNames.root("estate") + "] ", NamedTextColor.LIGHT_PURPLE);
     }
 
     private static Component parse(FileConfiguration cfg, String key, String fallbackText, NamedTextColor color) {
         String raw = cfg == null ? null : cfg.getString(key);
         if (raw != null && !raw.isBlank()) {
-            return LEGACY_AMPERSAND.deserialize(raw).append(Component.space());
+            return LEGACY_AMPERSAND.deserialize(
+                    dev.dreamcraft.protection.message.Messages.applyVersionedCommands(raw))
+                    .append(Component.space());
         }
         return Component.text(fallbackText, color);
     }
@@ -71,6 +79,30 @@ public final class CommandMessages {
      */
     private static Component parseLegacy(String message) {
         return LEGACY_AMPERSAND.deserialize(message.replace('§', '&'));
+    }
+
+    /** Public parse for listeners sending catalog text to titles/actionbars. */
+    public static Component legacy(String legacyText) {
+        return parseLegacy(legacyText);
+    }
+
+    /**
+     * Zone-nearby prompt shared by the area gate and the entry check — same
+     * catalog keys and placeholders ({name.estate}/{cmd.estate} versioned;
+     * {type}/{type.key} resolved from the adventure type) so both paths show
+     * the exact same cartel.
+     */
+    public static void adventureZoneNearby(Player player,
+                                           dev.dreamcraft.protection.domain.model.EstateType type) {
+        String typeLabel = tr("adventure.type." + type.key(), type.displayName());
+        String typeArg = tr("adventure.type-key." + type.key(), type.key());
+        titleLegacy(player,
+                tr("adventure.zone-nearby.title",
+                        "&6&l{name.estate} &6&lal &f{type} &6&ldisponible",
+                        "type", typeLabel),
+                tr("adventure.zone-nearby.subtitle",
+                        "&eUnete usando &f/{cmd.estate} discover {type.key}",
+                        "type.key", typeArg));
     }
 
     /** Renders a help block from the catalog: header, subtitle, blank line, lines[]. */
@@ -127,6 +159,20 @@ public final class CommandMessages {
                         java.time.Duration.ZERO,
                         java.time.Duration.ofSeconds(2),
                         java.time.Duration.ofMillis(500))));
+    }
+
+    /**
+     * Title + subtitle from catalog strings: supports legacy & codes and
+     * {cmd.*}/{name.*} placeholders (resolved by the caller via tr()).
+     */
+    public static void titleLegacy(Player player, String legacyTitle, String legacySubtitle) {
+        player.showTitle(net.kyori.adventure.title.Title.title(
+                parseLegacy(legacyTitle),
+                parseLegacy(legacySubtitle),
+                net.kyori.adventure.title.Title.Times.times(
+                        java.time.Duration.ofMillis(300),
+                        java.time.Duration.ofSeconds(3),
+                        java.time.Duration.ofSeconds(1))));
     }
 
     /** Friendly handling of IllegalArgumentException from domain services. */

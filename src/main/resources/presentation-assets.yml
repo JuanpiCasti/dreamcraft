@@ -32,6 +32,7 @@ icons:
   estate.adventure:     { material: ENDER_EYE,                cmd: 41302 }
   estate.instance:      { material: END_PORTAL_FRAME,         cmd: 41303 }
   estate.dragon:        { material: DRAGON_HEAD,              cmd: 41304 }
+  estate.zone-tp:       { material: NETHER_STAR,              cmd: 41305 }
   # Menú genérico
   menu.deposit:         { material: LIME_STAINED_GLASS_PANE,  cmd: 41401 }
   menu.filler:          { material: GRAY_STAINED_GLASS_PANE,  cmd: 0 }

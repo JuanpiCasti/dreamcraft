@@ -5,7 +5,10 @@ import dev.dreamcraft.protection.config.CommandNames;
 import dev.dreamcraft.protection.domain.model.Estate;
 import dev.dreamcraft.protection.domain.model.EstateType;
 import dev.dreamcraft.protection.domain.service.EstateService;
+import dev.dreamcraft.protection.presentation.MenuAction;
 import dev.dreamcraft.protection.presentation.MenuContext;
+import dev.dreamcraft.protection.presentation.MenuDefinition;
+import dev.dreamcraft.protection.presentation.MenuItem;
 import dev.dreamcraft.protection.presentation.MenuProvider;
 import dev.dreamcraft.protection.presentation.menu.EstateMenuBuilder;
 import dev.dreamcraft.protection.presentation.viewmodel.EstateViewModel;
@@ -146,7 +149,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         String name = args[1];
         Estate estate = estateService.createEstate(player.getUniqueId(), name, null, null, false);
         estateService.addMember(estate, player.getUniqueId());
-        ok(player, ESTATE_PREFIX, "Estate '" + estate.name() + "' creado.");
+        ok(player, ESTATE_PREFIX, "Instancia '" + estate.name() + "' creada.");
         return true;
     }
 
@@ -171,7 +174,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         estateService.addMember(estate, player.getUniqueId());
         syncEstateMembers(estate);
 
-        ok(player, ESTATE_PREFIX, "Estate '" + estate.name() + "' creado. Sos su líder.");
+        ok(player, ESTATE_PREFIX, "Instancia '" + estate.name() + "' creada. Sos su líder.");
         if (type.isInstancedAdventure()) {
             if (zoneOpt.isPresent()) {
                 info(player, ESTATE_PREFIX, "Zona de aventura heredada. Colocá los ojos y cruzá el portal "
@@ -192,13 +195,14 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         }
         if (args.length < 2) {
             error(player, ESTATE_PREFIX, "Uso: " + CommandNames.cmd("estate",
-                    "admin create <id> <tipo> [radio|auto] | admin area <id> [radio] | admin reset <id>"));
+                    "admin create <id> <tipo> [radio|auto] | admin area <id> [radio] | admin reset <id> | admin menu"));
             return true;
         }
         return switch (args[1].toLowerCase(Locale.ROOT)) {
             case "create" -> handleAdminCreate(player, args);
             case "area" -> handleAdminArea(player, args);
             case "reset" -> handleAdminReset(player, args);
+            case "menu" -> handleAdminMenu(player);
             default -> {
                 error(player, ESTATE_PREFIX, "Subcomando admin desconocido: " + args[1]);
                 yield true;
@@ -244,12 +248,12 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
                 null, 0, 0, 0, 0);
         if (player.getWorld() != null && radius > 0) {
             applyArea(estate, anchor, radius);
-            ok(player, ESTATE_PREFIX, "Estate admin '" + estate.name() + "' creado (persistente, tipo "
+            ok(player, ESTATE_PREFIX, "Instancia admin '" + estate.name() + "' creada (persistente, tipo "
                     + type.displayName() + ", área r=" + radius
                     + (auto ? ", anclada a la estructura @ " + anchor.getBlockX() + "/"
                     + anchor.getBlockY() + "/" + anchor.getBlockZ() : "") + ").");
         } else {
-            ok(player, ESTATE_PREFIX, "Estate admin '" + estate.name() + "' creado (persistente, tipo "
+            ok(player, ESTATE_PREFIX, "Instancia admin '" + estate.name() + "' creada (persistente, tipo "
                     + type.displayName() + "). Define su área con " + CommandNames.cmd("estate", "admin area") + " " + estate.id());
         }
         return true;
@@ -289,12 +293,12 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         }
         Estate estate = findEstateByIdOrName(args[2]);
         if (estate == null) {
-            error(player, ESTATE_PREFIX, "Estate no encontrado: " + args[2]);
+            error(player, ESTATE_PREFIX, "Instancia no encontrada: " + args[2]);
             return true;
         }
         int radius = args.length >= 4 ? parseRadius(args[3]) : Math.max(estate.areaRadius(), defaultAreaRadius());
         applyArea(estate, player.getLocation(), radius);
-        ok(player, ESTATE_PREFIX, "Área del estate '" + estate.name()
+        ok(player, ESTATE_PREFIX, "Área de la zona '" + estate.name()
                 + "' fijada aquí (r=" + radius + ").");
         return true;
     }
@@ -307,16 +311,83 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         }
         Estate estate = findEstateByIdOrName(args[2]);
         if (estate == null) {
-            error(player, ESTATE_PREFIX, "Estate no encontrado: " + args[2]);
+            error(player, ESTATE_PREFIX, "Instancia no encontrada: " + args[2]);
             return true;
         }
         if (instanceService == null || !estate.type().usesEndInstance()) {
-            error(player, ESTATE_PREFIX, "Este estate no tiene instancia de End.");
+            error(player, ESTATE_PREFIX, "Esta zona no tiene instancia de End.");
             return true;
         }
         instanceService.resetInstance(estate);
         ok(player, ESTATE_PREFIX, "Instancia reiniciada: mapa restaurado y dragona lista.");
         return true;
+    }
+
+    /**
+     * Admin GUI listing every server-created adventure zone (persistent END /
+     * TRIAL_CHAMBER estates). Two buttons per zone: the nether star teleports
+     * to the anchored area, the book opens that group's own menu (join it or
+     * manage it); resets stay command-driven.
+     */
+    private boolean handleAdminMenu(Player player) {
+        List<Estate> zones = estateService.findAll().stream()
+                .filter(Estate::persistent)
+                .filter(e -> e.type().isInstancedAdventure())
+                .toList();
+        if (zones.isEmpty()) {
+            error(player, ESTATE_PREFIX, "No hay zonas de aventura. Creá una con "
+                    + CommandNames.cmd("estate", "admin create <id> <tipo> [radio|auto]") + ".");
+            return true;
+        }
+
+        List<MenuItem> items = new ArrayList<>();
+        int slot = 0;
+        for (Estate zone : zones) {
+            if (slot >= 52) break; // keep the close button clear at slot 53
+            String id = zone.id().toString();
+            boolean active = instanceService != null && zone.type().usesEndInstance()
+                    && Bukkit.getWorld(instanceService.worldNameFor(zone)) != null;
+
+            List<String> tpLore = new ArrayList<>();
+            tpLore.add("&7Tipo: &f" + zone.type().displayName());
+            tpLore.add(zone.hasArea()
+                    ? "&7Área: &f" + zone.areaWorld() + " @ " + zone.areaX() + ", "
+                    + zone.areaY() + ", " + zone.areaZ() + " &7(r=" + zone.areaRadius() + ")"
+                    : "&cSin área definida");
+            tpLore.add(active ? "&aMundo de instancia activo" : "&7Sin mundo activo");
+            tpLore.add("");
+            if (zone.hasArea()) tpLore.add("&eClic &7— teletransportar al área");
+            if (zone.type().usesEndInstance()) {
+                tpLore.add("&7Reiniciar: &f" + CommandNames.cmd("estate", "admin reset"));
+            }
+            items.add(MenuItem.button(slot++, "icon.estate.zone-tp", "&6&l" + zone.name(),
+                    tpLore, zone.hasArea() ? MenuAction.of("estateadmin.tp", id) : null));
+
+            List<String> bookLore = new ArrayList<>();
+            bookLore.add("&7Owner: &f" + resolveName(zone.ownerId())
+                    + " &7· Miembros: &f" + zone.members().size());
+            bookLore.add("");
+            bookLore.add("&eClic &7— abrir el menú de la instancia");
+            bookLore.add("&7(unirte o gestionarla)");
+            items.add(MenuItem.button(slot++, "icon.estate.overview", "&d&l" + zone.name(),
+                    bookLore, MenuAction.of("estateadmin.menu", id)));
+        }
+        items.add(MenuItem.button(53, "icon.back", "&c&lCerrar",
+                List.of("&7Cerrar menú"), MenuAction.of("menu.close")));
+
+        var def = new MenuDefinition("estate_admin_zones",
+                CommandMessages.tr("menu.title.estate-admin-zones", "&8Zonas de aventura"),
+                54, items);
+        MenuContext ctx = new MenuContext(player.getUniqueId(), player.getName(), Map.of());
+        menuProvider.open(def, ctx);
+        return true;
+    }
+
+    /** Opens a group's own menu by id — entry point for the admin zones GUI. */
+    public void openEstateMenuById(Player player, UUID estateId) {
+        Estate estate = estateService.findById(estateId).orElse(null);
+        if (estate == null) return;
+        openEstateMenu(player, estate);
     }
 
     private void applyArea(Estate estate, org.bukkit.Location location, int radius) {
@@ -383,11 +454,11 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         boolean added = estateService.addMember(estate, target.getUniqueId());
         if (added) {
             syncEstateMembers(estate);
-            ok(player, ESTATE_PREFIX, target.getName() + " invitado al Estate.");
+            ok(player, ESTATE_PREFIX, target.getName() + " invitado a la instancia.");
             target.sendMessage(ESTATE_PREFIX.append(
-                    Component.text("Fuiste invitado al Estate " + estate.name() + ".", NamedTextColor.GREEN)));
+                    Component.text("Fuiste invitado a la instancia " + estate.name() + ".", NamedTextColor.GREEN)));
         } else {
-            warn(player, ESTATE_PREFIX, target.getName() + " ya es miembro del Estate.");
+            warn(player, ESTATE_PREFIX, target.getName() + " ya es miembro de la instancia.");
         }
         return true;
     }
@@ -401,21 +472,26 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         try {
             estateId = UUID.fromString(args[1]);
         } catch (IllegalArgumentException e) {
-            error(player, ESTATE_PREFIX, "Estate ID inválido: " + args[1]);
+            error(player, ESTATE_PREFIX, "ID de instancia inválido: " + args[1]);
             return true;
         }
         Estate estate = estateService.findById(estateId).orElse(null);
         if (estate == null) {
-            error(player, ESTATE_PREFIX, "Estate no encontrado.");
+            error(player, ESTATE_PREFIX, "Instancia no encontrada.");
+            return true;
+        }
+        if (estate.persistent()) {
+            error(player, ESTATE_PREFIX, "Esta zona de aventura la administra el servidor. Creá tu grupo con "
+                    + CommandNames.cmd("estate", "discover <tipo>") + ".");
             return true;
         }
         if (estate.isMember(player.getUniqueId())) {
-            warn(player, ESTATE_PREFIX, "Ya eres miembro del Estate.");
+            warn(player, ESTATE_PREFIX, "Ya eres miembro de la instancia.");
             return true;
         }
         estateService.addMember(estate, player.getUniqueId());
         syncEstateMembers(estate);
-        ok(player, ESTATE_PREFIX, "Te uniste al Estate " + estate.name() + ".");
+        ok(player, ESTATE_PREFIX, "Te uniste a la instancia " + estate.name() + ".");
         return true;
     }
 
@@ -427,12 +503,12 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         if (!estate.isMember(player.getUniqueId())) {
-            error(player, ESTATE_PREFIX, "No eres miembro del Estate.");
+            error(player, ESTATE_PREFIX, "No eres miembro de la instancia.");
             return true;
         }
         estateService.removeMember(estate, player.getUniqueId());
         syncEstateMembers(estate);
-        ok(player, ESTATE_PREFIX, "Saliste del Estate " + estate.name() + ".");
+        ok(player, ESTATE_PREFIX, "Saliste de la instancia " + estate.name() + ".");
         return true;
     }
 
@@ -446,9 +522,11 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         if (instanceService != null && estate.type().usesEndInstance()) {
             instanceService.resetInstance(estate);
         }
+        // The estate is gone: its pending zone edits must not outlive it
+        if (instanceService != null) instanceService.clearZoneEdits(estate.id());
         if (worldGuardAdapter != null) worldGuardAdapter.removeEstateAreaRegion(estate);
         estateService.delete(estate);
-        ok(player, ESTATE_PREFIX, "Estate " + estate.name() + " disuelto.");
+        ok(player, ESTATE_PREFIX, "Instancia " + estate.name() + " disuelta.");
         return true;
     }
 
@@ -471,7 +549,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             }
             title(player, "Instancia Iniciada", estate.name(), NamedTextColor.LIGHT_PURPLE);
         } else {
-            warn(player, ESTATE_PREFIX, "El Estate ya tiene una instancia activa.");
+            warn(player, ESTATE_PREFIX, "La instancia ya tiene un mundo activo.");
         }
         return true;
     }
@@ -501,9 +579,9 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         }
         boolean transferred = estateService.transferOwnership(estate, targetId);
         if (transferred) {
-            ok(player, ESTATE_PREFIX, "Estate transferido a " + args[1] + ".");
+            ok(player, ESTATE_PREFIX, "Liderazgo de la instancia transferido a " + args[1] + ".");
         } else {
-            error(player, ESTATE_PREFIX, args[1] + " debe ser miembro del Estate.");
+            error(player, ESTATE_PREFIX, args[1] + " debe ser miembro de la instancia.");
         }
         return true;
     }
@@ -564,7 +642,8 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         if (!byOwner.isEmpty()) return byOwner.iterator().next();
         var byMember = estateService.findByMember(player.getUniqueId());
         if (!byMember.isEmpty()) return byMember.iterator().next();
-        error(player, ESTATE_PREFIX, "No se encontró ningún Nexo. Usa " + CommandNames.cmd("estate", "create <id>") + " primero.");
+        error(player, ESTATE_PREFIX, "No pertenecés a ninguna instancia. Usa "
+                + CommandNames.cmd("estate", "discover <tipo>") + " para crear tu grupo.");
         return null;
     }
 
@@ -576,6 +655,9 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
 
     private void sendHelp(Player player) {
         helpBlock(player, "help.estate");
+        if (player.hasPermission("dreamcraft.protection.admin")) {
+            helpAdminSection(player, "help.estate.admin");
+        }
     }
 
     // ── Tab completion ─────────────────────────────────────────────────────────
@@ -594,7 +676,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
                 case "invite", "transfer" -> filter(onlinePlayers(args[1]), args[1]).forEach(completions::add);
                 case "join" -> filter(estateIds(), args[1]).forEach(completions::add);
                 case "discover" -> filter(List.of("end", "trial_chamber", "standard"), args[1]).forEach(completions::add);
-                case "admin" -> filter(List.of("create", "area", "reset"), args[1]).forEach(completions::add);
+                case "admin" -> filter(List.of("create", "area", "reset", "menu"), args[1]).forEach(completions::add);
                 default -> estateIdsOf(sender).stream().filter(id -> id.startsWith(args[1])).forEach(completions::add);
             }
             return completions;

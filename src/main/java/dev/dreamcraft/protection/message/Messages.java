@@ -48,16 +48,23 @@ public final class Messages {
 
     /**
      * Substitutes the versioned root-command tokens ({@code {cmd.ward}},
-     * {@code {cmd.city}}, …) so catalog texts always show this server's
-     * player-facing command names (lore coherence).
+     * {@code {cmd.city}}, …) and the lore-domain tokens ({@code {name.ward}},
+     * …) so catalog texts — prefixes, headers, menu titles — always show this
+     * server's player-facing terms (sync / matriz / nexo) without editing
+     * messages.yml.
      */
     public static String applyVersionedCommands(String template) {
-        if (template == null || !template.contains("{cmd.")) return template;
+        if (template == null) return template;
+        if (!template.contains("{cmd.") && !template.contains("{name.")) return template;
         return template
                 .replace("{cmd.ward}", dev.dreamcraft.protection.config.CommandNames.root("ward"))
                 .replace("{cmd.city}", dev.dreamcraft.protection.config.CommandNames.root("city"))
                 .replace("{cmd.estate}", dev.dreamcraft.protection.config.CommandNames.root("estate"))
-                .replace("{cmd.protection}", dev.dreamcraft.protection.config.CommandNames.root("protection"));
+                .replace("{cmd.protection}", dev.dreamcraft.protection.config.CommandNames.root("protection"))
+                .replace("{name.ward}", dev.dreamcraft.protection.config.CommandNames.root("ward"))
+                .replace("{name.city}", dev.dreamcraft.protection.config.CommandNames.root("city"))
+                .replace("{name.estate}", dev.dreamcraft.protection.config.CommandNames.root("estate"))
+                .replace("{name.protection}", dev.dreamcraft.protection.config.CommandNames.root("protection"));
     }
 
     /**

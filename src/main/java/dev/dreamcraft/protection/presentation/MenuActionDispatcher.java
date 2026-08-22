@@ -49,6 +49,8 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     private dev.dreamcraft.protection.persistence.CityTreasuryStore treasuryStore = null;
     /** Optional: reopens the Ward menu with fresh data (scheduled 1 tick later). */
     private java.util.function.BiConsumer<Player, Ward> wardMenuReopener = null;
+    /** Optional: opens an estate/group menu by id (admin zones GUI book button). */
+    private java.util.function.BiConsumer<Player, UUID> estateMenuOpener = null;
     /** Optional: manages private End instances for END-type estates. */
     private dev.dreamcraft.protection.service.EndInstanceService endInstanceService = null;
     /** Optional: asset contract — resolves menu sounds (presentation-assets.yml). */
@@ -86,6 +88,11 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     /** Registers the callback used to refresh the open Ward menu after state changes. */
     public void setWardMenuReopener(java.util.function.BiConsumer<Player, Ward> reopener) {
         this.wardMenuReopener = reopener;
+    }
+
+    /** Registers the callback that opens an estate/group menu by estate id. */
+    public void setEstateMenuOpener(java.util.function.BiConsumer<Player, UUID> opener) {
+        this.estateMenuOpener = opener;
     }
 
     /** Registers the persistent city treasury vault store. */
@@ -135,6 +142,8 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                 case "estate.leave" -> handleEstateLeave(player, ctx);
                 case "estate.start" -> handleEstateStart(player, ctx);
                 case "estate.disband" -> handleEstateDisband(player, ctx);
+                case "estateadmin.tp" -> handleAdminZoneTp(player, action);
+                case "estateadmin.menu" -> handleAdminZoneMenu(player, action);
                 default -> feedback(player, dev.dreamcraft.protection.message.Messages.apply(
                         msg("menu.unknown-action", "Acción no reconocida: {action}"),
                         "action", id), NamedTextColor.RED);
@@ -292,9 +301,10 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         // 2. Verify the player can pay the item cost
         var missing = upgradeService.missingItems(player, quote);
         if (!missing.isEmpty()) {
-            player.sendMessage(Component.text(dev.dreamcraft.protection.message.Messages.apply(
-                    msg("menu.ward.missing-items", "[Ward] Te faltan ítems para mejorar al tier {tier}:"),
-                    "tier", quote.targetTierKey()), NamedTextColor.RED));
+            player.sendMessage(CommandMessages.WARD_PREFIX.append(Component.text(
+                    dev.dreamcraft.protection.message.Messages.apply(
+                            msg("menu.ward.missing-items", "Te faltan ítems para mejorar al tier {tier}:"),
+                            "tier", quote.targetTierKey()), NamedTextColor.RED)));
             missing.forEach(player::sendMessage);
             playError(player);
             return;
@@ -483,12 +493,18 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     private void handleEstateJoin(Player player, MenuContext ctx) {
         Estate estate = resolveEstate(player, ctx);
         if (estate == null) return;
+        if (estate.persistent()) {
+            feedback(player, msg("menu.estate.admin-zone",
+                    "Esta zona la administra el servidor: creá tu grupo con /{cmd.estate} discover."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
         if (estate.isOwner(player.getUniqueId())) {
-            feedback(player, msg("menu.estate.already-owner", "Ya eres el owner de este Estate."), NamedTextColor.YELLOW);
+            feedback(player, msg("menu.estate.already-owner", "Ya eres el owner de esta instancia."), NamedTextColor.YELLOW);
             return;
         }
         if (estate.isMember(player.getUniqueId())) {
-            feedback(player, msg("menu.estate.already-member", "Ya eres miembro del Estate."), NamedTextColor.YELLOW);
+            feedback(player, msg("menu.estate.already-member", "Ya eres miembro de la instancia."), NamedTextColor.YELLOW);
             return;
         }
         estateService.addMember(estate, player.getUniqueId());
@@ -507,14 +523,14 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
             return;
         }
         if (!estate.isMember(player.getUniqueId())) {
-            feedback(player, msg("menu.estate.not-member", "No eres miembro del Estate."), NamedTextColor.RED);
+            feedback(player, msg("menu.estate.not-member", "No eres miembro de la instancia."), NamedTextColor.RED);
             return;
         }
         estateService.removeMember(estate, player.getUniqueId());
         worldGuardAdapter.syncEstateMembers(estate);
         player.closeInventory();
         feedback(player, dev.dreamcraft.protection.message.Messages.apply(
-                msg("menu.estate.left", "Saliste del Estate {estate}."),
+                msg("menu.estate.left", "Saliste de la instancia {estate}."),
                 "estate", estate.name()), NamedTextColor.GREEN);
         playSuccess(player);
     }
@@ -529,7 +545,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         String instanceId = "inst-" + estate.id().toString().substring(0, 8);
         boolean started = estateService.startInstance(estate, instanceId);
         if (!started) {
-            feedback(player, msg("menu.estate.instance-active", "El Estate ya tiene una instancia activa."), NamedTextColor.YELLOW);
+            feedback(player,                 msg("menu.estate.instance-active", "La instancia ya tiene un mundo activo."), NamedTextColor.YELLOW);
             return;
         }
         // END-type estates pre-open their private End world + dragon right away
@@ -547,22 +563,104 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         Estate estate = resolveEstate(player, ctx);
         if (estate == null) return;
         if (!estate.isOwner(player.getUniqueId())) {
-            feedback(player, msg("menu.estate.owner-only-disband", "Solo el owner puede disolver el Estate."), NamedTextColor.RED);
+            feedback(player, msg("menu.estate.owner-only-disband", "Solo el owner puede disolver la instancia."), NamedTextColor.RED);
+            return;
+        }
+        if (estate.persistent()) {
+            // Admin zones outlive groups: they are managed via /{cmd.estate} admin
+            feedback(player, msg("menu.estate.admin-zone",
+                    "Esta zona la administra el servidor: creá tu grupo con /{cmd.estate} discover."), NamedTextColor.RED);
+            playError(player);
             return;
         }
         if (endInstanceService != null && estate.type().usesEndInstance()) {
             endInstanceService.resetInstance(estate);
         }
+        // The estate is gone: its pending zone edits must not outlive it
+        if (endInstanceService != null) endInstanceService.clearZoneEdits(estate.id());
         worldGuardAdapter.removeEstateAreaRegion(estate);
         estateService.delete(estate);
         player.closeInventory();
         feedback(player, dev.dreamcraft.protection.message.Messages.apply(
-                msg("menu.estate.disbanded", "Estate {estate} disuelto."),
+                msg("menu.estate.disbanded", "Instancia {estate} disuelta."),
                 "estate", estate.name()), NamedTextColor.GREEN);
         playSuccess(player);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Admin-only: teleports the viewer to the anchored area of the adventure
+     * zone carried in the action payload (from the admin zones GUI).
+     */
+    private void handleAdminZoneTp(Player player, MenuAction action) {
+        if (!player.hasPermission("dreamcraft.protection.admin")) {
+            feedback(player, msg("common.no-permission", "No tienes permiso."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        UUID zoneId;
+        try {
+            zoneId = UUID.fromString(action.payload());
+        } catch (IllegalArgumentException e) {
+            feedback(player, msg("menu.estate.context-lost", "Contexto de Estate perdido."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        Estate estate = estateService.findById(zoneId).orElse(null);
+        if (estate == null || !estate.hasArea()) {
+            feedback(player, msg("menu.estate.context-lost", "Contexto de instancia perdido."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        org.bukkit.World world = Bukkit.getWorld(estate.areaWorld());
+        if (world == null) {
+            feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                    msg("menu.estate.world-not-loaded", "El mundo {world} no está cargado."),
+                    "world", estate.areaWorld()), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        Bukkit.getScheduler().runTask(plugin(), () -> {
+            Player online = Bukkit.getPlayer(player.getUniqueId());
+            if (online == null) return;
+            online.closeInventory();
+            online.teleport(new org.bukkit.Location(world,
+                    estate.areaX() + 0.5, estate.areaY() + 1.0, estate.areaZ() + 0.5));
+            playSuccess(online);
+        });
+    }
+
+    /**
+     * Opens the estate/group menu of the zone carried in the action payload
+     * (book button of the admin zones GUI): join the group or manage it.
+     */
+    private void handleAdminZoneMenu(Player player, MenuAction action) {
+        UUID zoneId;
+        try {
+            zoneId = UUID.fromString(action.payload());
+        } catch (IllegalArgumentException e) {
+            feedback(player, msg("menu.estate.context-lost", "Contexto de instancia perdido."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        Estate estate = estateService.findById(zoneId).orElse(null);
+        if (estate == null) {
+            feedback(player, msg("menu.estate.context-lost", "Contexto de instancia perdido."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        var opener = estateMenuOpener;
+        if (opener == null) {
+            feedback(player, msg("menu.estate.menu-unavailable", "El menú no está disponible."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        Bukkit.getScheduler().runTask(plugin(), () -> {
+            Player online = Bukkit.getPlayer(player.getUniqueId());
+            if (online != null) opener.accept(online, estate.id());
+        });
+    }
 
     /** Display name of a Ward's owner for messages (online, offline or fallback). */
     private String ownerName(Ward ward) {
@@ -595,7 +693,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     private Estate resolveEstate(Player player, MenuContext ctx) {
         UUID estateId = ctx.get("estateId");
         if (estateId == null) {
-            feedback(player, msg("menu.estate.context-lost", "Contexto de Estate perdido."), NamedTextColor.RED);
+            feedback(player, msg("menu.estate.context-lost", "Contexto de instancia perdido."), NamedTextColor.RED);
             return null;
         }
         return estateService.findById(estateId).orElse(null);

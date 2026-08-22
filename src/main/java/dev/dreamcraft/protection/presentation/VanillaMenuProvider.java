@@ -45,6 +45,7 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
             "icon.members",        "PLAYER_HEAD",
             "icon.city.overview",  "BEACON",
             "icon.estate.overview","BOOK",
+            "icon.estate.zone-tp", "NETHER_STAR",
             "icon.deposit",        "LIME_STAINED_GLASS_PANE",
             "icon.filler",         "GRAY_STAINED_GLASS_PANE",
             "icon.back",           "ARROW"

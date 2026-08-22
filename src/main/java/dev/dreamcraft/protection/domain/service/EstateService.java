@@ -200,9 +200,12 @@ public final class EstateService {
     /**
      * The admin-created zone template for an adventure type: an estate of that
      * type which owns a gated area. Party estates copy their area from it.
+     * Admin zones are always persistent — player parties (persistent = false)
+     * never act as templates.
      */
     public Optional<Estate> findZoneTemplate(EstateType type) {
         return findByType(type).stream()
+                .filter(Estate::persistent)
                 .filter(Estate::hasArea)
                 .findFirst();
     }
@@ -218,7 +221,8 @@ public final class EstateService {
      * @param zone      the zone template to inherit the area from (nullable)
      */
     public Estate createPartyEstate(UUID ownerId, String ownerName, EstateType type, Estate zone) {
-        String name = type.displayName() + " de " + ownerName;
+        String label = type == EstateType.END ? "Estancia" : type.displayName();
+        String name = label + " de " + ownerName;
         if (zone != null && zone.hasArea()) {
             Estate party = createEstate(ownerId, name, "adv-" + type.key(), null, false, type,
                     zone.areaWorld(), zone.areaX(), zone.areaY(), zone.areaZ(), zone.areaRadius());

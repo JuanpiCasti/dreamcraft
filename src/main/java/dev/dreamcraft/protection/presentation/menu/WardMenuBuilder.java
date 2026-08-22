@@ -63,7 +63,7 @@ public final class WardMenuBuilder {
             upkeepLore.add("&7colocá los ítems y cerrala:");
             upkeepLore.add("&ase contabilizan al salir");
         } else {
-            upkeepLore.add("&cNo puedes depositar en este NÃºcleo");
+            upkeepLore.add("&cNo puedes depositar en este Núcleo");
         }
         if (vm.canDeposit()) {
             items.add(MenuItem.button(10, "icon.upkeep", "&a&lBóveda de Upkeep", upkeepLore,
@@ -132,7 +132,7 @@ public final class WardMenuBuilder {
         // Slot 16 — City membership
         if (vm.hasCityMembership()) {
             items.add(MenuItem.display(16, "icon.city.overview", "&a&lMatriz: " + vm.cityName(),
-                    List.of("&7NÃºcleo federado a la Matriz", "&7" + vm.cityName())));
+                    List.of("&7Núcleo federado a la Matriz", "&7" + vm.cityName())));
         } else if (vm.canAnnexToCity()) {
             items.add(MenuItem.button(16, "icon.city.overview", "&a&lFederar a Matriz",
                     List.of("&7Clic para federar a tu Matriz"),
@@ -155,7 +155,7 @@ public final class WardMenuBuilder {
         // Slot 21 — Disband / delete
         if (vm.canDisband()) {
             items.add(MenuItem.button(21, "icon.ward.inactive", "§c§lApagar Núcleo",
-                    List.of("&cClic para eliminar este NÃºcleo", "&cEsta acción es irreversible"),
+                    List.of("&cClic para eliminar este Núcleo", "&cEsta acción es irreversible"),
                     MenuAction.of("ward.disband")));
         } else {
             items.add(MenuItem.display(21, "icon.ward.inactive", "&8§lApagar Núcleo",

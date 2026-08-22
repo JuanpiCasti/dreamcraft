@@ -174,7 +174,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
             wardService.assignWorldGuardRegion(ward, regionId);
         }
         ok(player, WARD_PREFIX, "Núcleo §f" + ward.name() + "§a despertado (fase " + ward.tier() + ", radio " + ward.radius() + ").");
-        title(player, "âœ¦ Territorio Despierto âœ¦", ward.name(), NamedTextColor.AQUA);
+        title(player, "✦ Territorio Despierto ✦", ward.name(), NamedTextColor.AQUA);
         return true;
     }
 
@@ -278,7 +278,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         if (!upkeepService.canDeposit(player, ward)) {
-            error(player, WARD_PREFIX, "No puedes depositar energÃ­a en este NÃºcleo.");
+            error(player, WARD_PREFIX, "No puedes depositar energía en este Núcleo.");
             return true;
         }
         if (args.length < 2 || !args[1].matches("\\d+")) {
@@ -444,7 +444,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         ok(player, WARD_PREFIX, "Núcleo §f" + oldName + "§a renombrado a §f" + ward.name() + "§a.");
-        title(player, "NÃºcleo Renombrado", ward.name(), NamedTextColor.AQUA);
+        title(player, "Núcleo Renombrado", ward.name(), NamedTextColor.AQUA);
         return true;
     }
 
@@ -468,12 +468,12 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         Ward ward = resolveWard(player, args);
         if (ward == null) return true;
         if (!ward.ownerId().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
-            error(player, WARD_PREFIX, "Solo el owner puede eliminar el NÃºcleo.");
+            error(player, WARD_PREFIX, "Solo el owner puede eliminar el Núcleo.");
             return true;
         }
         worldGuardAdapter.removeRegion(ward);
         wardService.delete(ward);
-        ok(player, WARD_PREFIX, "NÃºcleo eliminado.");
+        ok(player, WARD_PREFIX, "Núcleo eliminado.");
         return true;
     }
 
@@ -614,7 +614,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         Ward ward = resolveWard(player, args);
         if (ward == null) return true;
         if (!ward.ownerId().equals(player.getUniqueId())) {
-            error(player, WARD_PREFIX, "Solo el owner puede transferir el NÃºcleo.");
+            error(player, WARD_PREFIX, "Solo el owner puede transferir el Núcleo.");
             return true;
         }
         Player target = Bukkit.getPlayerExact(args[1]);
@@ -624,7 +624,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         }
         wardService.transferOwnership(ward, target.getUniqueId(), OwnerType.PLAYER);
         worldGuardAdapter.syncOwner(ward);
-        ok(player, WARD_PREFIX, "NÃºcleo transferido a " + target.getName() + ".");
+        ok(player, WARD_PREFIX, "Núcleo transferido a " + target.getName() + ".");
         return true;
     }
 
@@ -670,13 +670,13 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
                 cityService.findById(ward.cityId()).ifPresent(c ->
                         info(player, WARD_PREFIX, "Ciudad: " + c.name()));
             } else {
-                info(player, WARD_PREFIX, "Este NÃºcleo no pertenece a ninguna Matriz.");
+                info(player, WARD_PREFIX, "Este Núcleo no pertenece a ninguna Matriz.");
             }
             return true;
         }
         if ("annex".equalsIgnoreCase(args[1])) {
             if (!ward.ownerId().equals(player.getUniqueId())) {
-                error(player, WARD_PREFIX, "Solo el owner puede federar el NÃºcleo.");
+                error(player, WARD_PREFIX, "Solo el owner puede federar el Núcleo.");
                 return true;
             }
             var optCity = cityService.findByMember(player.getUniqueId());
@@ -687,19 +687,19 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
             City city = optCity.get();
             wardService.setCityMembership(ward, city.id());
             dev.dreamcraft.protection.service.WardAccessSync.project(ward, cityService, worldGuardAdapter);
-            ok(player, WARD_PREFIX, "NÃºcleo federado a la Matriz " + city.name() + ".");
+            ok(player, WARD_PREFIX, "Núcleo federado a la Matriz " + city.name() + ".");
             return true;
         }
         if ("leave".equalsIgnoreCase(args[1])) {
             if (!ward.ownerId().equals(player.getUniqueId())) {
-                error(player, WARD_PREFIX, "Solo el owner puede desvincular el NÃºcleo.");
+                error(player, WARD_PREFIX, "Solo el owner puede desvincular el Núcleo.");
                 return true;
             }
             // Clear membership first so the projection collapses the region's
             // member list (city-granted access fully revoked)
             wardService.setCityMembership(ward, null);
             dev.dreamcraft.protection.service.WardAccessSync.project(ward, cityService, worldGuardAdapter);
-            ok(player, WARD_PREFIX, "NÃºcleo desvinculado de la Matriz.");
+            ok(player, WARD_PREFIX, "Núcleo desvinculado de la Matriz.");
             return true;
         }
         error(player, WARD_PREFIX, CommandNames.cmd("ward", "city [annex|leave]"));

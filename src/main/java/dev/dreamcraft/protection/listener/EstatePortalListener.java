@@ -160,14 +160,26 @@ public final class EstatePortalListener implements Listener {
                 .toList();
         if (candidates.isEmpty()) return;
 
-        Estate estate = candidates.stream()
-                .filter(e -> isMember(e, player.getUniqueId()))
-                .filter(e -> Bukkit.getWorld(instanceService.worldNameFor(e)) != null)
-                .findFirst()
-                .orElseGet(() -> candidates.stream()
-                        .filter(e -> isMember(e, player.getUniqueId()))
+        // Deterministic pick: resume own active fight > own party world already
+        // loaded > any own party (world created fresh) > admin zone LAST — so a
+        // shared area never routes members into the server-managed world by accident.
+        UUID playerId = player.getUniqueId();
+        List<Estate> mine = candidates.stream()
+                .filter(e -> isMember(e, playerId))
+                .toList();
+        Estate estate = instanceService.estateOfPlayer(playerId)
+                .filter(mine::contains)
+                .orElseGet(() -> mine.stream()
+                        .filter(e -> !e.persistent())
+                        .filter(e -> Bukkit.getWorld(instanceService.worldNameFor(e)) != null)
                         .findFirst()
-                        .orElse(null));
+                        .orElseGet(() -> mine.stream()
+                                .filter(e -> !e.persistent())
+                                .findFirst()
+                                .orElseGet(() -> mine.stream()
+                                        .filter(Estate::persistent)
+                                        .findFirst()
+                                        .orElse(null))));
 
         if (estate == null) {
             event.setCancelled(true);
@@ -240,17 +252,18 @@ public final class EstatePortalListener implements Listener {
 
     /**
      * Zone-entry discovery: the first time a player steps into an END /
-     * TRIAL_CHAMBER zone without belonging to any of its estates, a personal
-     * party estate is created with them as leader — they can then invite their
-     * group. Already-recognized members are simply remembered.
+     * TRIAL_CHAMBER zone without belonging to any of its estates, an
+     * on-screen prompt tells them to create their own group with
+     * {@code /{cmd.estate} discover} — no party is auto-created.
+     * Already-recognized members are simply remembered.
      */
     private void evaluateZoneEntry(Player player, Location location) {
         World world = location.getWorld();
         if (world == null) return;
-        List<Estate> zones = new java.util.ArrayList<>(estateService.findInstancedAreasAt(
+        List<Estate> zones = estateService.findInstancedAreasAt(
                         world.getName(), location.getBlockX(), location.getBlockZ()).stream()
                 .filter(e -> withinVerticalBand(location, e))
-                .toList());
+                .toList();
         UUID playerId = player.getUniqueId();
 
         if (zones.isEmpty()) {
@@ -259,28 +272,17 @@ public final class EstatePortalListener implements Listener {
         }
         Estate zone = zones.get(0);
         if (zone.id().equals(lastZoneByPlayer.get(playerId))) {
-            return; // already handled this zone
+            return; // already notified this zone
         }
         lastZoneByPlayer.put(playerId, zone.id());
 
         if (zones.stream().anyMatch(e -> isMember(e, playerId))) {
-            return; // known member — nothing to provision
+            return; // known member — nothing to prompt
         }
 
-        Estate party = estateService.createPartyEstate(playerId, player.getName(), zone.type(), zone);
-        estateService.addMember(party, playerId);
-        if (worldGuardAdapter != null && worldGuardAdapter.isAvailable() && party.hasArea()) {
-            worldGuardAdapter.createEstateAreaRegion(party, party.areaWorld(),
-                    party.areaX(), party.areaZ(), party.areaRadius());
-        }
-        player.sendMessage(CommandMessages.ESTATE_PREFIX
-                .append(Component.text("¡Descubriste la zona de ", NamedTextColor.GREEN))
-                .append(Component.text(zone.type().displayName(), NamedTextColor.AQUA))
-                    .append(Component.text("! Se creó tu Nexo ", NamedTextColor.GREEN))
-                .append(Component.text(party.name(), NamedTextColor.AQUA))
-                .append(Component.text(" y sos su líder. Invitá a tu grupo con ", NamedTextColor.GREEN))
-                .append(Component.text(CommandNames.cmd("estate", "invite <jugador>"), NamedTextColor.YELLOW))
-                .append(Component.text(".", NamedTextColor.GREEN)));
+        // Same keys/placeholders as the edit gate (EstateStructureListener):
+        // entering the zone and bumping into it show the exact same cartel.
+        CommandMessages.adventureZoneNearby(player, zone.type());
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

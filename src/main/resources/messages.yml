@@ -3,17 +3,17 @@
 #             → este archivo (default embebido) → fallback en código.
 # Soporta códigos & y placeholders {nombre}.
 #
-# VOCABULARIO: esta versión usa los términos canónicos Ward / Ciudad / Estate.
-# Las raíces de comando ({cmd.ward}, etc.) se resuelven con command-names en
-# config.yml — un servidor que renombre a sync/matriz/nexo ve esos términos
-# sin tocar este archivo. Para rebranding completo (Núcleo/Matriz/Nexo),
-# copia este archivo al data folder y edítalo.
+# VOCABULARIO: los términos de dominio NO están escritos a mano — usan los
+# placeholders {name.ward} / {name.city} / {name.estate}, que se resuelven con
+# command-names en config.yml. Un servidor que renombre a sync/matriz/nexo ve
+# "[Sync] / [Matriz] / [Nexo]" en TODOS los textos sin tocar este archivo.
+# Las raíces de comando ({cmd.ward}) se resuelven igual.
 
 prefixes:
   global: "&5[DreamCraft]"
-  ward: "&3[Ward]"
-  city: "&b[Ciudad]"
-  estate: "&d[Estate]"
+  ward: "&3[{name.ward}]"
+  city: "&b[{name.city}]"
+  estate: "&d[{name.estate}]"
   protection: "&3[Protección]"
 
 common:
@@ -32,11 +32,11 @@ sync:
   sintonized: "&aAcceso compartido habilitado: construcción y contenedores públicos."
   desintonized: "&eAcceso público revocado: construcción y contenedores cerrados."
   tp-done: "Teletransporte al núcleo completado."
-  nucleus-not-found: "&cWard no encontrado. Usa <id> o el nombre de un jugador online."
+  nucleus-not-found: "&c{name.ward} no encontrado. Usa <id> o el nombre de un jugador online."
 
 help:
   ward:
-    header: "&b&lDreamCraft Ward"
+    header: "&b&lDreamCraft {name.ward}"
     subtitle: "&7Gestiona tu territorio. Raíz actual: &f/{cmd.ward}"
     lines:
       - "&f/{cmd.ward} create              &7— Crear Ward en tu posición"
@@ -54,7 +54,7 @@ help:
       - "&f/{cmd.ward} delete [id]       &7— Eliminar Ward"
       - "&8Staff: /{cmd.ward} abrir <id|jugador> · /{cmd.ward} give"
   city:
-    header: "&6&lDreamCraft Ciudad"
+    header: "&6&lDreamCraft {name.city}"
     subtitle: "&7Gestiona tu ciudad. Raíz actual: &f/{cmd.city}"
     lines:
       - "&f/{cmd.city} create <nombre>     &7— Crear ciudad"
@@ -70,22 +70,26 @@ help:
       - "&f/{cmd.city} delete              &7— Eliminar ciudad"
       - "&7Roles: GOVERNOR, COUNCIL, CITIZEN, ALLY"
   estate:
-    header: "&d&lDreamCraft Estate"
+    header: "&d&lDreamCraft {name.estate}"
     subtitle: "&7Zonas de expedición grupal. Raíz actual: &f/{cmd.estate}"
     lines:
-      - "&f/{cmd.estate} create <id>          &7— Crear Estate"
+      - "&f/{cmd.estate} create <id>          &7— Crear instancia (grupo)"
       - "&f/{cmd.estate} discover <tipo>      &7— Unirte a la aventura (end, trial_chamber)"
-      - "&f/{cmd.estate} admin create <id> <tipo> [radio|auto] &8(admin)"
-      - "&f/{cmd.estate} admin area <id> [radio]  &8(admin)"
-      - "&f/{cmd.estate} admin reset <id>     &8(admin)"
       - "&f/{cmd.estate} invite <jugador>     &7— Invitar miembro"
-      - "&f/{cmd.estate} join <id>           &7— Unirse a un Estate"
-      - "&f/{cmd.estate} leave               &7— Salir del Estate"
+      - "&f/{cmd.estate} join <id>           &7— Unirse a una instancia"
+      - "&f/{cmd.estate} leave               &7— Salir de la instancia"
       - "&f/{cmd.estate} start               &7— Iniciar instancia"
       - "&f/{cmd.estate} transfer <jugador>   &7— Transferir ownership"
       - "&f/{cmd.estate} info                &7— Ver información"
-      - "&f/{cmd.estate} menu                &7— Abrir menú del Estate"
-      - "&f/{cmd.estate} disband             &7— Disolver Estate"
+      - "&f/{cmd.estate} menu                &7— Abrir menú de la instancia"
+      - "&f/{cmd.estate} disband             &7— Disolver instancia"
+    admin:
+      header: "&c&lAdmin:"
+      lines:
+        - "&f/{cmd.estate} admin create <id> <tipo> [radio|auto] &7— Crear zona de aventura"
+        - "&f/{cmd.estate} admin area <id> [radio]  &7— Anclar el área donde estás"
+        - "&f/{cmd.estate} admin reset <id>     &7— Reiniciar la instancia de una zona"
+        - "&f/{cmd.estate} admin menu           &7— Abrir el menú de zonas"
   protection:
     header: "&5&lDreamCraft Protection"
     subtitle: "&7Gestiona tu Ward — misma mecánica que &f/{cmd.ward}&7."
@@ -107,21 +111,40 @@ help:
         - "&f/{cmd.protection} recalculate &7— Re-sincronizar la región"
         - "&f/{cmd.protection} integrations &7— Estado del Integration Registry"
 
-# Ítem físico y títulos de menús
+# Aventuras instanciadas (zonas END / Trial Chamber creadas por admin)
+adventure:
+  # Cartel de zona disponible — compartido por el gate de edición y la
+  # detección de entrada (mismas claves/placeholders en ambos).
+  zone-nearby:
+    title: "&6&l{name.estate} &6&lal &f{type} &6&ldisponible"
+    subtitle: "&eUnete usando &f/{cmd.estate} discover {type.key}"
+  # Etiqueta visible por tipo de aventura y su argumento de subcomando
+  type:
+    end: "End"
+    trial_chamber: "Trial Chamber"
+  type-key:
+    end: "end"
+    trial_chamber: "trial_chamber"
+  # Actionbar al chocar con estructura indestructible
+  structure-indestructible: "&b✦ La estructura de la aventura es indestructible."
+
+# Ítem físico y títulos de menús — un solo bloque `menu:` (las claves
+# duplicadas de YAML se pisan entre sí y pierden los títulos).
 items:
-  nucleus-name: "&bBaliza de Ward"
+  nucleus-name: "&bBaliza de {name.ward}"
   nucleus-lore:
-    - "&7Colocala para fundar un Ward"
+    - "&7Colocala para fundar un {name.ward}"
     - "&7La protección se extiende en radio alrededor de este bloque"
 
 menu:
-  title.ward: "&8Ward &f{name}"
-  title.city: "&8Ciudad &f{name}"
-  title.estate-lobby: "&8Estate &f{name}"
+  title.ward: "&8{name.ward} &f{name}"
+  title.city: "&8{name.city} &f{name}"
+  title.estate-lobby: "&8{name.estate} &f{name}"
   title.estate-instance: "&8Instancia &f{name}"
-
-# Feedback de los menús (MenuActionDispatcher) — acción bar / chat.
-menu:
+  title.estate-admin-zones: "&8Zonas de aventura (admin)"
+  # Zonas persistentes creadas por admin — no se unen por ID/menú
+  estate.admin-zone: "Esta zona la administra el servidor: creá tu grupo con /{cmd.estate} discover"
+  # Feedback de los menús (MenuActionDispatcher) — acción bar / chat.
   unknown-action: "&cAcción no reconocida: {action}"
   internal-error: "Error interno"
   # hints que redirigen a comandos (siempre con raíz versionada del servidor)

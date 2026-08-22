@@ -1,5 +1,6 @@
 package dev.dreamcraft.protection.listener;
 
+import dev.dreamcraft.protection.command.CommandMessages;
 import dev.dreamcraft.protection.config.CommandNames;
 
 import dev.dreamcraft.protection.config.ProtectionConfig;
@@ -7,6 +8,7 @@ import dev.dreamcraft.protection.domain.model.Ward;
 import dev.dreamcraft.protection.domain.model.WardTier;
 import dev.dreamcraft.protection.domain.port.WardTierProvider;
 import dev.dreamcraft.protection.domain.service.WardService;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -67,8 +69,12 @@ public final class WardBlockGateListener implements Listener {
                 .map(t -> capitalize(t.key()))
                 .orElse(capitalize(requiredTierKey));
         event.setCancelled(true);
-        player.sendMessage("§c[Ward] §f" + pretty(placed) + "§c requiere un Ward rango §b"
-                + requiredName + "§c. Elevá la fase de tu Núcleo desde su menú (§f/" + CommandNames.root("ward") + " menu§c).");
+        player.sendMessage(CommandMessages.prefixed("ward",
+                "&f" + pretty(placed) + "&c requiere un " + CommandNames.root("ward")
+                        + " rango &b" + requiredName
+                        + "&c. Elevá la fase de tu Núcleo desde su menú (&f/"
+                        + CommandNames.root("ward") + " menu&c).",
+                NamedTextColor.RED));
     }
 
     /** 0-based position of the tier when ordered by min-base-score; -1 if unknown. */

@@ -28,7 +28,7 @@ public final class CityMenuBuilder {
         List<String> overviewLore = new ArrayList<>();
         overviewLore.add("&7Gobernador: &f" + vm.governorName());
         overviewLore.add("&7Miembros: &f" + vm.memberCount());
-        overviewLore.add("&7NÃºcleos: &f" + vm.wardCount());
+        overviewLore.add("&7Núcleos: &f" + vm.wardCount());
         overviewLore.add("&7Tesoro: &a" + vm.treasury());
         overviewLore.add("&7City Score: &f" + vm.cityScore());
         if (vm.levelStatus() != null) {
@@ -45,7 +45,7 @@ public final class CityMenuBuilder {
             levelLore.add("&7Nivel actual: &b" + lvl.levelName());
             levelLore.add("");
             levelLore.add("&7Progreso:");
-            levelLore.add("&8- &7NÃºcleos federados: &f" + lvl.wards());
+            levelLore.add("&8- &7Núcleos federados: &f" + lvl.wards());
             levelLore.add("&8- &7Habitantes: &f" + lvl.members());
             levelLore.add("&8- &7Riqueza (score): &f" + lvl.wealth());
             if (lvl.maxed()) {
@@ -54,7 +54,7 @@ public final class CityMenuBuilder {
             } else {
                 levelLore.add("");
                 levelLore.add("&7Siguiente nivel: &b" + lvl.nextLevelName());
-                levelLore.add("&8- " + (lvl.needWards() == 0 ? "&a✔" : "&fFaltan " + lvl.needWards() + " nÃºcleos"));
+                levelLore.add("&8- " + (lvl.needWards() == 0 ? "&a✔" : "&fFaltan " + lvl.needWards() + " núcleos"));
                 levelLore.add("&8- " + (lvl.needMembers() == 0 ? "&a✔" : "&fFaltan " + lvl.needMembers() + " habitantes"));
                 levelLore.add("&8- " + (lvl.needWealth() == 0 ? "&a✔" : "&fFaltan " + lvl.needWealth() + " de riqueza"));
                 levelLore.add("");

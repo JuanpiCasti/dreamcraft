@@ -119,7 +119,7 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
             if (region == null) return;
             DefaultDomain memberDomain = new DefaultDomain();
             for (UUID memberId : members) memberDomain.addPlayer(memberId);
-            // Owners domain is untouched â€” the owner keeps access regardless.
+            // Owners domain is untouched — the owner keeps access regardless.
             region.setMembers(memberDomain);
         } catch (Exception e) {
             logger.warning("[WorldGuard] replaceMembers failed for ward " + ward.id() + ": " + e.getMessage());
@@ -177,7 +177,7 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
         try {
             ProtectedRegion region = getRegion(ward);
             if (region == null) return;
-            // Restore priority to a neutral value; members are left intact here â€”
+            // Restore priority to a neutral value; members are left intact here —
             // the next WardAccessSync.project re-derives them from domain truth.
             if (region.getPriority() >= 100) {
                 region.setPriority(0);
@@ -187,7 +187,7 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
         }
     }
 
-    // â”€â”€ Estate area regions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Estate area regions ───────────────────────────────────────────────────
 
     /** Vertical band (stealth): region spans anchorY - below … anchorY + above. */
     private int estateBandBelow = 16;
@@ -274,7 +274,7 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
         return "dc_estate_" + estate.id().toString().replace("-", "").substring(0, 12);
     }
 
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private RegionManager getRegionManager(String worldName) {
         World world = Bukkit.getWorld(worldName);

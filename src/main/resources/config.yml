@@ -121,6 +121,11 @@ estate-instances:
   frame-scan-radius: 24
   # Segundos entre que sale el último miembro y se reinicia el mundo de la instancia
   reset-delay-seconds: 10
+  # Radio (en chunks) alrededor del centro de la isla que se mantiene cargado
+  # mientras la instancia vive. La IA de vuelo de la dragona solo corre en
+  # chunks entity-ticking: fuera del radio de simulación de los jugadores se
+  # congela en el aire. ±10 chunks ≈ toda la arena de combate (island + anillo).
+  arena-force-radius-chunks: 10
   # Reiniciar los ojos del portal de entrada tras el primer ingreso del grupo
   # (da tiempo a que el equipo cruce antes de cerrar el portal para el próximo grupo)
   reset-portal-on-first-enter: true

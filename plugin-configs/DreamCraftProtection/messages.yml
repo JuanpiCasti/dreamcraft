@@ -39,16 +39,10 @@ items:
     - "&7Colocalo para despertar tu territorio"
     - "&7La protección se extiende en radio alrededor de este bloque"
 
-menu:
-  title.ward: "&8Núcleo &f{name}"
-  title.city: "&8Matriz &f{name}"
-  title.estate-lobby: "&8Nexo &f{name}"
-  title.estate-instance: "&8Instancia &f{name}"
-
 help:
   ward:
     header: "&b&l✦ Sincronía · DreamCraft ✦"
-    subtitle: "&7Gestiona tu territorio despierto con &f/{cmd.ward}&7.
+    subtitle: "&7Gestiona tu territorio despierto con &f/{cmd.ward}&7."
     lines:
       - "&f/sync despertar           &7— Despierta tu Núcleo en tu posición"
       - "&f/sync info [id]           &7— Fase actual, letargo y coordenadas"
@@ -118,8 +112,17 @@ help:
         - "&f/{cmd.protection} recalculate &7— Re-sincronizar la región"
         - "&f/{cmd.protection} integrations &7— Estado del Integration Registry"
 
-# Feedback de los menús (MenuActionDispatcher) — acción bar / chat.
+# Menús y feedback (MenuActionDispatcher) — UN solo bloque `menu:`
+# (las claves duplicadas de YAML se pisan entre sí y pierden los títulos).
 menu:
+  # Títulos de menús
+  title.ward: "&8Núcleo &f{name}"
+  title.city: "&8Matriz &f{name}"
+  title.estate-lobby: "&8Nexo &f{name}"
+  title.estate-instance: "&8Instancia &f{name}"
+  title.estate-admin-zones: "&8Zonas de aventura (admin)"
+  # Zonas persistentes creadas por admin — no se unen por ID/menú
+  estate.admin-zone: "Esta zona la administra el servidor: creá tu grupo con /{cmd.estate} discover"
   unknown-action: "&cAcción no reconocida: {action}"
   internal-error: "Error interno"
   # hints que redirigen a comandos (siempre con raíz versionada del servidor)
@@ -133,21 +136,22 @@ menu:
   ward.cannot-deposit: "No puedes depositar energía en este Núcleo."
   ward.item-not-accepted: "Ítem no válido para upkeep. Mira los aceptados en el menú."
   ward.owner-only-upgrade: "Solo el owner puede mejorar el Núcleo."
-  ward.max-tier: "El Ward ya está en el tier máximo ({tier})."
-  ward.conflict-radius: "No puedes mejorar: el radio nuevo ({radius}) alcanzaría la Ward '{other}' de {owner}."
-  ward.conflict-radius-tier: "No puedes mejorar al tier {tier}: el radio nuevo ({radius}) alcanzaría la Ward '{other}' de {owner}."
-  ward.missing-items: "[Sincronía] Te faltan ítems para mejorar al tier {tier}:"
+  ward.max-tier: "El Núcleo ya está en el tier máximo ({tier})."
+  ward.conflict-radius: "No puedes mejorar: el radio nuevo ({radius}) alcanzaría el Núcleo '{other}' de {owner}."
+  ward.conflict-radius-tier: "No puedes mejorar al tier {tier}: el radio nuevo ({radius}) alcanzaría el Núcleo '{other}' de {owner}."
+  # El prefijo [Sincronía] lo antepone el código — no repetirlo aquí
+  ward.missing-items: "Te faltan ítems para mejorar al tier {tier}:"
   ward.upgraded: "Mejorado a "
   ward.owner-only-permissions: "Solo el owner puede cambiar permisos."
   ward.invalid-permission: "Permiso inválido: {perm}"
   ward.permission-revoked: "Permiso {perm} revocado."
   ward.permission-granted: "Permiso {perm} concedido."
-  ward.owner-only-annex: "Solo el owner puede anexar el Ward."
+  ward.owner-only-annex: "Solo el owner puede federar el Núcleo."
   ward.already-in-city: "El Núcleo ya pertenece a una Matriz."
   ward.not-in-city: "No eres miembro de ninguna ciudad."
   ward.annexed: "Núcleo federado a la Matriz {city}."
-  ward.owner-only-disband: "Solo el owner puede disolver el Ward."
-  ward.disbanded: "Ward disuelto."
+  ward.owner-only-disband: "Solo el owner puede apagar el Núcleo."
+  ward.disbanded: "Núcleo apagado."
   ward.context-lost: "Contexto de Núcleo perdido."
   ward.deposited: "Depositaste "
   ward.deposited-units: " → +{units} unidades. Balance: {balance}"
@@ -163,17 +167,17 @@ menu:
   city.owner-only-delete: "Solo el Gobernador puede eliminar la ciudad."
   city.deleted: "Ciudad {city} eliminada."
   city.context-lost: "Contexto de Ciudad perdido."
-  # estate
-  estate.already-owner: "Ya eres el owner de este Estate."
-  estate.already-member: "Ya eres miembro del Estate."
-  estate.joined: "Te uniste al Estate {estate}."
-  estate.owner-cannot-leave: "El owner no puede salir; transfiere o disuelve el Estate."
-  estate.not-member: "No eres miembro del Estate."
-  estate.left: "Saliste del Estate {estate}."
+  # estate — vocabulario del lore: Nexo / instancia
+  estate.already-owner: "Ya eres el owner de este Nexo."
+  estate.already-member: "Ya eres miembro de este Nexo."
+  estate.joined: "Te uniste al Nexo {estate}."
+  estate.owner-cannot-leave: "El owner no puede salir; transfiere o disuelve el Nexo."
+  estate.not-member: "No eres miembro de este Nexo."
+  estate.left: "Saliste del Nexo {estate}."
   estate.owner-only-start: "Solo el owner puede iniciar la instancia."
-  estate.instance-active: "El Estate ya tiene una instancia activa."
+  estate.instance-active: "El Nexo ya tiene una instancia activa."
   estate.instance-ready: " El End privado está listo con la dragona."
   estate.started: "Instancia de {estate} iniciada."
-  estate.owner-only-disband: "Solo el owner puede disolver el Estate."
-  estate.disbanded: "Estate {estate} disuelto."
-  estate.context-lost: "Contexto de Estate perdido."
+  estate.owner-only-disband: "Solo el owner puede disolver el Nexo."
+  estate.disbanded: "Nexo {estate} disuelto."
+  estate.context-lost: "Contexto de Nexo perdido."

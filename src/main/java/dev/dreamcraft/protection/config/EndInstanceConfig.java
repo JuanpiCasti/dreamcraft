@@ -34,13 +34,20 @@ public record EndInstanceConfig(
          * rolled back when the party closes it (exit portal / reset), so the
          * next adventurers always find pristine chunks.
          */
-        boolean regenerateZone
+        boolean regenerateZone,
+        /**
+         * Arena force-load radius in chunks around the island center. The
+         * dragon's flight AI only ticks inside entity-ticking chunks; outside
+         * every player's simulation distance it freezes mid-air forever. The
+         * arena stays force-loaded (entity-ticking) while the instance lives.
+         */
+        int arenaForceRadiusChunks
 ) {
 
     public static EndInstanceConfig load(FileConfiguration config) {
         ConfigurationSection s = config.getConfigurationSection("estate-instances");
         if (s == null) {
-            return new EndInstanceConfig(true, "dc_end_", 32, 24, 10, true, 30, 16, 48, true, true);
+            return new EndInstanceConfig(true, "dc_end_", 32, 24, 10, true, 30, 16, 48, true, true, 10);
         }
         return new EndInstanceConfig(
                 s.getBoolean("enabled", true),
@@ -53,7 +60,8 @@ public record EndInstanceConfig(
                 Math.max(0, s.getInt("band-below", 16)),
                 Math.max(4, s.getInt("band-above", 48)),
                 s.getBoolean("protect-structure", true),
-                s.getBoolean("regenerate-zone", true)
+                s.getBoolean("regenerate-zone", true),
+                Math.max(2, s.getInt("arena-force-radius-chunks", 10))
         );
     }
 }

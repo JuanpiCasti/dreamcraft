@@ -89,6 +89,9 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        // Command names must be installed BEFORE the message catalog loads:
+        // prefixes/headers/titles resolve {name.*}/{cmd.*} at load time.
+        dev.dreamcraft.protection.config.CommandNames.install(getConfig());
         dev.dreamcraft.protection.message.Messages.load(this);
 
         // 1. Integration Registry — detect all optional plugins
@@ -215,6 +218,8 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                     worldGuardAdapter, endInstanceService(), commandOptions);
             estateCmd.setExecutor(estateExecutor);
             estateCmd.setTabCompleter(estateExecutor);
+            // Admin zones GUI book button → opens that group's own menu
+            dispatcher.setEstateMenuOpener(estateExecutor::openEstateMenuById);
         }
 
         // 7b-bis. Versioned roots (/sync, /nexo, /matriz…) registered as real
@@ -267,6 +272,8 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                 estateService, endInstanceConfig.protectStructure(),
                 endInstanceConfig.regenerateZone(), zoneJournal,
                 endInstanceConfig.areaBandBelow(), endInstanceConfig.areaBandAbove()), this);
+        // 8c. Instance world events — exit-portal generation when the dragon falls
+        pm.registerEvents(endInstanceService(), this);
 
         getLogger().info("[DreamCraft] Domain layer active — Ward/City/Estate ready.");
     }
