@@ -138,7 +138,7 @@ public final class WardMenuBuilder {
                     List.of("&7Clic para federar a tu Matriz"),
                     MenuAction.of("ward.annex_city")));
         } else {
-            items.add(MenuItem.display(16, "icon.city.overview", "&8&lAnexar a Ciudad",
+            items.add(MenuItem.display(16, "icon.city.overview", "&8&lFederar a Matriz",
                     List.of("&8Necesitas ser owner y no tener Matriz")));
         }
 
@@ -154,11 +154,11 @@ public final class WardMenuBuilder {
 
         // Slot 21 — Disband / delete
         if (vm.canDisband()) {
-            items.add(MenuItem.button(21, "icon.ward.inactive", "&c&lDespertar apagado",
+            items.add(MenuItem.button(21, "icon.ward.inactive", "§c§lApagar Núcleo",
                     List.of("&cClic para eliminar este NÃºcleo", "&cEsta acción es irreversible"),
                     MenuAction.of("ward.disband")));
         } else {
-            items.add(MenuItem.display(21, "icon.ward.inactive", "&8&lDisolver Ward",
+            items.add(MenuItem.display(21, "icon.ward.inactive", "&8§lApagar Núcleo",
                     List.of("&8Solo el owner puede disolver")));
         }
 
