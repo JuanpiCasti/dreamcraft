@@ -1,5 +1,7 @@
 package dev.dreamcraft.protection.presentation;
 
+import dev.dreamcraft.protection.command.CommandMessages;
+
 import dev.dreamcraft.protection.config.CommandNames;
 
 import dev.dreamcraft.protection.domain.model.*;
@@ -212,7 +214,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         }
         var receipt = upkeepService.deposit(ward, player, material, amount);
         consume.run();
-        player.sendMessage(Component.text("[Ward] ", NamedTextColor.DARK_AQUA)
+        player.sendMessage(CommandMessages.WARD_PREFIX
                 .append(Component.text(msg("menu.ward.deposited", "Depositaste "), NamedTextColor.GREEN))
                 .append(Component.text(receipt.amount() + "x "
                         + upkeepService.displayName(receipt.material()), NamedTextColor.WHITE))
@@ -303,7 +305,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         wardService.addBaseScore(ward, quote.scoreGain());
         worldGuardAdapter.resizeRegion(ward, -64, 320);
 
-        player.sendMessage(Component.text("[Ward] ", NamedTextColor.DARK_AQUA)
+        player.sendMessage(CommandMessages.WARD_PREFIX
                 .append(Component.text("Mejorado a ", NamedTextColor.GREEN))
                 .append(Component.text(ward.tier(), NamedTextColor.AQUA))
                 .append(Component.text(" — radio " + ward.radius()
@@ -423,7 +425,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                     net.kyori.adventure.text.Component.text("★ Tesoro de " + cityName,
                             NamedTextColor.GOLD));
             online.openInventory(holder.getInventory());
-            online.sendMessage(Component.text("[Ciudad] ", NamedTextColor.GOLD)
+            online.sendMessage(CommandMessages.CITY_PREFIX
                     .append(Component.text(msg("menu.city.treasury-value-prefix", "Valor actual del tesoro: "), NamedTextColor.GRAY))
                     .append(Component.text(value + msg("menu.city.treasury-value-suffix", " unidades de riqueza"), NamedTextColor.YELLOW)));
         });

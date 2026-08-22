@@ -1,5 +1,7 @@
 package dev.dreamcraft.protection.listener;
 
+import dev.dreamcraft.protection.command.CommandMessages;
+
 import dev.dreamcraft.protection.config.CommandNames;
 
 import dev.dreamcraft.protection.domain.model.Estate;
@@ -104,7 +106,7 @@ public final class EstatePortalListener implements Listener {
         Estate zone = zones.get(0);
         if (zones.stream().noneMatch(e -> isMember(e, player.getUniqueId()))) {
             event.setCancelled(true);
-            player.sendMessage(Component.text("[Estate] ", NamedTextColor.LIGHT_PURPLE)
+            player.sendMessage(CommandMessages.ESTATE_PREFIX
                     .append(Component.text("Esta zona pertenece al estate ", NamedTextColor.RED))
                     .append(Component.text(zone.name(), NamedTextColor.AQUA))
                     .append(Component.text(". Creá tu grupo con ", NamedTextColor.RED))
@@ -121,7 +123,7 @@ public final class EstatePortalListener implements Listener {
             Bukkit.getScheduler().runTaskLater(plugin(), () -> {
                 if (countFilledFrames(frameLoc, 16) >= 12) {
                     broadcastToEstate(estateId,
-                            Component.text("[Estate] ", NamedTextColor.LIGHT_PURPLE)
+                            CommandMessages.ESTATE_PREFIX
                                     .append(Component.text("El portal del End está abierto. ¡Adelante!",
                                             NamedTextColor.GREEN)));
                 }
@@ -145,7 +147,7 @@ public final class EstatePortalListener implements Listener {
                     ? instanceService.exitLocationFor(estate)
                     : fallbackExit();
             event.setTo(exit);
-            player.sendMessage(Component.text("[Estate] Volviste del End.", NamedTextColor.GREEN));
+            player.sendMessage(CommandMessages.prefixed("estate", "Volviste del End.", NamedTextColor.GREEN));
             return;
         }
 
@@ -169,7 +171,7 @@ public final class EstatePortalListener implements Listener {
 
         if (estate == null) {
             event.setCancelled(true);
-            player.sendMessage(Component.text("[Estate] ", NamedTextColor.LIGHT_PURPLE)
+            player.sendMessage(CommandMessages.ESTATE_PREFIX
                     .append(Component.text("Solo los miembros de un estate de esta zona pueden cruzar. "
                             + "Creá el tuyo con ", NamedTextColor.RED))
                     .append(Component.text(CommandNames.cmd("estate", "discover end"), NamedTextColor.YELLOW))
@@ -183,7 +185,7 @@ public final class EstatePortalListener implements Listener {
         World instance = instanceService.getOrCreateWorld(estate);
         if (instance == null) {
             event.setCancelled(true);
-            player.sendMessage(Component.text("[Estate] No se pudo abrir la instancia. Avisa a un admin.",
+            player.sendMessage(CommandMessages.prefixed("estate", "No se pudo abrir la instancia. Avisa a un admin.",
                     NamedTextColor.RED));
             return;
         }
@@ -271,7 +273,7 @@ public final class EstatePortalListener implements Listener {
             worldGuardAdapter.createEstateAreaRegion(party, party.areaWorld(),
                     party.areaX(), party.areaZ(), party.areaRadius());
         }
-        player.sendMessage(Component.text("[Estate] ", NamedTextColor.LIGHT_PURPLE)
+        player.sendMessage(CommandMessages.ESTATE_PREFIX
                 .append(Component.text("¡Descubriste la zona de ", NamedTextColor.GREEN))
                 .append(Component.text(zone.type().displayName(), NamedTextColor.AQUA))
                     .append(Component.text("! Se creó tu Nexo ", NamedTextColor.GREEN))

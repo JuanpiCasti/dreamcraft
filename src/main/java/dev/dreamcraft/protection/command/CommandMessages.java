@@ -19,10 +19,25 @@ public final class CommandMessages {
     private static final LegacyComponentSerializer LEGACY_AMPERSAND =
             LegacyComponentSerializer.legacyAmpersand();
 
-    static Component PREFIX = Component.text("[DreamCraft] ", NamedTextColor.DARK_PURPLE);
-    static Component WARD_PREFIX = Component.text("[Ward] ", NamedTextColor.DARK_AQUA);
-    static Component CITY_PREFIX = Component.text("[Ciudad] ", NamedTextColor.AQUA);
-    static Component ESTATE_PREFIX = Component.text("[Estate] ", NamedTextColor.LIGHT_PURPLE);
+    public static Component PREFIX = Component.text("[DreamCraft] ", NamedTextColor.DARK_PURPLE);
+    public static Component WARD_PREFIX = Component.text("[Ward] ", NamedTextColor.DARK_AQUA);
+    public static Component CITY_PREFIX = Component.text("[Ciudad] ", NamedTextColor.AQUA);
+    public static Component ESTATE_PREFIX = Component.text("[Estate] ", NamedTextColor.LIGHT_PURPLE);
+
+    /**
+     * Catalog-driven prefix + legacy-parsed body in one component — for
+     * listeners/services outside the command package that build quick
+     * feedback lines without a full tr() key.
+     */
+    public static Component prefixed(String domain, String legacyText, NamedTextColor fallbackColor) {
+        Component prefix = switch (domain == null ? "" : domain) {
+            case "ward" -> WARD_PREFIX;
+            case "city" -> CITY_PREFIX;
+            case "estate" -> ESTATE_PREFIX;
+            default -> PREFIX;
+        };
+        return prefix.append(parseLegacy(legacyText).colorIfAbsent(fallbackColor));
+    }
 
     private CommandMessages() {}
 

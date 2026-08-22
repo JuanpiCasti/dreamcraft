@@ -1,5 +1,7 @@
 package dev.dreamcraft.protection.listener;
 
+import dev.dreamcraft.protection.command.CommandMessages;
+
 import dev.dreamcraft.protection.domain.model.Ward;
 import dev.dreamcraft.protection.domain.service.WardService;
 import dev.dreamcraft.protection.service.WardUpkeepService;
@@ -80,7 +82,7 @@ public final class WardUpkeepVaultListener implements Listener {
         }
         giveBack(player, rejected);
 
-        player.sendMessage(Component.text("[Ward] ", NamedTextColor.DARK_AQUA)
+        player.sendMessage(CommandMessages.WARD_PREFIX
                 .append(Component.text("Bóveda cerrada — ", NamedTextColor.GRAY)));
         if (!consumed.isEmpty()) {
             StringBuilder detail = new StringBuilder();
@@ -89,16 +91,16 @@ public final class WardUpkeepVaultListener implements Listener {
                 detail.append("§f").append(amount).append("x ")
                         .append(upkeepService.displayName(mat));
             });
-            player.sendMessage(Component.text("[Ward] ", NamedTextColor.DARK_AQUA)
+            player.sendMessage(CommandMessages.WARD_PREFIX
                     .append(Component.text("Depositado: " + detail, NamedTextColor.WHITE))
                     .append(Component.text(" → +" + totalUnits + " unidades", NamedTextColor.GREEN))
                     .append(Component.text(" (Balance: " + ward.upkeepBalance() + ")", NamedTextColor.GRAY)));
         } else {
-            player.sendMessage(Component.text("[Ward] No dejaste ítems válidos de upkeep.",
+            player.sendMessage(CommandMessages.prefixed("ward", "No dejaste ítems válidos de upkeep.",
                     NamedTextColor.YELLOW));
         }
         if (!rejected.isEmpty()) {
-            player.sendMessage(Component.text("[Ward] Ítems no válidos devueltos a tu inventario.",
+            player.sendMessage(CommandMessages.prefixed("ward", "Ítems no válidos devueltos a tu inventario.",
                     NamedTextColor.YELLOW));
         }
     }

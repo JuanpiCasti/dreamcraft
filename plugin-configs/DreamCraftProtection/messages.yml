@@ -136,7 +136,7 @@ menu:
   ward.max-tier: "El Ward ya está en el tier máximo ({tier})."
   ward.conflict-radius: "No puedes mejorar: el radio nuevo ({radius}) alcanzaría la Ward '{other}' de {owner}."
   ward.conflict-radius-tier: "No puedes mejorar al tier {tier}: el radio nuevo ({radius}) alcanzaría la Ward '{other}' de {owner}."
-  ward.missing-items: "[Ward] Te faltan ítems para mejorar al tier {tier}:"
+  ward.missing-items: "[Sincronía] Te faltan ítems para mejorar al tier {tier}:"
   ward.upgraded: "Mejorado a "
   ward.owner-only-permissions: "Solo el owner puede cambiar permisos."
   ward.invalid-permission: "Permiso inválido: {perm}"

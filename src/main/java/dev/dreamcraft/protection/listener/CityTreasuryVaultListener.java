@@ -1,5 +1,7 @@
 package dev.dreamcraft.protection.listener;
 
+import dev.dreamcraft.protection.command.CommandMessages;
+
 import dev.dreamcraft.protection.persistence.CityTreasuryStore;
 import dev.dreamcraft.protection.ui.CityTreasuryVaultHolder;
 import net.kyori.adventure.text.Component;
@@ -33,12 +35,12 @@ public final class CityTreasuryVaultListener implements Listener {
         try {
             store.flush();
         } catch (Exception e) {
-            player.sendMessage(Component.text("[Ciudad] No se pudo guardar el tesoro: "
+            player.sendMessage(CommandMessages.prefixed("city", "No se pudo guardar el tesoro: "
                     + e.getMessage(), NamedTextColor.RED));
             return;
         }
         int value = store.computeValue(event.getInventory().getContents());
-        player.sendMessage(Component.text("[Ciudad] ", NamedTextColor.GOLD)
+        player.sendMessage(CommandMessages.CITY_PREFIX
                 .append(Component.text("Tesoro guardado — valor: ", NamedTextColor.GRAY))
                 .append(Component.text(value + " unidades de riqueza", NamedTextColor.YELLOW)));
         saveAction.run();

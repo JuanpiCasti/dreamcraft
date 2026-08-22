@@ -140,7 +140,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleCreate(Player player, String[] args) {
         if (args.length < 2) {
-            error(player, ESTATE_PREFIX, "Uso: /estate create <id>");
+            error(player, ESTATE_PREFIX, CommandNames.cmd("estate", "create <id>"));
             return true;
         }
         String name = args[1];
@@ -158,7 +158,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
      */
     private boolean handleDiscover(Player player, String[] args) {
         if (args.length < 2) {
-            error(player, ESTATE_PREFIX, "Uso: /estate discover <tipo> (end, trial_chamber)");
+            error(player, ESTATE_PREFIX, CommandNames.cmd("estate", "discover <tipo> (end, trial_chamber)"));
             return true;
         }
         EstateType type = EstateType.parse(args[1]);
@@ -175,7 +175,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         if (type.isInstancedAdventure()) {
             if (zoneOpt.isPresent()) {
                 info(player, ESTATE_PREFIX, "Zona de aventura heredada. Colocá los ojos y cruzá el portal "
-                        + "con tu grupo (/estate invite <jugador>).");
+                        + "con tu grupo (" + CommandNames.cmd("estate", "invite <jugador>") + ").");
             } else {
                 warn(player, ESTATE_PREFIX, "Todavía no hay zona de '" + type.displayName()
                         + "' creada por un admin; tu nexo funcionará cuando exista.");
@@ -214,7 +214,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
      */
     private boolean handleAdminCreate(Player player, String[] args) {
         if (args.length < 4) {
-            error(player, ESTATE_PREFIX, "Uso: /estate admin create <id> <tipo> [radio|auto]");
+            error(player, ESTATE_PREFIX, CommandNames.cmd("estate", "admin create <id> <tipo> [radio|auto]"));
             return true;
         }
         String id = args[2];
@@ -250,7 +250,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
                     + anchor.getBlockY() + "/" + anchor.getBlockZ() : "") + ").");
         } else {
             ok(player, ESTATE_PREFIX, "Estate admin '" + estate.name() + "' creado (persistente, tipo "
-                    + type.displayName() + "). Define su área con /estate admin area " + estate.id());
+                    + type.displayName() + "). Define su área con " + CommandNames.cmd("estate", "admin area") + " " + estate.id());
         }
         return true;
     }
@@ -302,7 +302,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
     /** Forces the instance world reset (map restore + dragon respawn). */
     private boolean handleAdminReset(Player player, String[] args) {
         if (args.length < 3) {
-            error(player, ESTATE_PREFIX, "Uso: /estate admin reset <id>");
+            error(player, ESTATE_PREFIX, CommandNames.cmd("estate", "admin reset <id>"));
             return true;
         }
         Estate estate = findEstateByIdOrName(args[2]);
@@ -366,7 +366,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleInvite(Player player, String[] args) {
         if (args.length < 2) {
-            error(player, ESTATE_PREFIX, "Uso: /estate invite <jugador>");
+            error(player, ESTATE_PREFIX, CommandNames.cmd("estate", "invite <jugador>"));
             return true;
         }
         Estate estate = resolveEstate(player, args);
@@ -394,7 +394,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleJoin(Player player, String[] args) {
         if (args.length < 2) {
-            error(player, ESTATE_PREFIX, "Uso: /estate join <id>");
+            error(player, ESTATE_PREFIX, CommandNames.cmd("estate", "join <id>"));
             return true;
         }
         UUID estateId;
@@ -478,7 +478,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleTransfer(Player player, String[] args) {
         if (args.length < 2) {
-            error(player, ESTATE_PREFIX, "Uso: /estate transfer <jugador>");
+            error(player, ESTATE_PREFIX, CommandNames.cmd("estate", "transfer <jugador>"));
             return true;
         }
         Estate estate = resolveEstate(player, args);

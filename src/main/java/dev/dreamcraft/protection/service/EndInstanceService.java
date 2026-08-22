@@ -1,5 +1,7 @@
 package dev.dreamcraft.protection.service;
 
+import dev.dreamcraft.protection.command.CommandMessages;
+
 import dev.dreamcraft.protection.config.EndInstanceConfig;
 import dev.dreamcraft.protection.domain.model.Estate;
 import dev.dreamcraft.protection.domain.service.EstateService;
@@ -210,14 +212,14 @@ public final class EndInstanceService {
         for (UUID memberId : members) {
             if (!memberId.equals(player.getUniqueId())) others.add(resolveName(memberId));
         }
-        player.sendMessage(Component.text("[Estate] ", NamedTextColor.LIGHT_PURPLE)
+        player.sendMessage(CommandMessages.ESTATE_PREFIX
                 .append(Component.text("Entraste al End de ", NamedTextColor.GREEN))
                 .append(Component.text(estate.name(), NamedTextColor.AQUA))
                 .append(Component.text(others.isEmpty()
                         ? ". Sos el primero en llegar."
                         : ". Ya están del otro lado: " + String.join(", ", others) + ".", NamedTextColor.GREEN)));
 
-        Component arrival = Component.text("[Estate] ", NamedTextColor.LIGHT_PURPLE)
+        Component arrival = CommandMessages.ESTATE_PREFIX
                 .append(Component.text(player.getName(), NamedTextColor.YELLOW))
                 .append(Component.text(" llegó al End.", NamedTextColor.GREEN));
         broadcastToSession(estate.id(), arrival, player.getUniqueId());
@@ -265,7 +267,7 @@ public final class EndInstanceService {
         Estate target = estate.orElse(null);
         Location exit = target != null ? exitLocationFor(target) : fallbackExitLocation();
         player.teleport(exit);
-        player.sendMessage(Component.text("[Estate] Fuiste enviado fuera de una instancia de aventura.",
+        player.sendMessage(CommandMessages.prefixed("estate", "Fuiste enviado fuera de una instancia de aventura.",
                 NamedTextColor.YELLOW));
     }
 
@@ -280,7 +282,7 @@ public final class EndInstanceService {
             if (current != null && !playersByEstate.getOrDefault(estateId, Set.of()).isEmpty()) {
                 rollbackZoneEdits(current);
                 regeneratePortal(current);
-                broadcastToSession(estateId, Component.text("[Estate] El portal de entrada se reinició.",
+                broadcastToSession(estateId, CommandMessages.prefixed("estate", "El portal de entrada se reinició.",
                         NamedTextColor.GRAY), null);
             }
         }, config.portalResetDelaySeconds() * 20L);
@@ -341,7 +343,7 @@ public final class EndInstanceService {
                 if (online != null && online.isOnline()
                         && online.getWorld().getName().equals(worldNameFor(estate))) {
                     online.teleport(exitLocationFor(estate));
-                    online.sendMessage(Component.text("[Estate] La instancia se reinició; volviste al mundo principal.",
+                    online.sendMessage(CommandMessages.prefixed("estate", "La instancia se reinició; volviste al mundo principal.",
                             NamedTextColor.YELLOW));
                 }
             }
@@ -360,7 +362,7 @@ public final class EndInstanceService {
 
         plugin.getLogger().info("[EndInstance] Instancia reiniciada: " + name
                 + " — mapa restaurado y dragona lista para el próximo grupo.");
-        broadcastToEstate(estate, Component.text("[Estate] ", NamedTextColor.LIGHT_PURPLE)
+        broadcastToEstate(estate, CommandMessages.ESTATE_PREFIX
                 .append(Component.text("El End de ", NamedTextColor.GREEN))
                 .append(Component.text(estate.name(), NamedTextColor.AQUA))
                 .append(Component.text(" se reinició: la dragona reapareció y el mapa fue restaurado.",
