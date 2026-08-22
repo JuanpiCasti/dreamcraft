@@ -1,5 +1,7 @@
 package dev.dreamcraft.protection.command;
 
+import dev.dreamcraft.protection.config.CommandNames;
+
 import dev.dreamcraft.protection.domain.model.OwnerType;
 import dev.dreamcraft.protection.domain.model.Ward;
 import dev.dreamcraft.protection.domain.model.WardPermission;
@@ -484,7 +486,7 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
                     info(player, WARD_PREFIX, "Este Ward pertenece a §f" + c.name()
                             + "§7 — sus habitantes tienen acceso."));
         } else {
-            info(player, WARD_PREFIX, "Anexalo a tu ciudad con §f/ward city annex§7 para dar acceso a sus habitantes.");
+            info(player, WARD_PREFIX, "Anexalo a tu Matriz con §f" + CommandNames.cmd("ward", "city annex") + "§7 para dar acceso a sus habitantes.");
         }
         info(player, WARD_PREFIX, "Permisos públicos: §f/protection permissions");
         return true;
@@ -598,7 +600,7 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
         error(player, WARD_PREFIX, tr("common.physical-required",
                 "Debes interactuar físicamente con tu Bloque de DreamCraft para esto."));
         info(player, WARD_PREFIX, tr("common.physical-hint",
-                "Acércate a tu Núcleo o consigue el enlace remoto VIP con /sync tp."));
+                "Acércate a tu Núcleo; el enlace remoto es exclusivo VIP."));
         return false;
     }
 
@@ -611,7 +613,7 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
         if (atLocation.isPresent()) return atLocation.get();
         var byOwner = wardService.findByOwner(player.getUniqueId());
         if (!byOwner.isEmpty()) return byOwner.iterator().next();
-        error(player, WARD_PREFIX, "No hay ningún Ward en esta posición. Fundá uno con §f/ward create§c.");
+        error(player, WARD_PREFIX, "No hay ningún Núcleo aquí. Fundá uno con §f" + CommandNames.cmd("ward", "create") + "§c.");
         return null;
     }
 

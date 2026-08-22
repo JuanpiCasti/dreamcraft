@@ -42,7 +42,21 @@ public final class Messages {
     public String tr(String key, String fallback, Object... placeholders) {
         String raw = merged.getString(key);
         if (raw == null || raw.isBlank()) raw = fallback;
-        return apply(raw, placeholders);
+        return applyVersionedCommands(apply(raw, placeholders));
+    }
+
+    /**
+     * Substitutes the versioned root-command tokens ({@code {cmd.ward}},
+     * {@code {cmd.city}}, …) so catalog texts always show this server's
+     * player-facing command names (lore coherence).
+     */
+    public static String applyVersionedCommands(String template) {
+        if (template == null || !template.contains("{cmd.")) return template;
+        return template
+                .replace("{cmd.ward}", dev.dreamcraft.protection.config.CommandNames.root("ward"))
+                .replace("{cmd.city}", dev.dreamcraft.protection.config.CommandNames.root("city"))
+                .replace("{cmd.estate}", dev.dreamcraft.protection.config.CommandNames.root("estate"))
+                .replace("{cmd.protection}", dev.dreamcraft.protection.config.CommandNames.root("protection"));
     }
 
     /** String list (e.g. help blocks); empty list when absent. */

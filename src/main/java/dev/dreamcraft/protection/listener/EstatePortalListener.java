@@ -1,5 +1,7 @@
 package dev.dreamcraft.protection.listener;
 
+import dev.dreamcraft.protection.config.CommandNames;
+
 import dev.dreamcraft.protection.domain.model.Estate;
 import dev.dreamcraft.protection.domain.service.EstateService;
 import dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter;
@@ -106,7 +108,7 @@ public final class EstatePortalListener implements Listener {
                     .append(Component.text("Esta zona pertenece al estate ", NamedTextColor.RED))
                     .append(Component.text(zone.name(), NamedTextColor.AQUA))
                     .append(Component.text(". Creá tu grupo con ", NamedTextColor.RED))
-                    .append(Component.text("/estate discover " + zone.type().key(), NamedTextColor.YELLOW))
+                    .append(Component.text(CommandNames.cmd("estate", "discover " + zone.type().key()), NamedTextColor.YELLOW))
                     .append(Component.text(" o pedí una invitación.", NamedTextColor.RED)));
             return;
         }
@@ -170,7 +172,7 @@ public final class EstatePortalListener implements Listener {
             player.sendMessage(Component.text("[Estate] ", NamedTextColor.LIGHT_PURPLE)
                     .append(Component.text("Solo los miembros de un estate de esta zona pueden cruzar. "
                             + "Creá el tuyo con ", NamedTextColor.RED))
-                    .append(Component.text("/estate discover end", NamedTextColor.YELLOW))
+                    .append(Component.text(CommandNames.cmd("estate", "discover end"), NamedTextColor.YELLOW))
                     .append(Component.text(".", NamedTextColor.RED)));
             return;
         }
@@ -275,7 +277,7 @@ public final class EstatePortalListener implements Listener {
                 .append(Component.text("! Se creó tu estate ", NamedTextColor.GREEN))
                 .append(Component.text(party.name(), NamedTextColor.AQUA))
                 .append(Component.text(" y sos su líder. Invitá a tu grupo con ", NamedTextColor.GREEN))
-                .append(Component.text("/estate invite <jugador>", NamedTextColor.YELLOW))
+                .append(Component.text(CommandNames.cmd("estate", "invite <jugador>"), NamedTextColor.YELLOW))
                 .append(Component.text(".", NamedTextColor.GREEN)));
     }
 

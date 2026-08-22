@@ -1,5 +1,7 @@
 package dev.dreamcraft.protection.service;
 
+import dev.dreamcraft.protection.config.CommandNames;
+
 import dev.dreamcraft.protection.domain.model.Ward;
 import dev.dreamcraft.protection.domain.port.WardTierProvider;
 import dev.dreamcraft.protection.domain.service.WardService;
@@ -98,6 +100,6 @@ public final class WardUpkeepTickTask extends BukkitRunnable {
         if (owner == null) return;
         owner.sendMessage("§c[Ward] Tu Ward §f" + ward.name()
                 + "§c no pudo pagar el mantenimiento (" + cost
-                + " unidades). Depositá ítems en la baliza o con §f/ward upkeep deposit§c.");
+                + " unidades). Depositá ítems en la baliza o con §f/" + CommandNames.root("ward") + " upkeep deposit§c.");
     }
 }

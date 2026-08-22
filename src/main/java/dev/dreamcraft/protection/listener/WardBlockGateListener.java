@@ -1,5 +1,7 @@
 package dev.dreamcraft.protection.listener;
 
+import dev.dreamcraft.protection.config.CommandNames;
+
 import dev.dreamcraft.protection.config.ProtectionConfig;
 import dev.dreamcraft.protection.domain.model.Ward;
 import dev.dreamcraft.protection.domain.model.WardTier;
@@ -66,7 +68,7 @@ public final class WardBlockGateListener implements Listener {
                 .orElse(capitalize(requiredTierKey));
         event.setCancelled(true);
         player.sendMessage("§c[Ward] §f" + pretty(placed) + "§c requiere un Ward rango §b"
-                + requiredName + "§c. Mejorá tu Ward desde la baliza (§f/ward menu§c).");
+                + requiredName + "§c. Mejorá tu Ward desde la baliza (§f/" + CommandNames.root("ward") + " menu§c).");
     }
 
     /** 0-based position of the tier when ordered by min-base-score; -1 if unknown. */

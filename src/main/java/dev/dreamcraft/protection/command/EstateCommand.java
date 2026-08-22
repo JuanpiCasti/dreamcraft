@@ -1,5 +1,7 @@
 package dev.dreamcraft.protection.command;
 
+import dev.dreamcraft.protection.config.CommandNames;
+
 import dev.dreamcraft.protection.domain.model.Estate;
 import dev.dreamcraft.protection.domain.model.EstateType;
 import dev.dreamcraft.protection.domain.service.EstateService;
@@ -189,8 +191,8 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         if (args.length < 2) {
-            error(player, ESTATE_PREFIX, "Uso: /estate admin create <id> <tipo> [radio|auto] | "
-                    + "/estate admin area <id> [radio] | /estate admin reset <id>");
+            error(player, ESTATE_PREFIX, "Uso: " + CommandNames.cmd("estate",
+                    "admin create <id> <tipo> [radio|auto] | admin area <id> [radio] | admin reset <id>"));
             return true;
         }
         return switch (args[1].toLowerCase(Locale.ROOT)) {
@@ -282,7 +284,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
     /** Moves/re-anchors the estate's gated area at the player's position. */
     private boolean handleAdminArea(Player player, String[] args) {
         if (args.length < 3) {
-            error(player, ESTATE_PREFIX, "Uso: /estate admin area <id> [radio]");
+            error(player, ESTATE_PREFIX, CommandNames.cmd("estate", "admin area <id> [radio]"));
             return true;
         }
         Estate estate = findEstateByIdOrName(args[2]);
@@ -421,7 +423,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         Estate estate = resolveEstate(player, args);
         if (estate == null) return true;
         if (estate.isOwner(player.getUniqueId())) {
-            error(player, ESTATE_PREFIX, "El owner no puede salir. Usa /estate disband o /estate transfer.");
+            error(player, ESTATE_PREFIX, "El owner no puede salir. Usa " + CommandNames.cmd("estate", "disband") + " o " + CommandNames.cmd("estate", "transfer") + ".");
             return true;
         }
         if (!estate.isMember(player.getUniqueId())) {
@@ -562,7 +564,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         if (!byOwner.isEmpty()) return byOwner.iterator().next();
         var byMember = estateService.findByMember(player.getUniqueId());
         if (!byMember.isEmpty()) return byMember.iterator().next();
-        error(player, ESTATE_PREFIX, "No se encontró ningún Estate. Usa /estate create <id> primero.");
+        error(player, ESTATE_PREFIX, "No se encontró ningún Nexo. Usa " + CommandNames.cmd("estate", "create <id>") + " primero.");
         return null;
     }
 

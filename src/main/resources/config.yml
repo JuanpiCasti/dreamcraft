@@ -30,6 +30,15 @@ commands:
       claim:
         aliases: []
 
+# ── Nombres visibles de las raíces (coherencia de lore) ─────────────────────
+# Toda referencia en textos, menús y sugerencias usa estos nombres; deben
+# coincidir con los aliases definidos en commands.yml del servidor.
+command-names:
+  ward: sync
+  city: matriz
+  estate: nexo
+  protection: proteccion
+
 # ── Presentación de menús ───────────────────────────────────────────────────
 # provider:
 #   vanilla — GUIs vanilla puras, nunca aplica CustomModelData.

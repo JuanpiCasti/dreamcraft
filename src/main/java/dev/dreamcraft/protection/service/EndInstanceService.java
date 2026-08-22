@@ -139,6 +139,15 @@ public final class EndInstanceService {
             return null;
         }
         plugin.getLogger().info("[EndInstance] Mundo instanciado: " + name + " (estate " + estate.name() + ")");
+        // The dragon's phase AI only ticks while its arena chunks are loaded.
+        // Players arrive at the platform (chunk ~6,3), far from the origin —
+        // without force-loading, the arena unloads and the dragon freezes
+        // mid-air, ignoring crystals and players alike.
+        for (int cx = -2; cx <= 2; cx++) {
+            for (int cz = -2; cz <= 2; cz++) {
+                world.setChunkForceLoaded(cx, cz, true);
+            }
+        }
         ensureDragon(world);
         return world;
     }

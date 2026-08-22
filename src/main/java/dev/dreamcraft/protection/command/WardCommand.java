@@ -1,5 +1,7 @@
 package dev.dreamcraft.protection.command;
 
+import dev.dreamcraft.protection.config.CommandNames;
+
 import dev.dreamcraft.protection.domain.model.City;
 import dev.dreamcraft.protection.domain.model.OwnerType;
 import dev.dreamcraft.protection.domain.model.Ward;
@@ -210,7 +212,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         error(player, WARD_PREFIX, tr("common.physical-required",
                 "Debes interactuar físicamente con tu Bloque de DreamCraft para esto."));
         info(player, WARD_PREFIX, tr("common.physical-hint",
-                "Acércate a tu Núcleo o consigue el enlace remoto VIP con /sync tp."));
+                "Acércate a tu Núcleo; el enlace remoto es exclusivo VIP."));
         return false;
     }
 
@@ -268,7 +270,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
             error(player, WARD_PREFIX, tr("common.physical-required",
                     "Debes interactuar físicamente con tu Bloque de DreamCraft para esto."));
             info(player, WARD_PREFIX, tr("common.physical-hint",
-                    "Acércate a tu Núcleo o consigue el enlace remoto VIP con /sync tp."));
+                    "Acércate a tu Núcleo; el enlace remoto es exclusivo VIP."));
             return true;
         }
         if (upkeepService == null) {
@@ -281,7 +283,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         }
         if (args.length < 2 || !args[1].matches("\\d+")) {
             info(player, WARD_PREFIX, "Upkeep: " + ward.upkeepBalance()
-                    + " | Uso: /sync alimentar <cantidad>");
+                    + " | Uso: " + CommandNames.cmd("ward", "alimentar <cantidad>"));
             info(player, WARD_PREFIX, "Aceptados: " + acceptedMaterialsList());
             return true;
         }
@@ -424,7 +426,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
      */
     private boolean handleRename(Player player, String[] args) {
         if (args.length < 2) {
-            error(player, WARD_PREFIX, "Uso: /ward rename <nombre>");
+            error(player, WARD_PREFIX, CommandNames.cmd("ward", "rename <nombre>"));
             return true;
         }
         Ward ward = resolveWard(player, args);
@@ -529,7 +531,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
             // Lore: feeding the nucleus requires the physical block (or remote link)
             if (!ensurePresence(player, ward)) return true;
             if (args.length < 4) {
-                error(player, WARD_PREFIX, "Uso: /ward upkeep deposit <material> <cantidad>");
+                error(player, WARD_PREFIX, CommandNames.cmd("ward", "upkeep deposit <material> <cantidad>"));
                 info(player, WARD_PREFIX, "Aceptados: " + acceptedMaterialsList());
                 return true;
             }
@@ -581,7 +583,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
 
         info(player, WARD_PREFIX, "Upkeep: " + ward.upkeepBalance() + " | Próximo cobro: " + ward.nextUpkeepAt());
         if (upkeepService != null) {
-            info(player, WARD_PREFIX, "Depositar ítems: /ward upkeep deposit <material> <n>");
+            info(player, WARD_PREFIX, "Depositar ítems: " + CommandNames.cmd("ward", "upkeep deposit <material> <n>"));
             info(player, WARD_PREFIX, "Aceptados: " + acceptedMaterialsList());
         }
         return true;
@@ -606,7 +608,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleTransfer(Player player, String[] args) {
         if (args.length < 2) {
-            error(player, WARD_PREFIX, "Uso: /ward transfer <jugador>");
+            error(player, WARD_PREFIX, CommandNames.cmd("ward", "transfer <jugador>"));
             return true;
         }
         Ward ward = resolveWard(player, args);
@@ -652,7 +654,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
                 syncContainerFlag(ward, perm);
                 ok(player, WARD_PREFIX, "Permiso " + perm.name() + " revocado.");
             } else {
-                error(player, WARD_PREFIX, "Uso: /ward permissions <perm> <grant|revoke>");
+                error(player, WARD_PREFIX, CommandNames.cmd("ward", "permissions <perm> <grant|revoke>"));
             }
             return true;
         }
@@ -700,7 +702,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
             ok(player, WARD_PREFIX, "Ward desvinculado de la ciudad.");
             return true;
         }
-        error(player, WARD_PREFIX, "Uso: /ward city [annex|leave]");
+        error(player, WARD_PREFIX, CommandNames.cmd("ward", "city [annex|leave]"));
         return true;
     }
 
@@ -751,7 +753,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         // Try owner's first ward
         var byOwner = wardService.findByOwner(player.getUniqueId());
         if (!byOwner.isEmpty()) return byOwner.iterator().next();
-        error(player, WARD_PREFIX, "No se encontró ningún Ward. Usa /ward create primero.");
+        error(player, WARD_PREFIX, "No se encontró ningún Núcleo. Usa " + CommandNames.cmd("ward", "create") + " primero.");
         return null;
     }
 

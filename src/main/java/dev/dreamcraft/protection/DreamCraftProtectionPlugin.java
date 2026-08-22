@@ -272,6 +272,7 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
 
     private void bootServices() {
         reloadConfig();
+        dev.dreamcraft.protection.config.CommandNames.install(getConfig());
         this.protectionConfig = ProtectionConfig.load(getConfig());
         validateConfig(protectionConfig);
         this.endInstanceConfig = dev.dreamcraft.protection.config.EndInstanceConfig.load(getConfig());

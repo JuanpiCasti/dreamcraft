@@ -68,6 +68,13 @@ commands:
       recalculate:
         aliases: []
 
+# Nombres visibles de las raíces (coherencia con commands.yml del servidor).
+command-names:
+  ward: sync
+  city: matriz
+  estate: nexo
+  protection: proteccion
+
 # Presentación: auto = CMD solo con pack cargado; vanilla = sin CMD; rp = forzar.
 # Assets definidos en presentation-assets.yml (contrato con el equipo del RP).
 menus:

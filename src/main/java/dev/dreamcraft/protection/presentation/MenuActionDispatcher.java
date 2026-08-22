@@ -1,5 +1,7 @@
 package dev.dreamcraft.protection.presentation;
 
+import dev.dreamcraft.protection.config.CommandNames;
+
 import dev.dreamcraft.protection.domain.model.*;
 import dev.dreamcraft.protection.domain.service.CityService;
 import dev.dreamcraft.protection.domain.service.EstateService;
@@ -115,18 +117,18 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                 case "ward.disband" -> handleWardDisband(player, ctx);
                 case "ward.upkeep_vault" -> handleOpenUpkeepVault(player, ctx);
                 case "ward.transfer" -> feedback(player, msg("menu.hint.ward-transfer",
-                        "Usa /ward transfer <jugador>"), NamedTextColor.YELLOW);
+                        CommandNames.cmd("ward", "transfer <jugador>")), NamedTextColor.YELLOW);
                 case "city.invite" -> feedback(player, msg("menu.hint.city-invite",
-                        "Usa /city invite <jugador>"), NamedTextColor.YELLOW);
+                        CommandNames.cmd("city", "invite <jugador>")), NamedTextColor.YELLOW);
                 case "city.kick" -> feedback(player, msg("menu.hint.city-kick",
-                        "Usa /city kick <jugador>"), NamedTextColor.YELLOW);
+                        CommandNames.cmd("city", "kick <jugador>")), NamedTextColor.YELLOW);
                 case "city.roles" -> feedback(player, msg("menu.hint.city-roles",
-                        "Usa /city roles <jugador> <rol>"), NamedTextColor.YELLOW);
+                        CommandNames.cmd("city", "roles <jugador> <rol>")), NamedTextColor.YELLOW);
                 case "city.bank" -> handleOpenCityTreasury(player, ctx);
                 case "city.policy" -> handleCityPolicy(player, ctx, action);
                 case "city.delete" -> handleCityDelete(player, ctx);
                 case "estate.invite" -> feedback(player, msg("menu.hint.estate-invite",
-                        "Usa /estate invite <jugador>"), NamedTextColor.YELLOW);
+                        CommandNames.cmd("estate", "invite <jugador>")), NamedTextColor.YELLOW);
                 case "estate.join" -> handleEstateJoin(player, ctx);
                 case "estate.leave" -> handleEstateLeave(player, ctx);
                 case "estate.start" -> handleEstateStart(player, ctx);

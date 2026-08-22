@@ -1,5 +1,7 @@
 package dev.dreamcraft.protection.command;
 
+import dev.dreamcraft.protection.config.CommandNames;
+
 import dev.dreamcraft.protection.domain.model.City;
 import dev.dreamcraft.protection.domain.model.CityPolicy;
 import dev.dreamcraft.protection.domain.model.CityRole;
@@ -149,7 +151,7 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleCreate(Player player, String[] args) {
         if (args.length < 2) {
-            error(player, CITY_PREFIX, "Uso: /city create <nombre>");
+            error(player, CITY_PREFIX, CommandNames.cmd("city", "create <nombre>"));
             return true;
         }
         String name = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
@@ -161,7 +163,7 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleAnnex(Player player, String[] args) {
         if (args.length < 2) {
-            error(player, CITY_PREFIX, "Uso: /city annex <wardId>");
+            error(player, CITY_PREFIX, CommandNames.cmd("city", "annex <idNucleo>"));
             return true;
         }
         UUID wardId;
@@ -195,7 +197,7 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleInvite(Player player, String[] args) {
         if (args.length < 2) {
-            error(player, CITY_PREFIX, "Uso: /city invite <jugador>");
+            error(player, CITY_PREFIX, CommandNames.cmd("city", "invite <jugador>"));
             return true;
         }
         City city = resolveCity(player);
@@ -225,7 +227,7 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleKick(Player player, String[] args) {
         if (args.length < 2) {
-            error(player, CITY_PREFIX, "Uso: /city kick <jugador>");
+            error(player, CITY_PREFIX, CommandNames.cmd("city", "kick <jugador>"));
             return true;
         }
         City city = resolveCity(player);
@@ -257,7 +259,7 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleRoles(Player player, String[] args) {
         if (args.length < 3) {
-            error(player, CITY_PREFIX, "Uso: /city roles <jugador> <rol>");
+            error(player, CITY_PREFIX, CommandNames.cmd("city", "roles <jugador> <rol>"));
             return true;
         }
         City city = resolveCity(player);
@@ -310,7 +312,7 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         if (args.length < 3) {
-            error(player, CITY_PREFIX, "Uso: /city bank <deposit|withdraw> <monto> §8(admin)");
+            error(player, CITY_PREFIX, CommandNames.cmd("city", "bank <deposit|withdraw> <monto> §8(admin)"));
             return true;
         }
         City city = resolveCity(player);
@@ -342,14 +344,14 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
                 error(player, CITY_PREFIX, "Fondos insuficientes. Tesoro actual: " + city.treasury());
             }
         } else {
-            error(player, CITY_PREFIX, "Uso: /city bank <deposit|withdraw> <monto>");
+            error(player, CITY_PREFIX, CommandNames.cmd("city", "bank <deposit|withdraw> <monto>"));
         }
         return true;
     }
 
     private boolean handlePolicy(Player player, String[] args) {
         if (args.length < 3) {
-            error(player, CITY_PREFIX, "Uso: /city policy set <politica> <on|off>");
+            error(player, CITY_PREFIX, CommandNames.cmd("city", "policy set <politica> <on|off>"));
             info(player, CITY_PREFIX, "Políticas: " + policyNames());
             return true;
         }
@@ -360,7 +362,7 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         if (!"set".equalsIgnoreCase(args[1])) {
-            error(player, CITY_PREFIX, "Uso: /city policy set <politica> <on|off>");
+            error(player, CITY_PREFIX, CommandNames.cmd("city", "policy set <politica> <on|off>"));
             return true;
         }
         CityPolicy policy;
@@ -412,7 +414,7 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleTransfer(Player player, String[] args) {
         if (args.length < 2) {
-            error(player, CITY_PREFIX, "Uso: /city transfer <jugador>");
+            error(player, CITY_PREFIX, CommandNames.cmd("city", "transfer <jugador>"));
             return true;
         }
         City city = resolveCity(player);
@@ -468,7 +470,7 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
     private City resolveCity(Player player) {
         var optCity = cityService.findByMember(player.getUniqueId());
         if (optCity.isEmpty()) {
-            error(player, CITY_PREFIX, "No eres miembro de ninguna ciudad. Usa /city create <nombre>.");
+            error(player, CITY_PREFIX, "No eres miembro de ninguna Matriz. Usa " + CommandNames.cmd("city", "create <nombre>") + ".");
             return null;
         }
         return optCity.get();
