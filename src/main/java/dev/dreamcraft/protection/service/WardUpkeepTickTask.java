@@ -98,8 +98,8 @@ public final class WardUpkeepTickTask extends BukkitRunnable {
 
         Player owner = Bukkit.getPlayer(ward.ownerId());
         if (owner == null) return;
-        owner.sendMessage("§c[Ward] Tu Ward §f" + ward.name()
+        owner.sendMessage("§c[Sincronía] Tu Núcleo §f" + ward.name()
                 + "§c no pudo pagar el mantenimiento (" + cost
-                + " unidades). Depositá ítems en la baliza o con §f/" + CommandNames.root("ward") + " upkeep deposit§c.");
+                + " unidades). Alimentalo en su bloque o con §f/" + CommandNames.root("ward") + " upkeep deposit§c.");
     }
 }

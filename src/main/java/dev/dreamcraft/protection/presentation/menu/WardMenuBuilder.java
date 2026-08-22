@@ -167,6 +167,7 @@ public final class WardMenuBuilder {
                 List.of("&7Cerrar menú"),
                 MenuAction.of("menu.close")));
 
-        return new MenuDefinition(MENU_ID, "&8Ward &f" + vm.name(), 27, items);
+        return new MenuDefinition(MENU_ID, dev.dreamcraft.protection.message.Messages.get()
+                .tr("menu.title.ward", "&8Núcleo &f{name}", "name", vm.name()), 27, items);
     }
 }

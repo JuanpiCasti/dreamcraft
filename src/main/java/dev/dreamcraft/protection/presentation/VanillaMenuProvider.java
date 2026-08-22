@@ -34,10 +34,6 @@ import java.util.function.BiConsumer;
  */
 public class VanillaMenuProvider implements MenuProvider, Listener {
 
-    /** Magic separator encoded in the inventory title so click events can identify menus. */
-    private static final String TITLE_MAGIC = "\u00A78[DC:";
-    private static final String TITLE_SUFFIX = "]";
-
     private static final LegacyComponentSerializer LEGACY =
             LegacyComponentSerializer.legacyAmpersand();
 
@@ -114,10 +110,12 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
         Player player = Bukkit.getPlayer(context.viewerId());
         if (player == null) return;
 
-        // Embed menu ID in the title via a hidden suffix for event identification
-        String rawTitle = definition.title() + TITLE_MAGIC + definition.menuId() + TITLE_SUFFIX;
-        Component titleComp = LEGACY.deserialize(rawTitle);
-        Inventory inv = Bukkit.createInventory(null, definition.size(), titleComp);
+        // Clean title — menu identification lives in the MenuHolder, not in
+        // the visible text the player reads.
+        Component titleComp = LEGACY.deserialize(definition.title());
+        MenuHolder holder = new MenuHolder(definition.menuId());
+        Inventory inv = Bukkit.createInventory(holder, definition.size(), titleComp);
+        holder.attach(inv);
         populate(inv, definition, context.viewerId());
 
         openMenus.put(context.viewerId(), definition.menuId());
@@ -157,9 +155,8 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        // Retrieve title via Adventure API — avoids deprecated InventoryView#getTitle()
-        String title = LEGACY.serialize(event.getView().title());
-        if (!isDCMenu(title)) return;
+        // Only DreamCraft menus (identified by holder, never by visible title)
+        if (!(event.getView().getTopInventory().getHolder() instanceof MenuHolder)) return;
 
         int size = event.getView().getTopInventory().getSize();
         int rawSlot = event.getRawSlot();
@@ -189,8 +186,7 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onInventoryDrag(InventoryDragEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) return;
-        String title = LEGACY.serialize(event.getView().title());
-        if (!isDCMenu(title)) return;
+        if (!(event.getView().getTopInventory().getHolder() instanceof MenuHolder)) return;
         int size = event.getView().getTopInventory().getSize();
         for (int slot : event.getRawSlots()) {
             if (slot < size) { event.setCancelled(true); return; }
@@ -267,9 +263,5 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
         String materialName = iconMap.getOrDefault(iconKey, "PAPER");
         Material mat = Material.matchMaterial(materialName);
         return mat != null ? mat : Material.PAPER;
-    }
-
-    private boolean isDCMenu(String title) {
-        return title != null && title.contains(TITLE_MAGIC);
     }
 }

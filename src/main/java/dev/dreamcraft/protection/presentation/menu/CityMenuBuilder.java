@@ -151,7 +151,8 @@ public final class CityMenuBuilder {
                 List.of("&7Cerrar menú"),
                 MenuAction.of("menu.close")));
 
-        return new MenuDefinition(MENU_ID, "&8Ciudad &f" + vm.name(), 27, items);
+        return new MenuDefinition(MENU_ID, dev.dreamcraft.protection.message.Messages.get()
+                .tr("menu.title.city", "&8Matriz &f{name}", "name", vm.name()), 27, items);
     }
 
     private static String roleLabel(CityViewModel vm) {

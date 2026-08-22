@@ -211,7 +211,7 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
     private boolean handleClaim(Player player) {
         if (!canOpenProtectionMenu(player)) {
             error(player, WARD_PREFIX, "El menú por comando está reservado a VIPs y Gobernadores.");
-            info(player, WARD_PREFIX, "Abrí el menú con clic derecho en la baliza del Ward.");
+            info(player, WARD_PREFIX, "Abrí el menú con clic derecho en tu Núcleo de Sincronía.");
             return true;
         }
         Ward ward = resolveWard(player);
@@ -515,7 +515,7 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         player.getInventory().addItem(wardItems.createWardItem());
-        ok(player, WARD_PREFIX, "Baliza de Ward entregada. Colocala para fundar un Ward.");
+        ok(player, WARD_PREFIX, "Núcleo de Sincronía entregado. Colocalo para despertar tu territorio.");
         return true;
     }
 

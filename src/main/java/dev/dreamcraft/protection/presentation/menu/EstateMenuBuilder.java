@@ -107,7 +107,7 @@ public final class EstateMenuBuilder {
                 List.of("&7Cerrar menú"),
                 MenuAction.of("menu.close")));
 
-        return new MenuDefinition(MENU_ID_LOBBY, "&8Estate &f" + vm.name(), 27, items);
+        return new MenuDefinition(MENU_ID_LOBBY, dev.dreamcraft.protection.message.Messages.get().tr("menu.title.estate-lobby", "&8Nexo &f{name}", "name", vm.name()), 27, items);
     }
 
     private static MenuDefinition buildInstance(EstateViewModel vm) {
@@ -158,6 +158,6 @@ public final class EstateMenuBuilder {
                 List.of("&7Cerrar menú"),
                 MenuAction.of("menu.close")));
 
-        return new MenuDefinition(MENU_ID_INSTANCE, "&8Instancia &f" + vm.name(), 27, items);
+        return new MenuDefinition(MENU_ID_INSTANCE, dev.dreamcraft.protection.message.Messages.get().tr("menu.title.estate-instance", "&8Instancia &f{name}", "name", vm.name()), 27, items);
     }
 }

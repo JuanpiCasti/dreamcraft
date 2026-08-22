@@ -30,14 +30,20 @@ commands:
       claim:
         aliases: []
 
-# ── Nombres visibles de las raíces (coherencia de lore) ─────────────────────
-# Toda referencia en textos, menús y sugerencias usa estos nombres; deben
-# coincidir con los aliases definidos en commands.yml del servidor.
+# ── Nombres visibles de las raíces (adaptación por servidor) ────────────────
+# Por defecto el plugin usa sus raíces canónicas. Si tu servidor las renombra
+# vía commands.yml (p. ej. sync: ward $1-), decláralo aquí para que TODOS los
+# textos, menús y sugerencias usen ese término:
+#
+# command-names:
+#   ward: sync
+#   city: matriz
+#   estate: nexo
 command-names:
-  ward: sync
-  city: matriz
-  estate: nexo
-  protection: proteccion
+  ward: ward
+  city: city
+  estate: estate
+  protection: protection
 
 # ── Presentación de menús ───────────────────────────────────────────────────
 # provider:

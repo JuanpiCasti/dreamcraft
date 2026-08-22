@@ -217,6 +217,17 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
             estateCmd.setTabCompleter(estateExecutor);
         }
 
+        // 7b-bis. Versioned roots (/sync, /nexo, /matriz…) registered as real
+        // commands sharing the canonical executors — Bukkit's commands.yml
+        // aliases don't forward tab completions; this does.
+        java.util.Map<String, PluginCommand> canonicalRoots = new java.util.HashMap<>();
+        if (command != null) canonicalRoots.put("protection", command);
+        if (wardCmd != null) canonicalRoots.put("ward", wardCmd);
+        if (cityCmd != null) canonicalRoots.put("city", cityCmd);
+        if (estateCmd != null) canonicalRoots.put("estate", estateCmd);
+        dev.dreamcraft.protection.command.DynamicCommands.registerVersionedRoots(
+                this, getLogger(), canonicalRoots);
+
         // 7c. Ward block listener — placing the ward item founds a Ward centered on it
         pm.registerEvents(new WardItemListener(
                 wardItems(),

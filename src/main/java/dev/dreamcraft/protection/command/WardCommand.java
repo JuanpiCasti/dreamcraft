@@ -185,7 +185,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         player.getInventory().addItem(wardItems.createWardItem());
-        ok(player, WARD_PREFIX, "Baliza de Ward entregada. Colocala para fundar un Ward.");
+        ok(player, WARD_PREFIX, "Núcleo de Sincronía entregado. Colocalo para despertar tu territorio.");
         return true;
     }
 

@@ -26,12 +26,13 @@ public final class WardItems {
         Material material = config.wardMaterial() == null ? Material.BEACON : config.wardMaterial();
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName("Baliza de Ward");
-        meta.setLore(java.util.List.of(
-                "Colocala para fundar un Ward",
-                "La protección se extiende en radio alrededor de este bloque",
-                "ID: " + config.wardItemId()
-        ));
+        dev.dreamcraft.protection.message.Messages msgs = dev.dreamcraft.protection.message.Messages.get();
+        meta.setDisplayName(msgs.tr("items.nucleus-name", "§bNúcleo de Sincronía"));
+        meta.setLore(msgs.list("items.nucleus-lore").isEmpty()
+                ? java.util.List.of(
+                        "§7Colocalo para despertar tu territorio",
+                        "§7La protección se extiende en radio alrededor de este bloque")
+                : msgs.list("items.nucleus-lore"));
         meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, config.wardItemId());
         if (config.wardCustomModelData() > 0) {
             meta.setCustomModelData(config.wardCustomModelData());

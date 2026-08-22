@@ -274,7 +274,7 @@ public final class EstatePortalListener implements Listener {
         player.sendMessage(Component.text("[Estate] ", NamedTextColor.LIGHT_PURPLE)
                 .append(Component.text("¡Descubriste la zona de ", NamedTextColor.GREEN))
                 .append(Component.text(zone.type().displayName(), NamedTextColor.AQUA))
-                .append(Component.text("! Se creó tu estate ", NamedTextColor.GREEN))
+                    .append(Component.text("! Se creó tu Nexo ", NamedTextColor.GREEN))
                 .append(Component.text(party.name(), NamedTextColor.AQUA))
                 .append(Component.text(" y sos su líder. Invitá a tu grupo con ", NamedTextColor.GREEN))
                 .append(Component.text(CommandNames.cmd("estate", "invite <jugador>"), NamedTextColor.YELLOW))

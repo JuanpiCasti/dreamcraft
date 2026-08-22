@@ -178,7 +178,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
                         + "con tu grupo (/estate invite <jugador>).");
             } else {
                 warn(player, ESTATE_PREFIX, "Todavía no hay zona de '" + type.displayName()
-                        + "' creada por un admin; tu estate funcionará cuando exista.");
+                        + "' creada por un admin; tu nexo funcionará cuando exista.");
             }
         }
         openEstateMenu(player, estate);

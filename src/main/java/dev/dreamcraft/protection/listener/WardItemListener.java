@@ -102,7 +102,7 @@ public final class WardItemListener implements Listener {
         boolean admin = player.hasPermission("dreamcraft.ward.admin");
         if (!ward.ownerId().equals(player.getUniqueId()) && !admin) {
             event.setCancelled(true);
-            player.sendMessage("§c[Ward] Solo el owner puede romper la baliza del Ward.");
+            player.sendMessage("§c[Sincronía] Solo el owner puede retirar su Núcleo de Sincronía.");
             return;
         }
         worldGuardAdapter.removeRegion(ward);

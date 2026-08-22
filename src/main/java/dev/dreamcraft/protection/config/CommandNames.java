@@ -8,18 +8,17 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Versioned root-command names shown to players (lore coherence).
+ * Versioned root-command names shown to players.
  *
- * <p>The plugin registers canonical roots (/ward, /city, /estate, /protection)
- * but production servers rename them via Bukkit's {@code commands.yml}. This
- * resolver tells every player-facing text which name to display:
+ * <p><b>Distribution-neutral by design:</b> with no configuration the plugin
+ * uses its canonical roots (/ward, /city, /estate, /protection) everywhere.
+ * Each server rebrands by adding to its OWN config.yml:
  *
  * <pre>
  * command-names:
- *   ward: sync
+ *   ward: sync      # must match the alias defined in commands.yml
  *   city: matriz
  *   estate: nexo
- *   protection: proteccion
  * </pre>
  *
  * <p>{@link dev.dreamcraft.protection.message.Messages} substitutes the
@@ -29,11 +28,12 @@ import java.util.Map;
  */
 public final class CommandNames {
 
+    /** Identity defaults — a bare deployment behaves exactly like vanilla naming. */
     private static volatile Map<String, String> roots = Map.of(
-            "ward", "sync",
-            "city", "matriz",
-            "estate", "nexo",
-            "protection", "proteccion"
+            "ward", "ward",
+            "city", "city",
+            "estate", "estate",
+            "protection", "protection"
     );
 
     private CommandNames() {}
@@ -57,6 +57,11 @@ public final class CommandNames {
         return roots.getOrDefault(
                 domain == null ? "" : domain.toLowerCase(Locale.ROOT),
                 domain == null ? "" : domain);
+    }
+
+    /** Immutable view of every domain → display-root mapping. */
+    public static Map<String, String> all() {
+        return roots;
     }
 
     /**
