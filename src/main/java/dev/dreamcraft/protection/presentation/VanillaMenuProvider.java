@@ -53,6 +53,12 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
             Map.entry("icon.back",           "ARROW")
     );
 
+    /**
+     * Prefix of dynamic player-head icon keys: {@code icon.player.<uuid>} is
+     * rendered as a PLAYER_HEAD whose SkullMeta owner is that player.
+     */
+    public static final String PLAYER_HEAD_PREFIX = "icon.player.";
+
     private final Map<String, String> iconMap;
     /** Optional asset contract (presentation-assets.yml): CMD per viewer + fallbacks. */
     private volatile dev.dreamcraft.protection.presentation.resourcepack.PresentationAssetRegistry assets;
@@ -229,6 +235,7 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
                     .toList();
             meta.lore(loreLine);
         }
+        applySkullOwner(item.iconKey(), meta);
         applyAssets(item.iconKey(), stack, meta, viewerId);
         stack.setItemMeta(meta);
         return stack;
@@ -269,8 +276,27 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
      * Override in subclasses to apply custom model data or Oraxen items.
      */
     protected Material resolveIcon(String iconKey) {
+        if (iconKey != null && iconKey.startsWith(PLAYER_HEAD_PREFIX)) {
+            Material head = Material.matchMaterial("PLAYER_HEAD");
+            if (head != null) return head;
+        }
         String materialName = iconMap.getOrDefault(iconKey, "PAPER");
         Material mat = Material.matchMaterial(materialName);
         return mat != null ? mat : Material.PAPER;
+    }
+
+    /**
+     * Renders {@code icon.player.<uuid>} items as heads owned by that player
+     * (SkullMeta owner). Used by the online-player picker menus.
+     */
+    private void applySkullOwner(String iconKey, ItemMeta meta) {
+        if (!(meta instanceof org.bukkit.inventory.meta.SkullMeta skull)) return;
+        if (iconKey == null || !iconKey.startsWith(PLAYER_HEAD_PREFIX)) return;
+        try {
+            UUID ownerId = UUID.fromString(iconKey.substring(PLAYER_HEAD_PREFIX.length()));
+            skull.setOwningPlayer(Bukkit.getOfflinePlayer(ownerId));
+        } catch (IllegalArgumentException ignored) {
+            // Malformed uuid in the key: keep the generic head
+        }
     }
 }

@@ -48,20 +48,32 @@ public final class WardMenuBuilder {
                 )));
 
         // Slot 10 — Upkeep vault opener
+        // Lore (≤ 9 lines): protection time by state, consumption, balance,
+        // top-4 material → time equivalences, action hint.
         List<String> upkeepLore = new ArrayList<>();
-        upkeepLore.add("&7Balance actual: &f" + vm.upkeepBalance() + " unidades");
-        if (!vm.upkeepMaterials().isEmpty()) {
-            upkeepLore.add("");
-            upkeepLore.add("&7Ítems aceptados &8(unidades por ítem):");
-            for (String line : vm.upkeepMaterials()) {
-                upkeepLore.add("&8- &f" + line);
+        var projection = vm.upkeepProjection();
+        if (projection != null) {
+            String stateColor = projection.state().legacyColor();
+            upkeepLore.add(stateColor + "&lProtección: &f" + projection.timeRemainingText()
+                    + " &7(" + projection.state().displayName() + ")");
+            upkeepLore.add("&7Consumo: &f" + projection.unitsPerInterval() + " u/intervalo");
+            upkeepLore.add("&7Balance: &f" + projection.balanceUnits() + " u disponibles");
+            if (!projection.equivalences().isEmpty()) {
+                upkeepLore.add("");
+                int shown = 0;
+                for (var eq : projection.equivalences()) {
+                    if (shown >= 4) break;
+                    upkeepLore.add("&8· &f1×" + eq.label() + " &7≈ &b" + eq.timeBoughtText());
+                    shown++;
+                }
             }
+        } else {
+            // Calculator not wired — degrade gracefully to the plain balance line
+            upkeepLore.add("&7Balance actual: &f" + vm.upkeepBalance() + " unidades");
         }
         upkeepLore.add("");
         if (vm.canDeposit()) {
-            upkeepLore.add("&7Clic para abrir la bóveda,");
-            upkeepLore.add("&7colocá los ítems y cerrala:");
-            upkeepLore.add("&ase contabilizan al salir");
+            upkeepLore.add("&aClic para abrir la bóveda y colocar ítems");
         } else {
             upkeepLore.add("&cNo puedes depositar en este Núcleo");
         }

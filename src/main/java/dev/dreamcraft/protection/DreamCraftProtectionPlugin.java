@@ -176,9 +176,26 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         java.util.List<String> upkeepLines = new java.util.ArrayList<>();
         upkeepService.acceptedMaterials().forEach((mat, units) ->
                 upkeepLines.add(upkeepService.displayName(mat) + " ×" + units + " u"));
+        // Balance → protection-time projector for menu lore + vault-open summary
+        java.util.LinkedHashMap<String, Integer> upkeepUnitsByName = new java.util.LinkedHashMap<>();
+        upkeepService.acceptedMaterials().forEach((mat, units) ->
+                upkeepUnitsByName.put(dev.dreamcraft.protection.service.UpkeepProjectionCalculator
+                        .normalizeMaterialName(mat.name()), units));
+        dev.dreamcraft.protection.service.UpkeepProjectionCalculator upkeepProjection =
+                new dev.dreamcraft.protection.service.UpkeepProjectionCalculator(
+                        protectionConfig.upkeepInterval(),
+                        protectionConfig.warningThreshold(),
+                        protectionConfig.expiringThreshold(),
+                        upkeepUnitsByName,
+                        name -> {
+                            org.bukkit.Material mat = org.bukkit.Material.matchMaterial(name);
+                            return mat == null ? name
+                                    : dev.dreamcraft.protection.service.MaterialNames.forMaterial(mat);
+                        });
         dev.dreamcraft.protection.command.WardMenuFacade wardMenuFacade =
                 new dev.dreamcraft.protection.command.WardMenuFacade(
-                        tierProvider, cityService, upgradeService, menuProvider, upkeepLines);
+                        tierProvider, cityService, upgradeService, menuProvider, upkeepLines,
+                        upkeepProjection);
 
         // 7a. Wire the action + deposit dispatchers to the vanilla menu provider
         MenuActionDispatcher dispatcher = new MenuActionDispatcher(
@@ -307,7 +324,10 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
 
         // 7e. Ward upkeep vault — settles contents when the vault inventory closes
         pm.registerEvents(new dev.dreamcraft.protection.listener.WardUpkeepVaultListener(
-                wardService, upkeepService, this::saveDomainData), this);
+                wardService, upkeepService, this::saveDomainData, upkeepProjection,
+                ward -> tierProvider.findByKey(ward.tier())
+                        .map(dev.dreamcraft.protection.domain.model.WardTier::upkeepPerInterval)
+                        .orElse(1)), this);
 
         // 7f. City treasury vault — persists contents when the vault inventory closes
         pm.registerEvents(new dev.dreamcraft.protection.listener.CityTreasuryVaultListener(

@@ -4,6 +4,7 @@ import dev.dreamcraft.protection.command.CommandMessages;
 
 import dev.dreamcraft.protection.domain.model.Ward;
 import dev.dreamcraft.protection.domain.service.WardService;
+import dev.dreamcraft.protection.service.UpkeepProjectionCalculator;
 import dev.dreamcraft.protection.service.WardUpkeepService;
 import dev.dreamcraft.protection.ui.WardUpkeepVaultHolder;
 import net.kyori.adventure.text.Component;
@@ -14,6 +15,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
@@ -31,19 +33,79 @@ import java.util.Map;
  *   <li>Everything else is returned to the player's inventory (dropped at
  *       their feet when full) — nothing is ever destroyed.</li>
  * </ul>
+ *
+ * <p>On open it prints a compact chat summary (remaining protection time,
+ * consumption per interval and quick material equivalences) without touching
+ * the inventory contents.
  */
 public final class WardUpkeepVaultListener implements Listener {
 
     private final WardService wardService;
     private final WardUpkeepService upkeepService;
     private final Runnable saveAction;
+    /** Optional: balance → protection time projector; null disables the open summary. */
+    private final UpkeepProjectionCalculator projectionCalculator;
+    /** Resolves a Ward's tier consumption in units per interval. */
+    private final java.util.function.ToIntFunction<Ward> unitsPerInterval;
 
     public WardUpkeepVaultListener(WardService wardService,
                                    WardUpkeepService upkeepService,
                                    Runnable saveAction) {
+        this(wardService, upkeepService, saveAction, null, ward -> 1);
+    }
+
+    public WardUpkeepVaultListener(WardService wardService,
+                                   WardUpkeepService upkeepService,
+                                   Runnable saveAction,
+                                   UpkeepProjectionCalculator projectionCalculator,
+                                   java.util.function.ToIntFunction<Ward> unitsPerInterval) {
         this.wardService = wardService;
         this.upkeepService = upkeepService;
         this.saveAction = saveAction;
+        this.projectionCalculator = projectionCalculator;
+        this.unitsPerInterval = unitsPerInterval != null ? unitsPerInterval : ward -> 1;
+    }
+
+    /** Compact open-time summary — read-only, never modifies the vault inventory. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onVaultOpen(InventoryOpenEvent event) {
+        if (!(event.getInventory().getHolder() instanceof WardUpkeepVaultHolder holder)) return;
+        if (!(event.getPlayer() instanceof Player player)) return;
+        if (projectionCalculator == null) return;
+        Ward ward = wardService.findById(holder.wardId()).orElse(null);
+        if (ward == null) return;
+
+        var projection = projectionCalculator.project(
+                ward.upkeepBalance(), unitsPerInterval.applyAsInt(ward));
+
+        player.sendMessage(CommandMessages.WARD_PREFIX
+                .append(Component.text("Protección: ", NamedTextColor.GRAY))
+                .append(Component.text(projection.timeRemainingText(), stateColor(projection.state())))
+                .append(Component.text(" (" + projection.state().displayName() + ")", NamedTextColor.GRAY)));
+        player.sendMessage(CommandMessages.WARD_PREFIX
+                .append(Component.text("Consumo: " + projection.unitsPerInterval()
+                                + " u cada " + UpkeepProjectionCalculator.humanize(projectionCalculator.interval())
+                                + " · Balance: " + projection.balanceUnits() + " u",
+                        NamedTextColor.GRAY)));
+        List<String> eq = new ArrayList<>();
+        for (var e : projection.equivalences()) {
+            if (eq.size() >= 4) break;
+            eq.add("1×" + e.label() + " ≈ " + e.timeBoughtText());
+        }
+        if (!eq.isEmpty()) {
+            player.sendMessage(CommandMessages.WARD_PREFIX
+                    .append(Component.text(String.join(" · ", eq), NamedTextColor.DARK_AQUA)));
+        }
+    }
+
+    private NamedTextColor stateColor(UpkeepProjectionCalculator.State state) {
+        return switch (state) {
+            case PROTEGIDO -> NamedTextColor.GREEN;
+            case AVISO -> NamedTextColor.YELLOW;
+            case POR_VENCER -> NamedTextColor.GOLD;
+            case GRACIA -> NamedTextColor.RED;
+            case EXPIRADO -> NamedTextColor.DARK_RED;
+        };
     }
 
     @EventHandler(priority = EventPriority.MONITOR)

@@ -23,6 +23,8 @@ public final class WardViewModelBuilder {
     private final BiFunction<Ward, UUID, WardUpgradePreview> upgradePreviewResolver;
     /** Pre-formatted lines describing accepted upkeep materials (static config). */
     private final java.util.List<String> upkeepMaterialLines;
+    /** Optional: projects balance → remaining protection time + material equivalences. */
+    private final dev.dreamcraft.protection.service.UpkeepProjectionCalculator upkeepCalculator;
 
     public WardViewModelBuilder(WardTierProvider tierProvider, Function<UUID, String> nameResolver) {
         this(tierProvider, nameResolver, id -> null);
@@ -51,11 +53,29 @@ public final class WardViewModelBuilder {
                                 Function<UUID, String> cityNameResolver,
                                 BiFunction<Ward, UUID, WardUpgradePreview> upgradePreviewResolver,
                                 java.util.List<String> upkeepMaterialLines) {
+        this(tierProvider, nameResolver, cityNameResolver, upgradePreviewResolver,
+                upkeepMaterialLines, null);
+    }
+
+    /**
+     * @param nameResolver           resolves player UUIDs to display names
+     * @param cityNameResolver       resolves city UUIDs to city names (null when unknown)
+     * @param upgradePreviewResolver computes the upgrade preview; null → unavailable preview
+     * @param upkeepMaterialLines    pre-formatted accepted-material lines (legacy ctor path)
+     * @param upkeepCalculator       projects balance → protection time; null → no projection
+     */
+    public WardViewModelBuilder(WardTierProvider tierProvider,
+                                Function<UUID, String> nameResolver,
+                                Function<UUID, String> cityNameResolver,
+                                BiFunction<Ward, UUID, WardUpgradePreview> upgradePreviewResolver,
+                                java.util.List<String> upkeepMaterialLines,
+                                dev.dreamcraft.protection.service.UpkeepProjectionCalculator upkeepCalculator) {
         this.tierProvider = tierProvider;
         this.nameResolver = nameResolver;
         this.cityNameResolver = cityNameResolver;
         this.upgradePreviewResolver = upgradePreviewResolver;
         this.upkeepMaterialLines = java.util.List.copyOf(upkeepMaterialLines);
+        this.upkeepCalculator = upkeepCalculator;
     }
 
     /**
@@ -78,6 +98,8 @@ public final class WardViewModelBuilder {
         WardUpgradePreview preview = upgradePreviewResolver != null
                 ? upgradePreviewResolver.apply(ward, viewerId)
                 : WardUpgradePreview.unavailable();
+        var projection = upkeepCalculator == null ? null
+                : upkeepCalculator.project(ward.upkeepBalance(), unitsPerInterval(ward));
 
         return new WardViewModel(
                 ward.id(),
@@ -106,8 +128,16 @@ public final class WardViewModelBuilder {
                 isOwner,         // canTransfer
                 isOwner,         // canSetPermissions
                 isOwner && !hasCity, // canAnnexToCity — owner with no city
-                isOwner          // canDisband
+                isOwner,         // canDisband
+                projection
         );
+    }
+
+    /** Units charged per interval for this Ward's tier (1 when tier unknown). */
+    private int unitsPerInterval(Ward ward) {
+        return tierProvider.findByKey(ward.tier())
+                .map(dev.dreamcraft.protection.domain.model.WardTier::upkeepPerInterval)
+                .orElse(1);
     }
 
     private boolean hasNextTier(int currentScore, String currentTierKey) {

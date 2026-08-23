@@ -2,8 +2,6 @@ package dev.dreamcraft.protection.presentation;
 
 import dev.dreamcraft.protection.command.CommandMessages;
 
-import dev.dreamcraft.protection.config.CommandNames;
-
 import dev.dreamcraft.protection.domain.model.*;
 import dev.dreamcraft.protection.domain.service.CityService;
 import dev.dreamcraft.protection.domain.service.EstateService;
@@ -157,6 +155,22 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         this.adminMenuProvider = provider;
     }
 
+    // ── Player-picker contract (see PlayerPickMenuBuilder) ────────────────────
+
+    /** Pending action tokens carried inside {@code pick.*} payloads. */
+    private static final String ACT_WARD_TRANSFER = "ward.transfer";
+    private static final String ACT_CITY_INVITE = "city.invite";
+    private static final String ACT_CITY_KICK = "city.kick";
+    private static final String ACT_CITY_ROLES = "city.roles";
+    private static final String ACT_CITY_TRANSFER = "city.transfer";
+    private static final String ACT_ESTATE_INVITE = "estate.invite";
+    private static final String ACT_ESTATE_TRANSFER = "estate.transfer";
+
+    /** Origin-menu tokens for the picker's Volver button. */
+    private static final String ORIGIN_WARD = "ward";
+    private static final String ORIGIN_CITY = "city";
+    private static final String ORIGIN_ESTATE = "estate";
+
     @Override
     public void accept(MenuContext ctx, MenuAction action) {
         Player player = Bukkit.getPlayer(ctx.viewerId());
@@ -171,19 +185,22 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                 case "ward.annex_city" -> handleWardAnnexCity(player, ctx);
                 case "ward.disband" -> handleWardDisband(player, ctx);
                 case "ward.upkeep_vault" -> handleOpenUpkeepVault(player, ctx);
-                case "ward.transfer" -> feedback(player, msg("menu.hint.ward-transfer",
-                        CommandNames.cmd("ward", "transfer <jugador>")), NamedTextColor.YELLOW);
-                case "city.invite" -> feedback(player, msg("menu.hint.city-invite",
-                        CommandNames.cmd("city", "invite <jugador>")), NamedTextColor.YELLOW);
-                case "city.kick" -> feedback(player, msg("menu.hint.city-kick",
-                        CommandNames.cmd("city", "kick <jugador>")), NamedTextColor.YELLOW);
-                case "city.roles" -> feedback(player, msg("menu.hint.city-roles",
-                        CommandNames.cmd("city", "roles <jugador> <rol>")), NamedTextColor.YELLOW);
+                case "ward.transfer" -> openWardPick(player, ctx);
+                case "city.invite" -> openCityPick(player, ctx, ACT_CITY_INVITE);
+                case "city.kick" -> openCityPick(player, ctx, ACT_CITY_KICK);
+                case "city.roles" -> openCityPick(player, ctx, ACT_CITY_ROLES);
+                case "city.transfer" -> openCityPick(player, ctx, ACT_CITY_TRANSFER);
                 case "city.bank" -> handleOpenCityTreasury(player, ctx);
                 case "city.policy" -> handleCityPolicy(player, ctx, action);
                 case "city.delete" -> handleCityDelete(player, ctx);
-                case "estate.invite" -> feedback(player, msg("menu.hint.estate-invite",
-                        CommandNames.cmd("estate", "invite <jugador>")), NamedTextColor.YELLOW);
+                case "estate.invite" -> openEstatePick(player, ctx, ACT_ESTATE_INVITE);
+                case "estate.transfer" -> openEstatePick(player, ctx, ACT_ESTATE_TRANSFER);
+                // ── Player/role pickers (stateless payloads) ──────────────────
+                case "pick.player" -> handlePickPlayers(player, action);
+                case "pick.target" -> handlePickExecute(player, action);
+                case "pick.role" -> handlePickRoles(player, action);
+                case "pick.role.set" -> handlePickRoleSet(player, action);
+                case "pick.back" -> handlePickBack(player, action);
                 case "estate.join" -> handleEstateJoin(player, ctx);
                 case "estate.leave" -> handleEstateLeave(player, ctx);
                 case "estate.start" -> handleEstateStart(player, ctx);
@@ -682,6 +699,641 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                 msg("menu.estate.disbanded", "Instancia {estate} disuelta."),
                 "estate", estate.name()), NamedTextColor.GREEN);
         playSuccess(player);
+    }
+
+    // ── Player/role pickers (menus ejecutan la acción real; nada de hints) ────
+
+    /*
+     * v1 limit: the selector lists ONLINE players only. The underlying services
+     * accept offline UUIDs for kick/transfer-style actions (e.g.
+     * CityService.removeMember / transferGovernorship), so an offline variant
+     * could be layered later without touching this grammar — chat/conversation
+     * input is intentionally out of scope for this iteration.
+     */
+
+    /** Opens the online-player picker to choose the new Ward owner. */
+    private void openWardPick(Player player, MenuContext ctx) {
+        Ward ward = resolveWard(player, ctx);
+        if (ward == null) return;
+        if (!ward.ownerId().equals(player.getUniqueId())) {
+            feedback(player, msg("menu.ward.owner-only-transfer",
+                    "Solo el owner puede transferir el Ward."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        openPlayerPickLater(player, ACT_WARD_TRANSFER, ORIGIN_WARD, ward.id(), 0);
+    }
+
+    /** Opens the online-player picker for a pending city action. */
+    private void openCityPick(Player player, MenuContext ctx, String action) {
+        City city = resolveCity(player, ctx);
+        if (city == null) return;
+        if (!validateCityAction(player, city, action)) return;
+        openPlayerPickLater(player, action, ORIGIN_CITY, city.id(), 0);
+    }
+
+    /** Opens the online-player picker for a pending estate action. */
+    private void openEstatePick(Player player, MenuContext ctx, String action) {
+        Estate estate = resolveEstate(player, ctx);
+        if (estate == null) return;
+        if (!estate.isOwner(player.getUniqueId())) {
+            boolean invite = ACT_ESTATE_INVITE.equals(action);
+            feedback(player, msg(invite ? "menu.estate.owner-only-invite" : "menu.estate.owner-only-transfer",
+                    invite ? "Solo el owner puede invitar miembros." : "Solo el owner puede transferir el Estate."),
+                    NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        openPlayerPickLater(player, action, ORIGIN_ESTATE, estate.id(), 0);
+    }
+
+    /** Payload navigation: rebuild the candidate grid for another page. */
+    private void handlePickPlayers(Player player, MenuAction action) {
+        String[] parts = splitPayload(action.payload());
+        UUID entityId = parts.length > 2 ? parseUuid(parts[2]) : null;
+        String act = parts.length > 0 ? parts[0] : "";
+        String origin = parts.length > 1 ? parts[1] : "";
+        int page = parts.length > 3 ? parseIntOrDefault(parts[3], 0) : 0;
+        if (entityId == null) {
+            contextLost(player);
+            return;
+        }
+        if (!validateAuthority(player, act, origin, entityId)) return;
+        openPlayerPickLater(player, act, origin, entityId, page);
+    }
+
+    /**
+     * Executes the pending action against the picked player. Authority and every
+     * domain rule are re-checked server-side here even though the originating
+     * button was already gated in the view model.
+     */
+    private void handlePickExecute(Player player, MenuAction action) {
+        String[] parts = splitPayload(action.payload());
+        UUID entityId = parts.length > 2 ? parseUuid(parts[2]) : null;
+        UUID targetId = parts.length > 3 ? parseUuid(parts[3]) : null;
+        String act = parts.length > 0 ? parts[0] : "";
+        String origin = parts.length > 1 ? parts[1] : "";
+        if (entityId == null || targetId == null) {
+            contextLost(player);
+            return;
+        }
+        if (!validateAuthority(player, act, origin, entityId)) return;
+        switch (act) {
+            case ACT_WARD_TRANSFER -> executeWardTransfer(player, entityId, targetId);
+            case ACT_CITY_INVITE -> executeCityInvite(player, entityId, targetId, origin);
+            case ACT_CITY_KICK -> executeCityKick(player, entityId, targetId, origin);
+            case ACT_CITY_TRANSFER -> executeCityTransfer(player, entityId, targetId, origin);
+            case ACT_ESTATE_INVITE -> executeEstateInvite(player, entityId, targetId, origin);
+            case ACT_ESTATE_TRANSFER -> executeEstateTransfer(player, entityId, targetId, origin);
+            default -> contextLost(player);
+        }
+    }
+
+    /** Second step of city.roles: pick the role for an already-chosen member. */
+    private void handlePickRoles(Player player, MenuAction action) {
+        String[] parts = splitPayload(action.payload());
+        UUID targetId = parts.length > 0 ? parseUuid(parts[0]) : null;
+        UUID cityId = parts.length > 1 ? parseUuid(parts[1]) : null;
+        if (targetId == null || cityId == null) {
+            contextLost(player);
+            return;
+        }
+        City city = cityService.findById(cityId).orElse(null);
+        if (city == null) {
+            contextLost(player);
+            return;
+        }
+        if (!city.isGovernor(player.getUniqueId())) {
+            feedback(player, msg("menu.city.owner-only-roles",
+                    "Solo el Gobernador puede asignar roles."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        var def = dev.dreamcraft.protection.presentation.menu.PlayerPickMenuBuilder
+                .buildRoles(targetId, CommandMessages.resolveName(targetId), city.id());
+        menuProviderOpenLater(player, def);
+    }
+
+    /** Applies the chosen role (GOVERNOR transfers the governorship). */
+    private void handlePickRoleSet(Player player, MenuAction action) {
+        String[] parts = splitPayload(action.payload());
+        UUID cityId = parts.length > 2 ? parseUuid(parts[2]) : null;
+        UUID targetId = parts.length > 1 ? parseUuid(parts[1]) : null;
+        CityRole role;
+        try {
+            role = CityRole.valueOf(parts[0]);
+        } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException e) {
+            role = null;
+        }
+        if (cityId == null || targetId == null || role == null) {
+            contextLost(player);
+            return;
+        }
+        City city = cityService.findById(cityId).orElse(null);
+        if (city == null) {
+            contextLost(player);
+            return;
+        }
+        if (!city.isGovernor(player.getUniqueId())) {
+            feedback(player, msg("menu.city.owner-only-roles",
+                    "Solo el Gobernador puede asignar roles."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        if (role == CityRole.GOVERNOR) {
+            if (targetId.equals(player.getUniqueId())) {
+                feedback(player, msg("menu.city.self-transfer",
+                        "No puedes transferirte la gobernanza a ti mismo."), NamedTextColor.RED);
+                playError(player);
+                return;
+            }
+            if (cityService.transferGovernorship(city, targetId)) {
+                feedback(player, msg("menu.city.transferred", "Gobernanza transferida a {player}.",
+                        "player", CommandMessages.resolveName(targetId)), NamedTextColor.GREEN);
+                playSuccess(player);
+                reopenOriginMenu(player, ORIGIN_CITY, city.id());
+            } else {
+                feedback(player, msg("menu.city.transfer-not-member",
+                        "{player} debe ser miembro de la ciudad.",
+                        "player", CommandMessages.resolveName(targetId)), NamedTextColor.RED);
+                playError(player);
+            }
+            return;
+        }
+        if (cityService.setRole(city, targetId, role)) {
+            feedback(player, msg("menu.city.role-set", "Rol de {player} establecido a {role}.",
+                    "player", CommandMessages.resolveName(targetId), "role", role.name()), NamedTextColor.GREEN);
+            playSuccess(player);
+            reopenOriginMenu(player, ORIGIN_CITY, city.id());
+        } else {
+            feedback(player, msg("menu.city.role-not-member", "{player} no es miembro de la ciudad.",
+                    "player", CommandMessages.resolveName(targetId)), NamedTextColor.YELLOW);
+            playError(player);
+        }
+    }
+
+    /** Volver/Cancelar: back to the origin menu (close when unreachable). */
+    private void handlePickBack(Player player, MenuAction action) {
+        String[] parts = splitPayload(action.payload());
+        UUID entityId = parts.length > 1 ? parseUuid(parts[1]) : null;
+        String origin = parts.length > 0 ? parts[0] : "";
+        if (entityId == null || !reopenOriginMenu(player, origin, entityId)) {
+            player.closeInventory();
+        }
+    }
+
+    // ── Picker executions (validaciones espejo de los comandos) ───────────────
+
+    /** Mirrors ProtectionCommand.handleTransfer: owner-only, online target, no self. */
+    private void executeWardTransfer(Player player, UUID wardId, UUID targetId) {
+        Ward ward = wardService.findById(wardId).orElse(null);
+        if (ward == null) {
+            contextLost(player);
+            return;
+        }
+        if (!ward.ownerId().equals(player.getUniqueId())) {
+            feedback(player, msg("menu.ward.owner-only-transfer",
+                    "Solo el owner puede transferir el Ward."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        if (targetId.equals(player.getUniqueId())) {
+            feedback(player, msg("menu.ward.self-transfer",
+                    "No puedes transferirte el Ward a ti mismo."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        Player target = Bukkit.getPlayer(targetId);
+        if (target == null) {
+            feedback(player, msg("menu.pick.offline", "Ese jugador ya no está en línea."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        wardService.transferOwnership(ward, targetId, OwnerType.PLAYER);
+        worldGuardAdapter.syncOwner(ward);
+        feedback(player, msg("menu.ward.transferred", "Ownership transferido a {player}.",
+                "player", target.getName()), NamedTextColor.GREEN);
+        target.sendMessage(CommandMessages.prefixed("protection",
+                msg("menu.ward.transferred-target", "{player} te transfirió su Ward {ward}.",
+                        "player", player.getName(), "ward", ward.name()), NamedTextColor.GREEN));
+        playSuccess(player);
+        player.closeInventory();
+    }
+
+    /** Mirrors CityCommand.handleInvite: Council+, online target, WG re-projection. */
+    private void executeCityInvite(Player player, UUID cityId, UUID targetId, String origin) {
+        City city = cityService.findById(cityId).orElse(null);
+        if (city == null) {
+            contextLost(player);
+            return;
+        }
+        if (!isResidentManager(city, player)) {
+            feedback(player, msg("menu.city.residents-role-required",
+                    "Requerís rol Council o superior para gestionar residentes."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        Player target = Bukkit.getPlayer(targetId);
+        if (target == null) {
+            feedback(player, msg("menu.pick.offline", "Ese jugador ya no está en línea."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        if (cityService.addMember(city, target.getUniqueId())) {
+            // New resident gains access to every annexed ward's region
+            dev.dreamcraft.protection.service.WardAccessSync.projectAll(
+                    wardService.findByCity(city.id()), cityService, worldGuardAdapter);
+            feedback(player, msg("menu.city.invited", "{player} invitado a la ciudad.",
+                    "player", target.getName()), NamedTextColor.GREEN);
+            target.sendMessage(CommandMessages.CITY_PREFIX.append(Component.text(
+                    msg("menu.city.invited-target", "Fuiste invitado a la ciudad {city}.", "city", city.name()),
+                    NamedTextColor.GREEN)));
+            playSuccess(player);
+            reopenOriginMenu(player, origin, city.id());
+        } else {
+            feedback(player, msg("menu.city.already-member", "{player} ya es miembro de la ciudad.",
+                    "player", target.getName()), NamedTextColor.YELLOW);
+            playError(player);
+        }
+    }
+
+    /** Mirrors CityCommand.handleKick: Council+, never the governor, WG re-projection. */
+    private void executeCityKick(Player player, UUID cityId, UUID targetId, String origin) {
+        City city = cityService.findById(cityId).orElse(null);
+        if (city == null) {
+            contextLost(player);
+            return;
+        }
+        if (!isResidentManager(city, player)) {
+            feedback(player, msg("menu.city.residents-role-required",
+                    "Requerís rol Council o superior para gestionar residentes."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        if (city.isGovernor(targetId)) {
+            feedback(player, msg("menu.city.cannot-kick-governor",
+                    "No puedes expulsar al Gobernador."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        if (cityService.removeMember(city, targetId)) {
+            // Re-project: the ex-member loses access to every annexed ward's region
+            dev.dreamcraft.protection.service.WardAccessSync.projectAll(
+                    wardService.findByCity(city.id()), cityService, worldGuardAdapter);
+            feedback(player, msg("menu.city.kicked", "Miembro expulsado de la ciudad."), NamedTextColor.GREEN);
+            playSuccess(player);
+            reopenOriginMenu(player, origin, city.id());
+        } else {
+            feedback(player, msg("menu.city.kick-not-member",
+                    "Ese jugador no es miembro de la ciudad."), NamedTextColor.YELLOW);
+            playError(player);
+        }
+    }
+
+    /** Mirrors CityCommand.handleTransfer: governor-only, target must be member. */
+    private void executeCityTransfer(Player player, UUID cityId, UUID targetId, String origin) {
+        City city = cityService.findById(cityId).orElse(null);
+        if (city == null) {
+            contextLost(player);
+            return;
+        }
+        if (!city.isGovernor(player.getUniqueId())) {
+            feedback(player, msg("menu.city.owner-only-transfer",
+                    "Solo el Gobernador puede transferir la gobernanza."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        if (targetId.equals(player.getUniqueId())) {
+            feedback(player, msg("menu.city.self-transfer",
+                    "No puedes transferirte la gobernanza a ti mismo."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        if (cityService.transferGovernorship(city, targetId)) {
+            feedback(player, msg("menu.city.transferred", "Gobernanza transferida a {player}.",
+                    "player", CommandMessages.resolveName(targetId)), NamedTextColor.GREEN);
+            playSuccess(player);
+            reopenOriginMenu(player, origin, city.id());
+        } else {
+            feedback(player, msg("menu.city.transfer-not-member",
+                    "{player} debe ser miembro de la ciudad.",
+                    "player", CommandMessages.resolveName(targetId)), NamedTextColor.RED);
+            playError(player);
+        }
+    }
+
+    /** Mirrors EstateCommand.handleInvite: owner-only, online target, WG member sync. */
+    private void executeEstateInvite(Player player, UUID estateId, UUID targetId, String origin) {
+        Estate estate = estateService.findById(estateId).orElse(null);
+        if (estate == null) {
+            contextLost(player);
+            return;
+        }
+        if (!estate.isOwner(player.getUniqueId())) {
+            feedback(player, msg("menu.estate.owner-only-invite",
+                    "Solo el owner puede invitar miembros."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        Player target = Bukkit.getPlayer(targetId);
+        if (target == null) {
+            feedback(player, msg("menu.pick.offline", "Ese jugador ya no está en línea."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        if (estateService.addMember(estate, target.getUniqueId())) {
+            worldGuardAdapter.syncEstateMembers(estate);
+            feedback(player, msg("menu.estate.invited", "{player} invitado a la instancia.",
+                    "player", target.getName()), NamedTextColor.GREEN);
+            target.sendMessage(CommandMessages.ESTATE_PREFIX.append(Component.text(
+                    msg("menu.estate.invited-target", "Fuiste invitado a la instancia {estate}.",
+                            "estate", estate.name()), NamedTextColor.GREEN)));
+            playSuccess(player);
+            reopenOriginMenu(player, origin, estate.id());
+        } else {
+            feedback(player, msg("menu.estate.already-member-invite",
+                    "{player} ya es miembro de la instancia.", "player", target.getName()),
+                    NamedTextColor.YELLOW);
+            playError(player);
+        }
+    }
+
+    /** Mirrors EstateCommand.handleTransfer: owner-only, target must be member. */
+    private void executeEstateTransfer(Player player, UUID estateId, UUID targetId, String origin) {
+        Estate estate = estateService.findById(estateId).orElse(null);
+        if (estate == null) {
+            contextLost(player);
+            return;
+        }
+        if (!estate.isOwner(player.getUniqueId())) {
+            feedback(player, msg("menu.estate.owner-only-transfer",
+                    "Solo el owner puede transferir el Estate."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        if (targetId.equals(player.getUniqueId())) {
+            feedback(player, msg("menu.estate.self-transfer",
+                    "No puedes transferirte el Estate a ti mismo."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        if (estateService.transferOwnership(estate, targetId)) {
+            feedback(player, msg("menu.estate.transferred",
+                    "Liderazgo de la instancia transferido a {player}.",
+                    "player", CommandMessages.resolveName(targetId)), NamedTextColor.GREEN);
+            playSuccess(player);
+            reopenOriginMenu(player, origin, estate.id());
+        } else {
+            feedback(player, msg("menu.estate.transfer-not-member",
+                    "{player} debe ser miembro de la instancia.",
+                    "player", CommandMessages.resolveName(targetId)), NamedTextColor.RED);
+            playError(player);
+        }
+    }
+
+    // ── Picker plumbing ───────────────────────────────────────────────────────
+
+    /**
+     * Server-side authority gate for a pending picker action, re-resolving the
+     * aggregate fresh from its repository — the view model flags that hid the
+     * button are presentation-only and are never trusted here.
+     */
+    private boolean validateAuthority(Player player, String action, String origin, UUID entityId) {
+        return switch (origin) {
+            case ORIGIN_WARD -> {
+                Ward ward = wardService.findById(entityId).orElse(null);
+                if (ward == null) {
+                    contextLost(player);
+                    yield false;
+                }
+                if (!ward.ownerId().equals(player.getUniqueId())) {
+                    feedback(player, msg("menu.ward.owner-only-transfer",
+                            "Solo el owner puede transferir el Ward."), NamedTextColor.RED);
+                    playError(player);
+                    yield false;
+                }
+                yield true;
+            }
+            case ORIGIN_CITY -> {
+                City city = cityService.findById(entityId).orElse(null);
+                if (city == null) {
+                    contextLost(player);
+                    yield false;
+                }
+                yield validateCityAction(player, city, action);
+            }
+            case ORIGIN_ESTATE -> {
+                Estate estate = estateService.findById(entityId).orElse(null);
+                if (estate == null) {
+                    contextLost(player);
+                    yield false;
+                }
+                if (!estate.isOwner(player.getUniqueId())) {
+                    boolean invite = ACT_ESTATE_INVITE.equals(action);
+                    feedback(player, msg(invite ? "menu.estate.owner-only-invite" : "menu.estate.owner-only-transfer",
+                            invite ? "Solo el owner puede invitar miembros." : "Solo el owner puede transferir el Estate."),
+                            NamedTextColor.RED);
+                    playError(player);
+                    yield false;
+                }
+                yield true;
+            }
+            default -> {
+                contextLost(player);
+                yield false;
+            }
+        };
+    }
+
+    /** Per-action authority for city picks (espejo de CityCommand). */
+    private boolean validateCityAction(Player player, City city, String action) {
+        return switch (action) {
+            case ACT_CITY_INVITE, ACT_CITY_KICK -> {
+                if (!isResidentManager(city, player)) {
+                    feedback(player, msg("menu.city.residents-role-required",
+                            "Requerís rol Council o superior para gestionar residentes."), NamedTextColor.RED);
+                    playError(player);
+                    yield false;
+                }
+                yield true;
+            }
+            case ACT_CITY_ROLES -> {
+                if (!city.isGovernor(player.getUniqueId())) {
+                    feedback(player, msg("menu.city.owner-only-roles",
+                            "Solo el Gobernador puede asignar roles."), NamedTextColor.RED);
+                    playError(player);
+                    yield false;
+                }
+                yield true;
+            }
+            case ACT_CITY_TRANSFER -> {
+                if (!city.isGovernor(player.getUniqueId())) {
+                    feedback(player, msg("menu.city.owner-only-transfer",
+                            "Solo el Gobernador puede transferir la gobernanza."), NamedTextColor.RED);
+                    playError(player);
+                    yield false;
+                }
+                yield true;
+            }
+            default -> false;
+        };
+    }
+
+    /** Espejo de CityCommand.canManageResidents. */
+    private boolean isResidentManager(City city, Player player) {
+        return city.isGovernor(player.getUniqueId())
+                || city.roleOf(player.getUniqueId()) == CityRole.COUNCIL;
+    }
+
+    /** Builds the paginated candidate grid and opens it next tick. */
+    private void openPlayerPickLater(Player player, String action, String origin, UUID entityId, int page) {
+        var candidates = pickCandidates(player, action, entityId);
+        if (candidates.isEmpty()) {
+            feedback(player, msg("menu.pick.empty",
+                    "No hay jugadores disponibles para esta acción."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        var def = dev.dreamcraft.protection.presentation.menu.PlayerPickMenuBuilder
+                .buildPlayers(action, origin, entityId, page, candidates);
+        menuProviderOpenLater(player, def);
+    }
+
+    /**
+     * Candidates per pending action (always ONLINE players, viewer excluded):
+     * invites list non-members; kick lists members (never the governor);
+     * roles/transfer list members. Empty result → the picker is not opened.
+     */
+    private List<dev.dreamcraft.protection.presentation.menu.PlayerPickMenuBuilder.Candidate>
+            pickCandidates(Player viewer, String action, UUID entityId) {
+        var out = new ArrayList<dev.dreamcraft.protection.presentation.menu.PlayerPickMenuBuilder.Candidate>();
+        switch (action) {
+            case ACT_WARD_TRANSFER -> {
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    if (!p.getUniqueId().equals(viewer.getUniqueId())) out.add(candidateOf(p));
+                }
+            }
+            case ACT_CITY_INVITE -> {
+                City city = cityService.findById(entityId).orElse(null);
+                if (city == null) return out;
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    UUID id = p.getUniqueId();
+                    if (id.equals(viewer.getUniqueId()) || city.isMember(id)) continue;
+                    out.add(candidateOf(p));
+                }
+            }
+            case ACT_CITY_KICK -> {
+                City city = cityService.findById(entityId).orElse(null);
+                if (city == null) return out;
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    UUID id = p.getUniqueId();
+                    if (id.equals(viewer.getUniqueId()) || city.isGovernor(id)) continue;
+                    if (!city.isMember(id)) continue;
+                    out.add(candidateOf(p));
+                }
+            }
+            case ACT_CITY_ROLES, ACT_CITY_TRANSFER -> {
+                City city = cityService.findById(entityId).orElse(null);
+                if (city == null) return out;
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    UUID id = p.getUniqueId();
+                    if (id.equals(viewer.getUniqueId()) || !city.isMember(id)) continue;
+                    out.add(candidateOf(p));
+                }
+            }
+            case ACT_ESTATE_INVITE -> {
+                Estate estate = estateService.findById(entityId).orElse(null);
+                if (estate == null) return out;
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    UUID id = p.getUniqueId();
+                    if (id.equals(viewer.getUniqueId()) || id.equals(estate.ownerId())
+                            || estate.isMember(id)) continue;
+                    out.add(candidateOf(p));
+                }
+            }
+            case ACT_ESTATE_TRANSFER -> {
+                Estate estate = estateService.findById(entityId).orElse(null);
+                if (estate == null) return out;
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    UUID id = p.getUniqueId();
+                    if (id.equals(viewer.getUniqueId()) || !estate.isMember(id)) continue;
+                    out.add(candidateOf(p));
+                }
+            }
+            default -> { /* unknown pending action: empty grid */ }
+        }
+        out.sort(java.util.Comparator.comparing(c -> c.name().toLowerCase(java.util.Locale.ROOT)));
+        return out;
+    }
+
+    private static dev.dreamcraft.protection.presentation.menu.PlayerPickMenuBuilder.Candidate
+            candidateOf(Player player) {
+        return new dev.dreamcraft.protection.presentation.menu.PlayerPickMenuBuilder.Candidate(
+                player.getUniqueId(), player.getName());
+    }
+
+    /** Reopens the origin menu (fresh view model) next tick; false when unreachable. */
+    private boolean reopenOriginMenu(Player player, String origin, UUID entityId) {
+        switch (origin) {
+            case ORIGIN_CITY -> {
+                City city = cityService.findById(entityId).orElse(null);
+                var opener = cityMenuOpener;
+                if (city == null || opener == null) return false;
+                scheduleOpener(player, () -> opener.accept(player, city));
+                return true;
+            }
+            case ORIGIN_ESTATE -> {
+                var opener = estateMenuOpener;
+                if (opener == null) return false;
+                scheduleOpener(player, () -> opener.accept(player, entityId));
+                return true;
+            }
+            case ORIGIN_WARD -> {
+                Ward ward = wardService.findById(entityId).orElse(null);
+                var opener = wardMenuOpener;
+                if (ward == null || opener == null) return false;
+                scheduleOpener(player, () -> opener.accept(player, ward));
+                return true;
+            }
+            default -> {
+                return false;
+            }
+        }
+    }
+
+    /** Opens a rebuilt menu next tick (opening inside a click event ghosts items). */
+    private void scheduleOpener(Player player, Runnable open) {
+        Bukkit.getScheduler().runTask(plugin(), () -> {
+            Player online = Bukkit.getPlayer(player.getUniqueId());
+            if (online != null) open.run();
+        });
+    }
+
+    private static String[] splitPayload(String payload) {
+        return payload == null || payload.isBlank() ? new String[0] : payload.split(":");
+    }
+
+    private static UUID parseUuid(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return UUID.fromString(raw);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private static int parseIntOrDefault(String raw, int def) {
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            return def;
+        }
+    }
+
+    private void contextLost(Player player) {
+        feedback(player, msg("menu.pick.context-lost",
+                "Contexto del selector perdido."), NamedTextColor.RED);
+        playError(player);
     }
 
     // ── Ward/City admin GUIs (stateless payload navigation) ──────────────────

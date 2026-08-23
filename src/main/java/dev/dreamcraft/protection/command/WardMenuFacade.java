@@ -36,6 +36,19 @@ public final class WardMenuFacade {
                           dev.dreamcraft.protection.service.WardUpgradeService upgradeService,
                           MenuProvider menuProvider,
                           List<String> upkeepMaterialLines) {
+        this(tierProvider, cityService, upgradeService, menuProvider, upkeepMaterialLines, null);
+    }
+
+    /**
+     * @param upkeepCalculator optional balance → protection-time projector; null disables
+     *                         the "Protección:" lore lines and vault-open summary
+     */
+    public WardMenuFacade(WardTierProvider tierProvider,
+                          CityService cityService,
+                          dev.dreamcraft.protection.service.WardUpgradeService upgradeService,
+                          MenuProvider menuProvider,
+                          List<String> upkeepMaterialLines,
+                          dev.dreamcraft.protection.service.UpkeepProjectionCalculator upkeepCalculator) {
         this.upgradeService = upgradeService;
         this.menuProvider = menuProvider;
         this.viewModelBuilder = new WardViewModelBuilder(
@@ -43,7 +56,8 @@ public final class WardMenuFacade {
                 CommandMessages::resolveName,
                 id -> cityService.findById(id).map(City::name).orElse(null),
                 this::buildUpgradePreview,
-                upkeepMaterialLines);
+                upkeepMaterialLines,
+                upkeepCalculator);
     }
 
     /** Opens the Ward menu for the viewer with freshly computed state. */

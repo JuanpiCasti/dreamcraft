@@ -2,6 +2,7 @@ package dev.dreamcraft.protection.presentation.viewmodel;
 
 import dev.dreamcraft.protection.domain.model.OwnerType;
 import dev.dreamcraft.protection.domain.model.WardPermission;
+import dev.dreamcraft.protection.service.UpkeepProjectionCalculator;
 
 import java.time.Instant;
 import java.util.List;
@@ -44,6 +45,45 @@ public record WardViewModel(
         boolean canTransfer,
         boolean canSetPermissions,
         boolean canAnnexToCity,
-        boolean canDisband
+        boolean canDisband,
+        /** Pre-computed upkeep time projection (state + remaining time + material
+         *  equivalences); null when the calculator was not wired upstream. */
+        UpkeepProjectionCalculator.Projection upkeepProjection
 ) {
+    /** Legacy-arity constructor — projection unavailable (null). */
+    public WardViewModel(
+            UUID id,
+            String name,
+            String worldName,
+            UUID ownerId,
+            String ownerName,
+            OwnerType ownerType,
+            UUID cityId,
+            String cityName,
+            int baseScore,
+            String tier,
+            int radius,
+            int upkeepBalance,
+            Instant nextUpkeepAt,
+            int centerX,
+            int centerY,
+            int centerZ,
+            Set<WardPermission> permissions,
+            boolean hasCityMembership,
+            WardUpgradePreview upgradePreview,
+            List<String> upkeepMaterials,
+            boolean canUpgrade,
+            boolean canDeposit,
+            boolean canManage,
+            boolean canTransfer,
+            boolean canSetPermissions,
+            boolean canAnnexToCity,
+            boolean canDisband
+    ) {
+        this(id, name, worldName, ownerId, ownerName, ownerType, cityId, cityName,
+                baseScore, tier, radius, upkeepBalance, nextUpkeepAt,
+                centerX, centerY, centerZ, permissions, hasCityMembership, upgradePreview,
+                upkeepMaterials, canUpgrade, canDeposit, canManage, canTransfer,
+                canSetPermissions, canAnnexToCity, canDisband, null);
+    }
 }
