@@ -51,6 +51,6 @@ services:
       - ./data:/data
       # mount the locally built plugin JAR directly so it is picked up on each compose up
       # build first: ./gradlew shadowJar  (or: ./gradlew build)
-      - ./build/libs/dreamcraft-protection-0.1.1-SNAPSHOT.jar:/data/plugins/DreamCraftProtection.jar:ro
+      - ./build/libs/dreamcraft-protection-0.1.1.jar:/data/plugins/DreamCraftProtection.jar:ro
       # test harness — runs the scenario suite after boot, writes /data/dreamcraft-test/
-      - ./harness/build/libs/dreamcraft-harness-0.1.1-SNAPSHOT.jar:/data/plugins/DreamCraftTestHarness.jar:ro
+      - ./harness/build/libs/dreamcraft-harness-0.1.1.jar:/data/plugins/DreamCraftTestHarness.jar:ro

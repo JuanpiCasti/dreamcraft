@@ -1,5 +1,5 @@
 name: DreamCraftProtection
-version: ${version}
+version: 0.1.1
 main: dev.dreamcraft.protection.DreamCraftProtectionPlugin
 api-version: '1.21'
 description: DreamCraft domain system — claims, upkeep, Ward/City/Estate domain, integration layer
