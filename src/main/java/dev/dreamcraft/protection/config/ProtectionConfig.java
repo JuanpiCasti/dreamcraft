@@ -47,7 +47,9 @@ public record ProtectionConfig(
         Map<Material, Integer> wardUpkeepMaterials,
         Map<Material, String> wardTierGatedBlocks,
         List<CityLevelDefinition> cityLevels,
-        WardRecipe wardRecipe
+        WardRecipe wardRecipe,
+        /** Recurring upkeep units charged per interval for EACH gated block placed below tier. */
+        int belowTierSurchargeUnits
 ) {
     /** Convenience constructor: no ward upkeep materials, no gated blocks, no city levels. */
     public ProtectionConfig(
@@ -86,7 +88,7 @@ public record ProtectionConfig(
                 resourcePackEnabled, resourcePackOptional, resourcePackFallbackVanilla, customModelData,
                 resourceItemId, wardMaterial, wardItemId, wardCustomModelData, wardScorePerUpgrade,
                 tiers, categoryBaseCosts, materialOverrides, wardUpgradeCosts,
-                Map.of(), Map.of(), List.of(), WardRecipe.DEFAULT);
+                Map.of(), Map.of(), List.of(), WardRecipe.DEFAULT, 2);
     }
 
     public static ProtectionConfig load(FileConfiguration config) {
@@ -262,7 +264,10 @@ public record ProtectionConfig(
                 wardUpkeepMaterials,
                 wardTierGatedBlocks,
                 cityLevels,
-                WardRecipe.load(ward)
+                WardRecipe.load(ward),
+                // Recurring surcharge per gated block placed below its tier
+                // (ward.below-tier-surcharge-units); default 2 for legacy configs.
+                ward == null ? 2 : ward.getInt("below-tier-surcharge-units", 2)
         );
     }
 }

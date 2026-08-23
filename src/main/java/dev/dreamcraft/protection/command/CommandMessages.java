@@ -189,7 +189,7 @@ public final class CommandMessages {
      * Resolves a player display name without ever exposing raw UUID fragments.
      * Online name → last known name (offline) → "Desconocido".
      */
-    static String resolveName(java.util.UUID uuid) {
+    public static String resolveName(java.util.UUID uuid) {
         org.bukkit.entity.Player online = org.bukkit.Bukkit.getPlayer(uuid);
         if (online != null) return online.getName();
         String offline = org.bukkit.Bukkit.getOfflinePlayer(uuid).getName();

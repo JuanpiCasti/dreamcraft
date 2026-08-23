@@ -22,10 +22,11 @@ import java.util.Optional;
  * Gameplay service for Ward upgrades: quotes the next tier, computes item costs,
  * verifies the player's inventory and charges the items.
  *
- * <p>Upgrade model: each upgrade adds {@code ward.score-per-upgrade} base score to
- * the Ward; the domain tier provider resolves tier + radius from the new score.
- * The item cost is defined per TARGET tier in {@code ward-upgrade-costs} — tiers
- * without an entry are free to reach.
+ * <p>Upgrade model ("esquema B"): each upgrade adds {@code ward.score-per-upgrade}
+ * base score to the Ward; the domain tier provider resolves tier + radius from
+ * the new score, so the radius grows with every upgrade. Only the upgrade that
+ * <b>crosses</b> the next tier's minimum base score charges the item cost defined
+ * for that TARGET tier in {@code ward-upgrade-costs} — intermediate upgrades are free.
  */
 public final class WardUpgradeService {
 
@@ -35,7 +36,9 @@ public final class WardUpgradeService {
             int scoreGain,
             int radiusAfter,
             int upkeepPerInterval,
-            List<WardUpgradeCost> costs
+            List<WardUpgradeCost> costs,
+            /** true when this upgrade reaches the target tier's min score and pays {@link #costs}. */
+            boolean crossingTier
     ) {}
 
     private final WardTierProvider tierProvider;
@@ -53,6 +56,10 @@ public final class WardUpgradeService {
     /**
      * Quotes the next upgrade for a Ward.
      *
+     * <p>Cost rule ("esquema B"): the quoted cost is non-empty only when the
+     * resulting score reaches the target tier's minimum base score, i.e. when
+     * this upgrade crosses into the next tier. Intermediate upgrades are free.
+     *
      * @return empty when the Ward is already at the highest configured tier
      */
     public Optional<UpgradeQuote> quoteNext(Ward ward) {
@@ -61,12 +68,14 @@ public final class WardUpgradeService {
 
         WardTier next = nextOpt.get();
         int newScore = ward.baseScore() + scorePerUpgrade;
+        boolean crossingTier = newScore >= next.minBaseScore();
         return Optional.of(new UpgradeQuote(
                 next.key(),
                 scorePerUpgrade,
                 next.computeRadius(newScore),
                 next.upkeepPerInterval(),
-                costsFor(next.key())
+                costsForCrossing(newScore, next.minBaseScore(), costsFor(next.key())),
+                crossingTier
         ));
     }
 
@@ -82,6 +91,16 @@ public final class WardUpgradeService {
 
     private List<WardUpgradeCost> costsFor(String targetTierKey) {
         return costsByTargetTier.getOrDefault(targetTierKey.toLowerCase(Locale.ROOT), List.of());
+    }
+
+    /**
+     * Returns the target tier's costs only when {@code newScore} reaches
+     * {@code nextMinBaseScore} (the upgrade crosses into the tier); otherwise
+     * the intermediate upgrade is free. Pure helper, unit-testable without Bukkit.
+     */
+    public static List<WardUpgradeCost> costsForCrossing(int newScore, int nextMinBaseScore,
+                                                         List<WardUpgradeCost> costs) {
+        return newScore >= nextMinBaseScore ? costs : List.of();
     }
 
     // ── Inventory checks ──────────────────────────────────────────────────────

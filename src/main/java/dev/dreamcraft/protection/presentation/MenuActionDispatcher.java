@@ -7,6 +7,7 @@ import dev.dreamcraft.protection.config.CommandNames;
 import dev.dreamcraft.protection.domain.model.*;
 import dev.dreamcraft.protection.domain.service.CityService;
 import dev.dreamcraft.protection.domain.service.EstateService;
+import dev.dreamcraft.protection.domain.service.WardHealth;
 import dev.dreamcraft.protection.domain.service.WardService;
 import dev.dreamcraft.protection.integration.worldguard.WorldGuardAdapter;
 import net.kyori.adventure.text.Component;
@@ -15,6 +16,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
@@ -57,6 +60,16 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     private dev.dreamcraft.protection.service.WardDissolutionService wardDissolutionService = null;
     /** Optional: asset contract — resolves menu sounds (presentation-assets.yml). */
     private volatile dev.dreamcraft.protection.presentation.resourcepack.PresentationAssetRegistry presentationAssets;
+    /** Optional: opens the normal Ward menu (admin detail GUI «Abrir menú»). */
+    private java.util.function.BiConsumer<Player, Ward> wardMenuOpener = null;
+    /** Optional: opens a City menu by aggregate (admin detail GUI «Abrir menú»). */
+    private java.util.function.BiConsumer<Player, City> cityMenuOpener = null;
+    /** Optional: computed city levels shown in the admin city overview/detail. */
+    private dev.dreamcraft.protection.service.CityLevelService cityLevelService = null;
+    /** Configured physical core material for the health check (null → unknown). */
+    private volatile org.bukkit.Material wardCoreMaterial = null;
+    /** Provider used to open the admin overview/detail GUIs (wired at boot). */
+    private MenuProvider adminMenuProvider = null;
 
     public MenuActionDispatcher(WardService wardService,
                                 CityService cityService,
@@ -119,6 +132,31 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         this.presentationAssets = assets;
     }
 
+    /** Registers the opener used by the ward admin GUI to open a normal Ward menu. */
+    public void setWardMenuOpener(java.util.function.BiConsumer<Player, Ward> opener) {
+        this.wardMenuOpener = opener;
+    }
+
+    /** Registers the opener used by the city admin GUI to open a City menu. */
+    public void setCityMenuOpener(java.util.function.BiConsumer<Player, City> opener) {
+        this.cityMenuOpener = opener;
+    }
+
+    /** Registers the optional city level service (nivel line in the admin GUI). */
+    public void setCityLevelService(dev.dreamcraft.protection.service.CityLevelService service) {
+        this.cityLevelService = service;
+    }
+
+    /** Configures the physical core material used by the orphan health check. */
+    public void setWardCoreMaterial(org.bukkit.Material material) {
+        this.wardCoreMaterial = material;
+    }
+
+    /** Registers the menu provider used to open the admin overview/detail GUIs. */
+    public void setAdminMenuProvider(MenuProvider provider) {
+        this.adminMenuProvider = provider;
+    }
+
     @Override
     public void accept(MenuContext ctx, MenuAction action) {
         Player player = Bukkit.getPlayer(ctx.viewerId());
@@ -152,6 +190,36 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                 case "estate.disband" -> handleEstateDisband(player, ctx);
                 case "estateadmin.tp" -> handleAdminZoneTp(player, action);
                 case "estateadmin.menu" -> handleAdminZoneMenu(player, action);
+                case "wardadmin.page" -> {
+                    if (requireWardAdmin(player)) {
+                        int[] pf = parsePageFilter(action.payload());
+                        openWardAdminOverview(player, pf[0], pf[1] == 1);
+                    }
+                }
+                case "wardadmin.detail" -> {
+                    if (requireWardAdmin(player)) openWardAdminDetail(player, action.payload());
+                }
+                case "wardadmin.tp" -> {
+                    if (requireWardAdmin(player)) handleWardAdminTp(player, action);
+                }
+                case "wardadmin.dissolve" -> {
+                    if (requireWardAdmin(player)) handleWardAdminDissolve(player, action);
+                }
+                case "wardadmin.openmenu" -> {
+                    if (requireWardAdmin(player)) handleWardAdminOpenMenu(player, action);
+                }
+                case "cityadmin.page" -> {
+                    if (requireCityAdmin(player)) openCityAdminOverview(player, parsePage(action.payload()));
+                }
+                case "cityadmin.detail" -> {
+                    if (requireCityAdmin(player)) openCityAdminDetail(player, action.payload());
+                }
+                case "cityadmin.delete" -> {
+                    if (requireCityAdmin(player)) handleCityAdminDelete(player, action);
+                }
+                case "cityadmin.openmenu" -> {
+                    if (requireCityAdmin(player)) handleCityAdminOpenMenu(player, action);
+                }
                 default -> feedback(player, dev.dreamcraft.protection.message.Messages.apply(
                         msg("menu.unknown-action", "Acción no reconocida: {action}"),
                         "action", id), NamedTextColor.RED);
@@ -405,13 +473,21 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         }
         // Single dissolution contract: region + repository + physical core +
         // tagged founder item back to the owner (inventory or drop at feet).
-        boolean refunded = wardDissolutionService != null
-                ? wardDissolutionService.dissolve(ward, player, true).refunded()
-                : legacyDissolve(ward);
+        boolean refunded;
+        boolean coreBlockMissing = false;
+        if (wardDissolutionService != null) {
+            var result = wardDissolutionService.dissolve(ward, player, true);
+            refunded = result.refunded();
+            coreBlockMissing = !result.coreBlockRemoved();
+        } else {
+            refunded = legacyDissolve(ward);
+        }
         player.closeInventory();
         feedback(player, msg("menu.ward.disbanded", "Ward disuelto.")
                 + (refunded ? msg("menu.ward.disbanded-refund",
-                        " Tu Núcleo volvió a tu inventario.") : ""), NamedTextColor.GREEN);
+                        " Tu Núcleo volvió a tu inventario.") : "")
+                + (!refunded && coreBlockMissing ? msg("menu.ward.disbanded-no-core-block",
+                        " (sin bloque físico: nada devuelto)") : ""), NamedTextColor.GREEN);
         playSuccess(player);
     }
 
@@ -608,7 +684,514 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         playSuccess(player);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Ward/City admin GUIs (stateless payload navigation) ──────────────────
+
+    private static final int ADMIN_PAGE_SIZE = 45;
+
+    /** Inline permission gate for every wardadmin.* payload action. */
+    private boolean requireWardAdmin(Player player) {
+        if (player.hasPermission("dreamcraft.ward.admin")) return true;
+        feedback(player, msg("common.no-permission", "No tienes permiso."), NamedTextColor.RED);
+        playError(player);
+        return false;
+    }
+
+    /** Inline permission gate for every cityadmin.* payload action. */
+    private boolean requireCityAdmin(Player player) {
+        if (player.hasPermission("dreamcraft.city.admin")) return true;
+        feedback(player, msg("common.no-permission", "No tienes permiso."), NamedTextColor.RED);
+        playError(player);
+        return false;
+    }
+
+    /** Payload «page:filter» → {page, filter}; tolerant to missing parts. */
+    private int[] parsePageFilter(String payload) {
+        int[] out = {0, 0};
+        if (payload == null || payload.isBlank()) return out;
+        String[] parts = payload.split(":");
+        try {
+            if (parts.length > 0) out[0] = Math.max(0, Integer.parseInt(parts[0]));
+            if (parts.length > 1) out[1] = "1".equals(parts[1]) ? 1 : 0;
+        } catch (NumberFormatException ignored) {}
+        return out;
+    }
+
+    /** Payload «page» → page (≥ 0). */
+    private int parsePage(String payload) {
+        return parsePageFilter(payload)[0];
+    }
+
+    /** Payload «<uuid>:<page>:<f>» → {wardId, page, filter}; null when malformed. */
+    private Object[] parseIdPageFilter(Player player, String payload, String lostKey) {
+        if (payload == null || payload.isBlank()) {
+            feedback(player, msg(lostKey, "Contexto de admin perdido."), NamedTextColor.RED);
+            playError(player);
+            return null;
+        }
+        String[] parts = payload.split(":");
+        int[] pf = parsePageFilter((parts.length > 1 ? parts[1] : "") + ":" + (parts.length > 2 ? parts[2] : ""));
+        try {
+            return new Object[]{UUID.fromString(parts[0]), pf[0], pf[1]};
+        } catch (IllegalArgumentException e) {
+            feedback(player, msg(lostKey, "Contexto de admin perdido."), NamedTextColor.RED);
+            playError(player);
+            return null;
+        }
+    }
+
+    /**
+     * Structural health of a Ward — pure in-memory observation: never loads
+     * chunks or worlds. MISSING on either side → orphan; CHUNK_UNLOADED /
+     * WG_INACTIVE are unknowns, not absence.
+     */
+    private WardHealth.HealthReport healthOf(Ward ward) {
+        org.bukkit.World world = Bukkit.getWorld(ward.worldName());
+        WardHealth.CoreState core;
+        if (world == null || !world.isChunkLoaded(ward.centerX() >> 4, ward.centerZ() >> 4)) {
+            core = WardHealth.CoreState.CHUNK_UNLOADED;
+        } else {
+            org.bukkit.Material material = wardCoreMaterial;
+            org.bukkit.block.Block block = world.getBlockAt(
+                    ward.centerX(), ward.centerY(), ward.centerZ());
+            core = material == null ? WardHealth.CoreState.CHUNK_UNLOADED
+                    : block.getType() == material ? WardHealth.CoreState.PRESENT
+                    : WardHealth.CoreState.MISSING;
+        }
+        WardHealth.RegionState region = !worldGuardAdapter.isAvailable()
+                ? WardHealth.RegionState.WG_INACTIVE
+                : worldGuardAdapter.regionExists(ward)
+                ? WardHealth.RegionState.PRESENT
+                : WardHealth.RegionState.MISSING;
+        return WardHealth.classify(core, region);
+    }
+
+    /** True when the ward is not confirmed-healthy (orphan OR unknown states). */
+    private boolean isSuspect(WardHealth.HealthReport report) {
+        return report.orphan()
+                || report.coreState() == WardHealth.CoreState.CHUNK_UNLOADED
+                || report.regionState() == WardHealth.RegionState.WG_INACTIVE;
+    }
+
+    /**
+     * Admin overview of EVERY registered Ward — orphaned nuclei first, then
+     * alphabetical. Stateless pagination: page/filter travel inside payloads.
+     * Layout decision: 45 ítems (slots 0-44), «Anterior» en 45, toggle
+     * «solo sospechosos» en 49, «Siguiente» en 53 cuando hay más páginas y
+     * «Cerrar» ocupa el slot restante (53 sin paginación, 51 con ella).
+     */
+    public void openWardAdminOverview(Player player, int page, boolean suspectsOnly) {
+        record Row(Ward ward, WardHealth.HealthReport health) {}
+        List<Row> rows = new ArrayList<>();
+        for (Ward ward : wardService.findAll()) {
+            var health = healthOf(ward);
+            if (suspectsOnly && !isSuspect(health)) continue;
+            rows.add(new Row(ward, health));
+        }
+        rows.sort(java.util.Comparator
+                .comparing((Row r) -> r.health().orphan()).reversed()
+                .thenComparing(r -> r.ward().name().toLowerCase(java.util.Locale.ROOT)));
+
+        int pages = Math.max(1, (rows.size() + ADMIN_PAGE_SIZE - 1) / ADMIN_PAGE_SIZE);
+        int current = Math.min(Math.max(0, page), pages - 1);
+        int from = current * ADMIN_PAGE_SIZE;
+        int to = Math.min(from + ADMIN_PAGE_SIZE, rows.size());
+
+        List<MenuItem> items = new ArrayList<>();
+        for (int i = from; i < to; i++) {
+            Row row = rows.get(i);
+            Ward ward = row.ward();
+            boolean orphan = row.health().orphan();
+            List<String> lore = wardAdminLore(ward, row.health());
+            String icon = orphan ? "icon.ward.orphan" : "icon.ward.active";
+            String name = (orphan ? "&c⚠ &f" : "&b&l") + ward.name();
+            items.add(MenuItem.button(i - from, icon, name, lore,
+                    MenuAction.of("wardadmin.detail", ward.id() + ":" + current + ":" + (suspectsOnly ? 1 : 0))));
+        }
+        String f = suspectsOnly ? "1" : "0";
+        if (current > 0) {
+            items.add(MenuItem.button(45, "icon.back", "&e« Anterior",
+                    List.of("&7Página " + current),
+                    MenuAction.of("wardadmin.page", (current - 1) + ":" + f)));
+        }
+        items.add(MenuItem.button(49, suspectsOnly ? "icon.ward.orphan" : "icon.members",
+                suspectsOnly ? "&c⚠ Solo sospechosos: &aON" : "&⚠ Solo sospechosos: &7OFF",
+                List.of("&7Alterna entre todos los Núcleos y",
+                        "&csolo huérfanos / estado desconocido"),
+                MenuAction.of("wardadmin.page", current + ":" + (suspectsOnly ? "0" : "1"))));
+        boolean hasNext = to < rows.size();
+        if (hasNext) {
+            items.add(MenuItem.button(53, "icon.back", "&eSiguiente »",
+                    List.of("&7Página " + (current + 2) + " de " + pages),
+                    MenuAction.of("wardadmin.page", (current + 1) + ":" + f)));
+            items.add(MenuItem.button(51, "icon.back", "&c&lCerrar",
+                    List.of("&7Cerrar menú"), MenuAction.of("menu.close")));
+        } else {
+            items.add(MenuItem.button(53, "icon.back", "&c&lCerrar",
+                    List.of("&7Cerrar menú"), MenuAction.of("menu.close")));
+        }
+
+        String title = CommandMessages.tr("menu.title.ward-admin", "&8{name.ward} · Panel admin")
+                + " §8(" + (current + 1) + "/" + pages + ")"
+                + (suspectsOnly ? " §8· ⚠" : "");
+        var def = new MenuDefinition("ward_admin_overview", title, 54, items);
+        menuProviderOpenLater(player, def);
+    }
+
+    /** Lore shared by the overview button and the detail header of a ward. */
+    private List<String> wardAdminLore(Ward ward, WardHealth.HealthReport health) {
+        List<String> lore = new ArrayList<>();
+        lore.add("&7Owner: &f" + CommandMessages.resolveName(ward.ownerId()));
+        lore.add("&7Fase: &b" + ward.tier() + " &7· Radio: &f" + ward.radius()
+                + " &7· Score: &f" + ward.baseScore());
+        lore.add("&7Mundo: &f" + ward.worldName() + " &7@ &f"
+                + ward.centerX() + ", " + ward.centerY() + ", " + ward.centerZ());
+        lore.add("&7Upkeep: &f" + ward.upkeepBalance() + " u");
+        if (ward.hasCityMembership()) {
+            lore.add("&7Ciudad: &f" + cityService.findById(ward.cityId())
+                    .map(City::name).orElse("?"));
+        } else {
+            lore.add("&7Ciudad: &7ninguna");
+        }
+        switch (health.regionState()) {
+            case PRESENT -> lore.add("&7Región WG: &apresente");
+            case MISSING -> lore.add("&cRegión WG: &4ausente");
+            case WG_INACTIVE -> lore.add("&eRegión WG: &7inactiva");
+        }
+        switch (health.coreState()) {
+            case PRESENT -> lore.add("&7Bloque físico: &apresente");
+            case MISSING -> lore.add("&cBloque físico: &4ausente");
+            case CHUNK_UNLOADED -> lore.add("&eBloque físico: &7chunk sin cargar");
+        }
+        if (health.orphan()) lore.add(msg("menu.wardadmin.orphan-warning",
+                "&c⚠ HUÉRFANO: revisar o disolver"));
+        return lore;
+    }
+
+    /**
+     * Detail of one ward: open its normal menu, teleport to the core or force
+     * a dissolution (clear warning in lore; closes the GUI afterwards).
+     */
+    private void openWardAdminDetail(Player player, String payload) {
+        Object[] parsed = parseIdPageFilter(player, payload, "menu.ward.context-lost");
+        if (parsed == null) return;
+        Ward ward = wardService.findById((UUID) parsed[0]).orElse(null);
+        if (ward == null) {
+            feedback(player, msg("menu.ward.context-lost", "Contexto de Ward perdido."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        int page = (Integer) parsed[1];
+        int filter = (Integer) parsed[2];
+        var health = healthOf(ward);
+
+        List<MenuItem> items = new ArrayList<>();
+        List<String> headerLore = wardAdminLore(ward, health);
+        if (ward.belowTierBlocks() > 0) {
+            headerLore.add(dev.dreamcraft.protection.message.Messages.apply(
+                    msg("menu.wardadmin.surcharge", "&6Sobrecosto: &f{blocks} bloque(s) bajo fase"),
+                    "blocks", ward.belowTierBlocks()));
+        }
+        headerLore.add("");
+        headerLore.add("&7ID: &8" + ward.id());
+        items.add(MenuItem.display(4, health.orphan() ? "icon.ward.orphan" : "icon.ward.active",
+                (health.orphan() ? "&c⚠ " : "&b&l") + ward.name(), headerLore));
+
+        items.add(MenuItem.button(11, "icon.ward.active", "&a&lAbrir menú del Núcleo",
+                List.of("&7Abre el panel normal del Núcleo",
+                        "&7(inspección completa con acciones de owner)."),
+                MenuAction.of("wardadmin.openmenu", ward.id().toString())));
+
+        items.add(MenuItem.button(13, "icon.estate.zone-tp", "&e&lTP al centro",
+                List.of("&7Teletransporta al núcleo:",
+                        "&f" + ward.worldName() + " @ " + ward.centerX()
+                                + ", " + ward.centerY() + ", " + ward.centerZ()),
+                MenuAction.of("wardadmin.tp", ward.id().toString())));
+
+        items.add(MenuItem.button(15, "icon.ward.orphan", "&4&lDISOLVER NÚCLEO",
+                List.of("&cElimina la región WG, el registro y",
+                        "&cel bloque físico del Núcleo.",
+                        "&cEl owner NO recibe el núcleo de vuelta.",
+                        "",
+                        "&4⚠ Acción irreversible — clic para ejecutar"),
+                MenuAction.of("wardadmin.dissolve", ward.id().toString())));
+
+        items.add(MenuItem.button(22, "icon.back", "&e« Volver",
+                List.of("&7Vuelve a la lista (página " + (page + 1) + ")"),
+                MenuAction.of("wardadmin.page", page + ":" + filter)));
+
+        var def = new MenuDefinition("ward_admin_detail",
+                CommandMessages.tr("menu.title.ward-admin-detail", "&8Admin · Núcleo")
+                        .replace("{name}", ward.name()), 27, items);
+        menuProviderOpenLater(player, def);
+    }
+
+    /** estateadmin.tp mirrored: scheduled close + teleport to the ward center. */
+    private void handleWardAdminTp(Player player, MenuAction action) {
+        UUID wardId;
+        try {
+            wardId = UUID.fromString(action.payload());
+        } catch (IllegalArgumentException e) {
+            feedback(player, msg("menu.ward.context-lost", "Contexto de Ward perdido."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        Ward ward = wardService.findById(wardId).orElse(null);
+        if (ward == null) {
+            feedback(player, msg("menu.ward.context-lost", "Contexto de Ward perdido."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        org.bukkit.World world = Bukkit.getWorld(ward.worldName());
+        if (world == null) {
+            feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                    msg("menu.estate.world-not-loaded", "El mundo {world} no está cargado."),
+                    "world", ward.worldName()), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        org.bukkit.Location target = new org.bukkit.Location(world,
+                ward.centerX() + 0.5, ward.centerY() + 1.0, ward.centerZ() + 0.5);
+        // Explicit TP request by an admin — loading this chunk is intentional.
+        world.getChunkAt(target).load();
+        Bukkit.getScheduler().runTask(plugin(), () -> {
+            Player online = Bukkit.getPlayer(player.getUniqueId());
+            if (online == null) return;
+            online.closeInventory();
+            online.teleport(target);
+            feedback(online, dev.dreamcraft.protection.message.Messages.apply(
+                    msg("menu.wardadmin.tp-done", "✦ Teletransporte al centro de {name}."),
+                    "name", ward.name()), NamedTextColor.AQUA);
+            playSuccess(online);
+        });
+    }
+
+    /** Forced dissolution from the GUI: system path (no founder refund). */
+    private void handleWardAdminDissolve(Player player, MenuAction action) {
+        UUID wardId;
+        try {
+            wardId = UUID.fromString(action.payload());
+        } catch (IllegalArgumentException e) {
+            feedback(player, msg("menu.ward.context-lost", "Contexto de Ward perdido."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        Ward ward = wardService.findById(wardId).orElse(null);
+        if (ward == null) {
+            feedback(player, msg("menu.ward.context-lost", "Contexto de Ward perdido."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        var result = wardDissolutionService != null
+                ? wardDissolutionService.dissolve(ward, player, false)
+                : new dev.dreamcraft.protection.service.WardDissolutionService.Result(
+                        legacyDissolve(ward), false);
+        player.closeInventory();
+        feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                msg("menu.wardadmin.dissolved", "Núcleo {name} disuelto."),
+                "name", ward.name())
+                + (result.coreBlockRemoved() ? ""
+                        : msg("menu.wardadmin.no-core-block", " (sin bloque físico)")),
+                NamedTextColor.GREEN);
+        playSuccess(player);
+    }
+
+    /** Opens the ward's normal menu through the wired opener (next tick). */
+    private void handleWardAdminOpenMenu(Player player, MenuAction action) {
+        Ward found;
+        try {
+            found = wardService.findById(UUID.fromString(action.payload())).orElse(null);
+        } catch (IllegalArgumentException e) {
+            found = null;
+        }
+        if (found == null) {
+            feedback(player, msg("menu.ward.context-lost", "Contexto de Ward perdido."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        final Ward ward = found;
+        var opener = wardMenuOpener;
+        if (opener == null) {
+            feedback(player, msg("menu.wardadmin.menu-unavailable",
+                    "El menú del Núcleo no está disponible."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        Bukkit.getScheduler().runTask(plugin(), () -> {
+            Player online = Bukkit.getPlayer(player.getUniqueId());
+            if (online != null) opener.accept(online, ward);
+        });
+    }
+
+    /**
+     * Admin overview of EVERY city — alphabetical, same stateless pagination
+     * as the ward GUI (sin toggle de filtro: las ciudades no tienen salud).
+     */
+    public void openCityAdminOverview(Player player, int page) {
+        List<City> cities = cityService.findAll().stream()
+                .sorted(java.util.Comparator.comparing(c -> c.name().toLowerCase(java.util.Locale.ROOT)))
+                .toList();
+        int pages = Math.max(1, (cities.size() + ADMIN_PAGE_SIZE - 1) / ADMIN_PAGE_SIZE);
+        int current = Math.min(Math.max(0, page), pages - 1);
+        int from = current * ADMIN_PAGE_SIZE;
+        int to = Math.min(from + ADMIN_PAGE_SIZE, cities.size());
+
+        List<MenuItem> items = new ArrayList<>();
+        for (int i = from; i < to; i++) {
+            City city = cities.get(i);
+            List<String> lore = cityAdminLore(city);
+            items.add(MenuItem.button(i - from, "icon.city.overview", "&6&l" + city.name(), lore,
+                    MenuAction.of("cityadmin.detail", city.id() + ":" + current)));
+        }
+        if (current > 0) {
+            items.add(MenuItem.button(45, "icon.back", "&e« Anterior",
+                    List.of("&7Página " + current),
+                    MenuAction.of("cityadmin.page", String.valueOf(current - 1))));
+        }
+        boolean hasNext = to < cities.size();
+        if (hasNext) {
+            items.add(MenuItem.button(53, "icon.back", "&eSiguiente »",
+                    List.of("&7Página " + (current + 2) + " de " + pages),
+                    MenuAction.of("cityadmin.page", String.valueOf(current + 1))));
+            items.add(MenuItem.button(51, "icon.back", "&c&lCerrar",
+                    List.of("&7Cerrar menú"), MenuAction.of("menu.close")));
+        } else {
+            items.add(MenuItem.button(53, "icon.back", "&c&lCerrar",
+                    List.of("&7Cerrar menú"), MenuAction.of("menu.close")));
+        }
+
+        String title = CommandMessages.tr("menu.title.city-admin", "&8{name.city} · Panel admin")
+                + " §8(" + (current + 1) + "/" + pages + ")";
+        var def = new MenuDefinition("city_admin_overview", title, 54, items);
+        menuProviderOpenLater(player, def);
+    }
+
+    /** Lore shared by the city overview button and the detail header. */
+    private List<String> cityAdminLore(City city) {
+        List<String> lore = new ArrayList<>();
+        lore.add("&7Gobernador: &f" + CommandMessages.resolveName(city.governorId()));
+        lore.add("&7Miembros: &f" + city.members().size());
+        if (treasuryStore != null) {
+            lore.add("&7Tesoro: &f" + treasuryStore.computeValue(treasuryStore.get(city.id())) + " u");
+        } else {
+            lore.add("&7Tesoro: &f" + city.treasury() + " u");
+        }
+        lore.add("&7Núcleos anexados: &f" + wardService.findByCity(city.id()).size());
+        if (cityLevelService != null) {
+            var lvl = cityLevelService.statusOf(city);
+            lore.add("&7Nivel: &b" + lvl.levelName()
+                    + (lvl.maxed() ? " &8(máximo)" : " &8→ " + lvl.nextLevelName()));
+        }
+        return lore;
+    }
+
+    /** Detail of one city: open its menu or force-delete it (sin TP). */
+    private void openCityAdminDetail(Player player, String payload) {
+        Object[] parsed = parseIdPageFilter(player, payload, "menu.city.context-lost");
+        if (parsed == null) return;
+        City city = cityService.findById((UUID) parsed[0]).orElse(null);
+        if (city == null) {
+            feedback(player, msg("menu.city.context-lost", "Contexto de Ciudad perdido."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        int page = (Integer) parsed[1];
+
+        List<MenuItem> items = new ArrayList<>();
+        List<String> headerLore = cityAdminLore(city);
+        headerLore.add("");
+        headerLore.add("&7ID: &8" + city.id());
+        items.add(MenuItem.display(4, "icon.city.admin", "&6&l" + city.name(), headerLore));
+
+        items.add(MenuItem.button(11, "icon.city.overview", "&a&lAbrir menú de ciudad",
+                List.of("&7Abre el panel normal de la Matriz."),
+                MenuAction.of("cityadmin.openmenu", city.id().toString())));
+
+        items.add(MenuItem.button(13, "icon.ward.orphan", "&4&lELIMINAR CIUDAD",
+                List.of("&cDesanexa TODOS sus Núcleos (pierden el",
+                        "&cacceso de los residentes en sus regiones),",
+                        "&celimina el registro de la Matriz.",
+                        "",
+                        "&4⚠ Acción irreversible — clic para ejecutar"),
+                MenuAction.of("cityadmin.delete", city.id().toString())));
+
+        items.add(MenuItem.button(22, "icon.back", "&e« Volver",
+                List.of("&7Vuelve a la lista (página " + (page + 1) + ")"),
+                MenuAction.of("cityadmin.page", String.valueOf(page))));
+
+        var def = new MenuDefinition("city_admin_detail",
+                CommandMessages.tr("menu.title.city-admin-detail", "&8Admin · Ciudad")
+                        .replace("{name}", city.name()), 27, items);
+        menuProviderOpenLater(player, def);
+    }
+
+    /** Opens the city's normal menu through the wired opener (next tick). */
+    private void handleCityAdminOpenMenu(Player player, MenuAction action) {
+        City found;
+        try {
+            found = cityService.findById(UUID.fromString(action.payload())).orElse(null);
+        } catch (IllegalArgumentException e) {
+            found = null;
+        }
+        if (found == null) {
+            feedback(player, msg("menu.city.context-lost", "Contexto de Ciudad perdido."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        final City city = found;
+        var opener = cityMenuOpener;
+        if (opener == null) {
+            feedback(player, msg("menu.cityadmin.menu-unavailable",
+                    "El menú de la Matriz no está disponible."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        Bukkit.getScheduler().runTask(plugin(), () -> {
+            Player online = Bukkit.getPlayer(player.getUniqueId());
+            if (online != null) opener.accept(online, city);
+        });
+    }
+
+    /** Admin variant of the governor delete flow: disannex + project + delete. */
+    private void handleCityAdminDelete(Player player, MenuAction action) {
+        City city;
+        try {
+            city = cityService.findById(UUID.fromString(action.payload())).orElse(null);
+        } catch (IllegalArgumentException e) {
+            city = null;
+        }
+        if (city == null) {
+            feedback(player, msg("menu.city.context-lost", "Contexto de Ciudad perdido."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        deleteCityAsAdmin(player, city);
+    }
+
+    /** Shared teardown: disassociate wards, collapse region members, delete. */
+    private void deleteCityAsAdmin(Player player, City city) {
+        for (Ward ward : wardService.findByCity(city.id())) {
+            wardService.setCityMembership(ward, null);
+            dev.dreamcraft.protection.service.WardAccessSync.project(ward, cityService, worldGuardAdapter);
+        }
+        cityService.delete(city);
+        player.closeInventory();
+        feedback(player, dev.dreamcraft.protection.message.Messages.apply(
+                msg("menu.city.deleted", "Ciudad {city} eliminada."),
+                "city", city.name()), NamedTextColor.GREEN);
+        playSuccess(player);
+    }
+
+    /** Opens a built admin GUI next tick (opening inside a click event causes ghost items). */
+    private void menuProviderOpenLater(Player player, MenuDefinition def) {
+        Bukkit.getScheduler().runTask(plugin(), () -> {
+            Player online = Bukkit.getPlayer(player.getUniqueId());
+            if (online == null || adminMenuProvider == null) return;
+            MenuContext ctx = new MenuContext(online.getUniqueId(), online.getName(), java.util.Map.of());
+            adminMenuProvider.open(def, ctx);
+        });
+    }
+
+
 
     /**
      * Admin-only: teleports the viewer to the anchored area of the adventure

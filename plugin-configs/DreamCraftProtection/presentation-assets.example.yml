@@ -13,8 +13,10 @@ icons:
   ward.icon:     { material: SHIELD,              cmd: 41101, fallback: SHIELD }
   ward.inactive: { material: CRACKED_STONE_BRICKS, cmd: 41102 }
   ward.tier:     { material: NETHER_STAR,         cmd: 41103, fallback: BEACON }
+  ward.orphan:   { material: BARRIER,             cmd: 41106 }
   city.icon:     { material: BEACON,              cmd: 41201, fallback: BEACON }
   city.treasury: { material: GOLD_BLOCK,          cmd: 41202 }
+  city.admin:    { material: COMMAND_BLOCK,       cmd: 41204 }
   estate.icon:   { material: BOOK,                cmd: 41301, fallback: BOOK }
   estate.dragon: { material: DRAGON_HEAD,         cmd: 41304 }
 

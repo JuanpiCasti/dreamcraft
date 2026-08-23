@@ -34,6 +34,15 @@ public interface WorldGuardAdapter {
     void removeRegion(Ward ward);
 
     /**
+     * Checks in memory whether the WorldGuard region associated with the Ward
+     * still exists in the region registry. Never loads chunks or worlds.
+     *
+     * @return true when the region is present; false when missing, when the
+     *         ward has no registered region ID, or when WG is unavailable
+     */
+    boolean regionExists(Ward ward);
+
+    /**
      * Replaces the Ward region's entire WG member list with the given set.
      * This is the single write path for ward region membership: the domain
      * layer computes the expected members (owner + annexed city residents)

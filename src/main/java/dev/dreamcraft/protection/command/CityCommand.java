@@ -54,6 +54,13 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
     private final dev.dreamcraft.protection.config.CommandOptions options;
     /** Single source of truth for dispatch + tab completion. */
     private final CommandRegistry registry;
+    /** Admin cities GUI opener (/city admin menu); wired by the plugin to the dispatcher. */
+    private java.util.function.Consumer<Player> adminMenuOpener = player -> { };
+
+    /** Wires the admin cities GUI opener (stateless overview at page 0). */
+    public void setAdminMenuOpener(java.util.function.Consumer<Player> opener) {
+        this.adminMenuOpener = opener != null ? opener : player -> { };
+    }
 
     public CityCommand(CityService cityService, WardService wardService, MenuProvider menuProvider) {
         this(cityService, wardService, menuProvider, null);
@@ -114,14 +121,15 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
                 .register(SubcommandSpec.of("transfer", this::handleTransfer)
                         .withAliases(options.aliases("city", "transfer")))
                 .register(SubcommandSpec.of("delete", this::handleDelete)
-                        .withAliases(options.aliases("city", "delete")));
+                        .withAliases(options.aliases("city", "delete")))
+                .register(SubcommandSpec.admin("admin", this::handleAdmin)
+                        .withAliases(options.aliases("city", "admin")));
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(tr("common.players-only", "§cEste comando solo puede ser usado por jugadores."));
-            return true;
+            return handleConsole(sender, args);
         }
         if (!player.hasPermission(USE_PERM)) {
             error(player, CITY_PREFIX, tr("common.no-permission", "No tienes permiso para usar este comando."));
@@ -149,6 +157,82 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
 
     // ── Subcommand handlers ────────────────────────────────────────────────────
 
+    /**
+     * Console/RCON surface (SSH-friendly): only {@code admin delete} is
+     * reachable — a location-free forced city deletion by exact name.
+     * Everything else keeps the players-only contract.
+     */
+    private boolean handleConsole(CommandSender sender, String[] args) {
+        boolean whitelisted = args.length >= 2
+                && args[0].equalsIgnoreCase("admin")
+                && args[1].equalsIgnoreCase("delete");
+        if (!whitelisted) {
+            error(sender, CITY_PREFIX, tr("common.players-only", "§cEste comando solo puede ser usado por jugadores."));
+            return true;
+        }
+        if (!sender.hasPermission(ADMIN_PERM)) {
+            error(sender, CITY_PREFIX, tr("common.no-permission", "No tienes permiso para usar este comando."));
+            return true;
+        }
+        String raw = args.length >= 3
+                ? String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length)).trim()
+                : null;
+        return adminDelete(sender, raw);
+    }
+
+    /** /city admin — staff surface: overview GUI and forced deletion. */
+    private boolean handleAdmin(Player player, String[] args) {
+        if (!player.hasPermission(ADMIN_PERM)) {
+            error(player, CITY_PREFIX, tr("common.no-permission-action", "&cNo tienes permiso para este comando."));
+            return true;
+        }
+        if (args.length < 2) {
+            error(player, CITY_PREFIX, "Uso: " + CommandNames.cmd("city",
+                    "admin menu &8|&f admin delete <nombre>"));
+            return true;
+        }
+        return switch (args[1].toLowerCase(Locale.ROOT)) {
+            case "menu" -> {
+                adminMenuOpener.accept(player);
+                yield true;
+            }
+            case "delete" -> adminDelete(player, args.length >= 3
+                    ? String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length)).trim()
+                    : null);
+            default -> {
+                error(player, CITY_PREFIX, "Subcomando admin desconocido: " + args[1]);
+                yield true;
+            }
+        };
+    }
+
+    /** Resolves a city by EXACT name match (case-insensitive). */
+    private City findCityByExactName(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        return cityService.findAll().stream()
+                .filter(c -> c.name().equalsIgnoreCase(raw))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Forced deletion shared by the player and console admin routes: mirrors
+     * the governor delete flow (disannex wards → re-project regions → delete).
+     */
+    private boolean adminDelete(CommandSender feedback, String raw) {
+        if (raw == null || raw.isBlank()) {
+            error(feedback, CITY_PREFIX, CommandNames.cmd("city", "admin delete <nombre>"));
+            return true;
+        }
+        City city = findCityByExactName(raw);
+        if (city == null) {
+            error(feedback, CITY_PREFIX, "Ciudad '" + raw + "' no encontrada.");
+            return true;
+        }
+        deleteCityAndDisannex(city);
+        ok(feedback, CITY_PREFIX, "Ciudad " + city.name() + " eliminada por admin.");
+        return true;
+    }
     private boolean handleCreate(Player player, String[] args) {
         if (args.length < 2) {
             error(player, CITY_PREFIX, CommandNames.cmd("city", "create <nombre>"));
@@ -444,15 +528,22 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
             error(player, CITY_PREFIX, "Solo el Gobernador puede eliminar la ciudad.");
             return true;
         }
-        // Disassociate all wards from this city, then re-project: their region
-        // member lists collapse to empty (city-granted access fully revoked)
+        deleteCityAndDisannex(city);
+        ok(player, CITY_PREFIX, "Ciudad " + city.name() + " eliminada.");
+        return true;
+    }
+
+    /**
+     * Shared city teardown (governor delete + admin variant): disassociate all
+     * wards from the city, then re-project — their region member lists collapse
+     * to empty (city-granted access fully revoked) — and delete the aggregate.
+     */
+    private void deleteCityAndDisannex(City city) {
         for (Ward ward : wardService.findByCity(city.id())) {
             wardService.setCityMembership(ward, null);
             dev.dreamcraft.protection.service.WardAccessSync.project(ward, cityService, worldGuardAdapter);
         }
         cityService.delete(city);
-        ok(player, CITY_PREFIX, "Ciudad " + city.name() + " eliminada.");
-        return true;
     }
 
     // ── Menu opening ───────────────────────────────────────────────────────────
@@ -508,6 +599,9 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
 
     private void sendHelp(Player player) {
         helpBlock(player, "help.city");
+        if (player.hasPermission(ADMIN_PERM)) {
+            helpAdminSection(player, "help.city.admin");
+        }
     }
 
     // ── Tab completion ─────────────────────────────────────────────────────────
@@ -515,12 +609,24 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();
+        boolean admin = sender.hasPermission(ADMIN_PERM);
         if (args.length == 1) {
-            filter(registry.completionTokens(args[0]), args[0]).forEach(completions::add);
+            // Admin-only subcommands stay hidden from non-admin senders
+            filter(registry.completionTokens(args[0], spec -> !spec.isAdminOnly() || admin), args[0])
+                    .forEach(completions::add);
             return completions;
         }
         SubcommandSpec resolved = registry.resolve(args[0]);
         String sub = (resolved != null ? resolved.name() : args[0]).toLowerCase(Locale.ROOT);
+        if ("admin".equals(sub)) {
+            if (!admin) return completions;
+            if (args.length == 2) {
+                filter(List.of("menu", "delete"), args[1]).forEach(completions::add);
+            } else if (args.length == 3 && "delete".equalsIgnoreCase(args[1])) {
+                filter(cityNames(), args[2]).forEach(completions::add);
+            }
+            return completions;
+        }
         if (args.length == 2) {
             switch (sub) {
                 case "invite", "kick", "transfer" -> filter(onlinePlayers(args[1]), args[1]).forEach(completions::add);

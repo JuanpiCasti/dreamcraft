@@ -524,7 +524,9 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
                 ? dissolutionService.dissolve(ward, player, owner)
                 : legacyDissolve(ward);
         ok(player, WARD_PREFIX, "Ward §f" + ward.name() + "§a disuelto. El área ya no está protegida."
-                + (result.refunded() ? " §7(Tu Núcleo volvió a tu inventario.)" : ""));
+                + (result.refunded() ? " §7(Tu Núcleo volvió a tu inventario.)"
+                        : owner && !result.coreBlockRemoved()
+                                ? " §7(sin bloque físico: nada devuelto)" : ""));
         return true;
     }
 

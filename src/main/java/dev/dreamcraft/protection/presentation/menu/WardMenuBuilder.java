@@ -84,7 +84,10 @@ public final class WardMenuBuilder {
                 scoreLore.add("&8- &7Radio de protección: &f" + preview.radiusAfter() + " bloques");
                 scoreLore.add("&8- &7Upkeep: &f" + preview.upkeepPerInterval() + " unidades/intervalo");
                 scoreLore.add("&8- &7Score: &f+" + preview.scoreGain());
-                if (!preview.costs().isEmpty()) {
+                if (!preview.crossingTier()) {
+                    scoreLore.add("");
+                    scoreLore.add("&7Costo: &fgratis (crecimiento)");
+                } else if (!preview.costs().isEmpty()) {
                     scoreLore.add("");
                     scoreLore.add("&7Costo (se descuenta al mejorar):");
                     for (var cost : preview.costs()) {

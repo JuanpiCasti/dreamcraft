@@ -106,6 +106,12 @@ ward:
     CONDUIT: advanced
     RESPAWN_ANCHOR: advanced
 
+  # Sobrecosto de upkeep por bloque gated colocado con tier inferior al
+  # requerido. En vez de denegar la colocación, cada unidad suma unidades de
+  # mantenimiento RECURRENTES por intervalo (se acumula por bloque colocado;
+  # romper el bloque reduce el contador). El ítem fundador está exento.
+  below-tier-surcharge-units: 2
+
 # ── Instancias de aventura para Estates (End / Trial Chamber) ───────────────
 # Los estates de tipo END obtienen un mundo End PRIVADO por grupo:
 #   - El portal del área del estate solo acepta ojos de miembros del estate.

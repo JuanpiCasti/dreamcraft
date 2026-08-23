@@ -30,7 +30,7 @@ sync:
   sintonized: "&aFrecuencia compartida: los constructores ya pueden edificar y usar contenedores."
   desintonized: "&eFrecuencia cerrada: revocado el acceso público de construcción y contenedores."
   tp-done: "✦ Sintonización completa: llegada al núcleo."
-  nucleus-not-found: "&cNúcleo no encontrado. Usa <id> o el nombre de un jugador online."
+  nucleus-not-found: "&cNúcleo no encontrado. Usa <id> o el nombre exacto del Núcleo."
 
 # Primer núcleo gratis (/sync reclamar) — una vez por jugador
 ward:
@@ -66,6 +66,11 @@ help:
       - "&f/sync city [annex|leave]  &7— Federarse a una Matriz (ciudad)"
       - "&f/sync delete [id]         &7— Apaga el núcleo"
       - "&8Staff: /{cmd.ward} abrir <id|jugador> · /{cmd.ward} dar - /{cmd.protection} recargar"
+    admin:
+      header: "&c&lAdmin:"
+      lines:
+        - "&f/sync admin menu              &7— Panel admin de todos los Núcleos"
+        - "&f/{cmd.ward} admin delete <id|nombre> &7— Disolver por fuerza &8(consola ok)"
   city:
     header: "&6&lMatriz de Sincronía"
     subtitle: "&7Gestiona tu Red — une núcleos bajo una frecuencia común. &f{cmd.ward} city annex"
@@ -82,6 +87,11 @@ help:
       - "&f/{cmd.city} transfer <jugador>  &7— Transferir gobernanza"
       - "&f/{cmd.city} delete              &7— Eliminar la Matriz"
       - "&7Roles: GOVERNOR, COUNCIL, CITIZEN, ALLY"
+    admin:
+      header: "&c&lAdmin:"
+      lines:
+        - "&f/{cmd.city} admin menu           &7— Panel admin de todas las Matrices"
+        - "&f/{cmd.city} admin delete <nombre> &7— Eliminar por fuerza &8(consola ok)"
   estate:
     header: "&d&lNexo de Aventura"
     subtitle: "&7Zonas de expedición grupal. &f/{cmd.estate} &7≡ &f{cmd.ward} grupo"
@@ -129,6 +139,19 @@ menu:
   title.estate-lobby: "&8Nexo &f{name}"
   title.estate-instance: "&8Instancia &f{name}"
   title.estate-admin-zones: "&8Zonas de aventura (admin)"
+  # Paneles admin de Núcleos y Matrices (/{cmd.ward} admin menu · /{cmd.city} admin menu)
+  title.ward-admin: "&8Núcleos · Panel admin"
+  title.city-admin: "&8Matrices · Panel admin"
+  title.ward-admin-detail: "&8Admin · {name}"
+  title.city-admin-detail: "&8Admin · {name}"
+  wardadmin.dissolved: "Núcleo {name} apagado."
+  wardadmin.no-core-block: " (sin bloque físico)"
+  wardadmin.tp-done: "✦ Sintonización completa: centro del núcleo."
+  wardadmin.menu-unavailable: "El menú del Núcleo no está disponible."
+  cityadmin.menu-unavailable: "El menú de la Matriz no está disponible."
+  # Estados huérfano y avisos de sobrecosto del panel admin
+  wardadmin.orphan-warning: "&c⚠ HUÉRFANO: revisar o apagar"
+  wardadmin.surcharge: "&6Sobrecosto: &f{blocks} bloque(s) fuera de fase"
   # Zonas persistentes creadas por admin — no se unen por ID/menú
   estate.admin-zone: "Esta zona la administra el servidor: creá tu grupo con /{cmd.estate} discover"
   unknown-action: "&cAcción no reconocida: {action}"

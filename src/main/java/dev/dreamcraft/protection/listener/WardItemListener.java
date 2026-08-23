@@ -1,6 +1,7 @@
 package dev.dreamcraft.protection.listener;
 
 import dev.dreamcraft.protection.command.CommandMessages;
+import dev.dreamcraft.protection.config.CommandNames;
 import dev.dreamcraft.protection.domain.model.OwnerType;
 import dev.dreamcraft.protection.domain.model.Ward;
 import dev.dreamcraft.protection.domain.service.WardService;
@@ -30,46 +31,66 @@ import java.util.function.BiConsumer;
  *       on the placed block.</li>
  *   <li>Breaking the center block dissolves the Ward through the shared
  *       {@link dev.dreamcraft.protection.service.WardDissolutionService}
- *       (owner gets the tagged core back; admin teardown returns nothing).
+ *       (owner gets the tagged core back — only when the physical block was
+ *       actually removed; admin teardown returns nothing).
  *       The break event is cancelled so the vanilla generic drop never appears.</li>
- *   <li>Right-clicking the center block opens the Ward menu (admins/VIPs only,
- *       same restriction as {@code /ward menu}).</li>
+ *   <li>Right-clicking the center block opens the Ward menu. Physical access
+ *       rule: the viewer is the OWNER (always, default users included) or an
+ *       admin ({@code dreamcraft.ward.admin}) or a VIP
+ *       ({@code dreamcraft.ward.menu}). The remote {@code /ward menu} keeps its
+ *       own VIP/admin-only gate — see {@code WardCommand.canOpenWardMenu}.</li>
  * </ul>
  */
 public final class WardItemListener implements Listener {
+
+    private static final String ADMIN_PERM = "dreamcraft.ward.admin";
+    private static final String MENU_PERM = "dreamcraft.ward.menu";
 
     private final WardItems wardItems;
     private final WardService wardService;
     private final WorldGuardAdapter worldGuardAdapter;
     private final BiConsumer<Player, Ward> menuOpener;
-    private final java.util.function.Predicate<Player> menuAccess;
     private final Runnable saveAction;
     /** Single dissolution contract — same teardown as /ward delete and the menu. */
     private final dev.dreamcraft.protection.service.WardDissolutionService dissolutionService;
+    /**
+     * Backfill hook run right after a new Ward is founded: counts pre-existing
+     * below-tier gated blocks into the surcharge counter (no-op by default).
+     */
+    private final java.util.function.Consumer<Ward> foundingSeeder;
 
     public WardItemListener(WardItems wardItems,
                             WardService wardService,
                             WorldGuardAdapter worldGuardAdapter,
                             BiConsumer<Player, Ward> menuOpener,
-                            java.util.function.Predicate<Player> menuAccess,
                             Runnable saveAction) {
-        this(wardItems, wardService, worldGuardAdapter, menuOpener, menuAccess, saveAction, null);
+        this(wardItems, wardService, worldGuardAdapter, menuOpener, saveAction, null);
     }
 
     public WardItemListener(WardItems wardItems,
                             WardService wardService,
                             WorldGuardAdapter worldGuardAdapter,
                             BiConsumer<Player, Ward> menuOpener,
-                            java.util.function.Predicate<Player> menuAccess,
                             Runnable saveAction,
                             dev.dreamcraft.protection.service.WardDissolutionService dissolutionService) {
+        this(wardItems, wardService, worldGuardAdapter, menuOpener, saveAction,
+                dissolutionService, null);
+    }
+
+    public WardItemListener(WardItems wardItems,
+                            WardService wardService,
+                            WorldGuardAdapter worldGuardAdapter,
+                            BiConsumer<Player, Ward> menuOpener,
+                            Runnable saveAction,
+                            dev.dreamcraft.protection.service.WardDissolutionService dissolutionService,
+                            java.util.function.Consumer<Ward> foundingSeeder) {
         this.wardItems = wardItems;
         this.wardService = wardService;
         this.worldGuardAdapter = worldGuardAdapter;
         this.menuOpener = menuOpener;
-        this.menuAccess = menuAccess;
         this.saveAction = saveAction;
         this.dissolutionService = dissolutionService;
+        this.foundingSeeder = foundingSeeder != null ? foundingSeeder : ward -> { };
     }
 
     // ── Block place ───────────────────────────────────────────────────────────
@@ -83,10 +104,18 @@ public final class WardItemListener implements Listener {
         String world = block.getWorld().getName();
 
         // No founding a Ward inside another Ward's radius
-        if (wardService.findAtLocation(world, block.getX(), block.getZ()).isPresent()) {
+        Optional<Ward> occupied = wardService.findAtLocation(world, block.getX(), block.getZ());
+        if (occupied.isPresent()) {
             event.setCancelled(true);
-            player.sendMessage(CommandMessages.prefixed("ward",
-                    "Esta área ya pertenece a otro Núcleo.", NamedTextColor.RED));
+            if (occupied.get().ownerId().equals(player.getUniqueId())) {
+                player.sendMessage(CommandMessages.prefixed("ward",
+                        "Tu propio Núcleo ya cubre esta área §7(/" + CommandNames.root("ward")
+                                + " delete lo retira; click derecho en él abre su menú).",
+                        NamedTextColor.RED));
+            } else {
+                player.sendMessage(CommandMessages.prefixed("ward",
+                        "Esta área ya pertenece a otro Núcleo.", NamedTextColor.RED));
+            }
             return;
         }
 
@@ -103,6 +132,9 @@ public final class WardItemListener implements Listener {
             wardService.assignWorldGuardRegion(ward, regionId);
         }
         saveAction.run();
+        // Backfill: gated blocks that predate this core enter the surcharge
+        // counter right away (see WardBlockGateListener#seedExistingBelowTierBlocks).
+        foundingSeeder.accept(ward);
         player.sendMessage(CommandMessages.prefixed("ward",
                 "Núcleo §f" + ward.name() + "§a despertado (fase " + ward.tier()
                         + ", radio " + ward.radius() + ").",
@@ -135,7 +167,9 @@ public final class WardItemListener implements Listener {
         if (dissolutionService == null) saveAction.run();
         player.sendMessage(CommandMessages.prefixed("ward",
                 "Núcleo §f" + ward.name() + "§a desactivado. Área liberada."
-                        + (result.refunded() ? " §7(Tu Núcleo volvió a tu inventario.)" : ""),
+                        + (result.refunded() ? " §7(Tu Núcleo volvió a tu inventario.)"
+                                : owner && !result.coreBlockRemoved()
+                                        ? " §7(sin bloque físico: nada devuelto)" : ""),
                 NamedTextColor.GREEN));
     }
 
@@ -160,11 +194,18 @@ public final class WardItemListener implements Listener {
 
         event.setCancelled(true);
         Player player = event.getPlayer();
-        if (!menuAccess.test(player)) {
+        Ward ward = center.get();
+        // Physical access: the OWNER always opens their own core; admins and
+        // VIPs may open anyone's. Remote /ward menu keeps its VIP/admin gate.
+        boolean allowed = ward.ownerId().equals(player.getUniqueId())
+                || player.hasPermission(ADMIN_PERM)
+                || player.hasPermission(MENU_PERM);
+        if (!allowed) {
             player.sendMessage(CommandMessages.prefixed("ward",
-                    "El menú del Núcleo está reservado a admins y VIPs.", NamedTextColor.RED));
+                    "El menú de este Núcleo está reservado a su dueño, admins y VIPs.",
+                    NamedTextColor.RED));
             return;
         }
-        menuOpener.accept(player, center.get());
+        menuOpener.accept(player, ward);
     }
 }

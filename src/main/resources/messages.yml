@@ -32,7 +32,7 @@ sync:
   sintonized: "&aAcceso compartido habilitado: construcción y contenedores públicos."
   desintonized: "&eAcceso público revocado: construcción y contenedores cerrados."
   tp-done: "Teletransporte al núcleo completado."
-  nucleus-not-found: "&c{name.ward} no encontrado. Usa <id> o el nombre de un jugador online."
+  nucleus-not-found: "&c{name.ward} no encontrado. Usa <id> o el nombre exacto del Núcleo."
 
 # Primer núcleo gratis (/{cmd.ward} reclamar) — una vez por jugador
 ward:
@@ -61,6 +61,11 @@ help:
       - "&f/{cmd.ward} city [annex|leave] &7— Anexar/desvincular de ciudad"
       - "&f/{cmd.ward} delete [id]       &7— Eliminar Ward"
       - "&8Staff: /{cmd.ward} abrir <id|jugador> · /{cmd.ward} give"
+    admin:
+      header: "&c&lAdmin:"
+      lines:
+        - "&f/{cmd.ward} admin menu           &7— Panel admin de todos los Núcleos"
+        - "&f/{cmd.ward} admin delete <id|nombre> &7— Disolver por fuerza &8(consola ok)"
   city:
     header: "&6&lDreamCraft {name.city}"
     subtitle: "&7Gestiona tu ciudad. Raíz actual: &f/{cmd.city}"
@@ -77,6 +82,11 @@ help:
       - "&f/{cmd.city} transfer <jugador>  &7— Transferir gobernanza"
       - "&f/{cmd.city} delete              &7— Eliminar ciudad"
       - "&7Roles: GOVERNOR, COUNCIL, CITIZEN, ALLY"
+    admin:
+      header: "&c&lAdmin:"
+      lines:
+        - "&f/{cmd.city} admin menu           &7— Panel admin de todas las ciudades"
+        - "&f/{cmd.city} admin delete <nombre> &7— Eliminar por fuerza &8(consola ok)"
   estate:
     header: "&d&lDreamCraft {name.estate}"
     subtitle: "&7Zonas de expedición grupal. Raíz actual: &f/{cmd.estate}"
@@ -150,6 +160,21 @@ menu:
   title.estate-lobby: "&8{name.estate} &f{name}"
   title.estate-instance: "&8Instancia &f{name}"
   title.estate-admin-zones: "&8Zonas de aventura (admin)"
+  # Paneles admin de Núcleos y Ciudades (/{cmd.ward} admin menu · /{cmd.city} admin menu)
+  title.ward-admin: "&8{name.ward} · Panel admin"
+  title.city-admin: "&8{name.city} · Panel admin"
+  title.ward-admin-detail: "&8Admin · {name}"
+  title.city-admin-detail: "&8Admin · {name}"
+  wardadmin.dissolved: "Núcleo {name} disuelto."
+  wardadmin.no-core-block: " (sin bloque físico)"
+  wardadmin.tp-done: "✦ Teletransporte al centro de {name}."
+  wardadmin.menu-unavailable: "El menú del Núcleo no está disponible."
+  cityadmin.menu-unavailable: "El menú de la ciudad no está disponible."
+  # Estados huérfano y avisos de sobrecosto del panel admin
+  wardadmin.orphan-warning: "&c⚠ HUÉRFANO: revisar o disolver"
+  wardadmin.surcharge: "&6Sobrecosto: &f{blocks} bloque(s) bajo fase"
+  ward.context-lost: "Contexto de Núcleo perdido."
+  city.context-lost: "Contexto de Ciudad perdido."
   # Zonas persistentes creadas por admin — no se unen por ID/menú
   estate.admin-zone: "Esta zona la administra el servidor: creá tu grupo con /{cmd.estate} discover"
   # Feedback de los menús (MenuActionDispatcher) — acción bar / chat.

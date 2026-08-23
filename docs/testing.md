@@ -48,9 +48,33 @@ API de Bukkit, nunca de clases de DreamCraftProtection.
 
 - Flujos que exigen una entidad Player real (abrir/clickear menús, colocar
   bloques) no son simulables desde API pura; quedan en verificación manual o
-  fase futura (cliente headless).
+  fase futura (cliente headless). En particular, los **menús gráficos de
+  administración** (`/ward|sync admin menu`, `/city|matriz admin menu`) están
+  fuera del alcance v1: el arnés puede despachar la apertura, pero no sus
+  clics.
+- Lo que sí queda cubierto black-box de esa superficie: los **tokens de
+  tab-complete admin** de `/sync` y `/matriz` — 2 escenarios ASSERTED nuevos
+  (`tab-completer-sync-admin-por-permiso`,
+  `tab-completer-matriz-admin-por-permiso`) verifican que el token `admin` de
+  nivel 1 solo aparece para un sender con el nodo correspondiente
+  (`dreamcraft.ward.admin` / `dreamcraft.city.admin`) y permanece oculto sin él.
 - La salida de comandos externos (LuckPerms, etc.) va al log del server, no al
   reporte.
+
+## Tests unitarios de decisiones puras (capa A)
+
+Las reglas nuevas del sistema de protección viven en helpers estáticos sin
+Bukkit (`src/test/java`), cubiertos por tests unitarios:
+
+| Decisión bajo test | Contrato |
+|---|---|
+| `WardBlockGateListener.shouldChargeSurcharge` | sobrecosto solo para ítem NO fundador con el tier del Ward por debajo del requerido; tiers desconocidos (`-1`) no cobran |
+| `WardDissolutionService.shouldRefund` | tabla de verdad: refund ⇔ owner disuelve SU ward ∧ `coreRemoved == true`; admin ajeno o bloque ausente ⇒ nada |
+| `WardHealth.classify` | huérfano ⇔ core `MISSING` ∨ región `MISSING`; `CHUNK_UNLOADED`/`WG_INACTIVE` son desconocido, nunca ausencia |
+| `quoteNext` / `costsForCrossing` (WardUpgradeService) | cruce de tramo: costo solo cuando `newScore >= next.minBaseScore()`; mejoras intermedias gratis |
+
+Referencias: `WardDissolutionContractTest`, `WardHealthTest`,
+`WardUpgradeCrossingTest`.
 
 ## Agregar escenarios
 
@@ -63,7 +87,8 @@ vocabulario, actualizar la expectativa (el texto es parte del contrato).
 
 1. ~~Toda la capa de comando exige `Player`~~ → **RESUELTO (v2)**: consola/RCON
    ya ejecuta las ops admin sin ubicación — `proteccion reload`,
-   `proteccion integrations`, `nexo disband <id>`, `nexo admin reset <id>`.
+   `proteccion integrations`, `nexo disband <id>`, `nexo admin reset <id>`,
+   `sync admin delete <id|nombre>` y `matriz admin delete <nombre>`.
    El resto de subcomandos conserva el contrato players-only (los cubre
    `consola-rechaza-comando-jugador`). Contrato vigente en
    `consola-proteccion-reload`, `consola-proteccion-integraciones` e

@@ -65,11 +65,24 @@ public final class WardDissolutionService {
         saveAction.run();
         boolean coreRemoved = removeCoreBlock(ward);
 
+        // Anti-duplication guard: the founder item only comes back when the
+        // physical core was actually removed. If the block is gone/absent, a
+        // refund would duplicate the core (the item IS the block).
         boolean refunded = false;
-        if (ownerDissolvingOwnWard && actor != null && actor.isOnline()) {
+        if (shouldRefund(ownerDissolvingOwnWard, coreRemoved)
+                && actor != null && actor.isOnline()) {
             refunded = refundFounderItem(actor);
         }
         return new Result(coreRemoved, refunded);
+    }
+
+    /**
+     * Pure decision: does this dissolution return the tagged founder item?
+     * Only when the OWNER dissolves their own ward AND the physical core block
+     * was actually removed (no block → nothing returned, no duplication).
+     */
+    static boolean shouldRefund(boolean ownerOwnWard, boolean coreRemoved) {
+        return ownerOwnWard && coreRemoved;
     }
 
     /** Removes the physical core block only while it still is the configured ward material. */

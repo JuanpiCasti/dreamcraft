@@ -16,7 +16,9 @@ public record WardUpgradePreview(
         int scoreGain,
         int radiusAfter,
         int upkeepPerInterval,
-        List<CostLine> costs
+        List<CostLine> costs,
+        /** false when this upgrade does not reach the target tier yet (free growth upgrade). */
+        boolean crossingTier
 ) {
 
     /** One cost row with per-line affordability for coloring. */
@@ -24,6 +26,6 @@ public record WardUpgradePreview(
 
     /** Preview for a maxed-out Ward (no further tiers configured). */
     public static WardUpgradePreview unavailable() {
-        return new WardUpgradePreview(false, false, null, 0, 0, 0, List.of());
+        return new WardUpgradePreview(false, false, null, 0, 0, 0, List.of(), false);
     }
 }

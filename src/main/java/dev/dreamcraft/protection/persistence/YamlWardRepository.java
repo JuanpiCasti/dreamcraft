@@ -38,6 +38,8 @@ public final class YamlWardRepository implements WardRepository {
             if (s == null) continue;
             try {
                 Ward ward = readWard(s, key);
+                // Legacy wards predate the counter: absent → 0
+                ward.belowTierBlocks(s.getInt("below-tier-blocks", 0));
                 cache.put(ward.id(), ward);
             } catch (Exception e) {
                 System.err.println("[DreamCraft] Failed to load ward " + key + ": " + e.getMessage());
@@ -206,6 +208,7 @@ public final class YamlWardRepository implements WardRepository {
         s.set("center-y", w.centerY());
         s.set("center-z", w.centerZ());
         s.set("wg-region-id", w.worldGuardRegionId());
+        s.set("below-tier-blocks", w.belowTierBlocks());
         s.set("permissions", w.permissions().stream().map(Enum::name).toList());
     }
 }

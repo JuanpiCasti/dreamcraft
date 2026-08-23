@@ -7,6 +7,8 @@ import dev.dreamcraft.protection.domain.port.WardTierProvider;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * Domain service for Ward lifecycle management.
@@ -23,6 +25,21 @@ public final class WardService {
     private final WardRepository wardRepository;
     private final WardTierProvider tierProvider;
     private final Duration upkeepInterval;
+
+    /**
+     * Optional presentation hook fired when a real tier ascent wipes the
+     * below-tier surcharge counter. Receives (ward, previousCounterValue).
+     * No-op by default; the domain never depends on Bukkit for this.
+     */
+    private BiConsumer<Ward, Integer> tierAlignedCallback = (ward, previous) -> { };
+
+    /**
+     * Optional hook fired when a tier transition descends (only reachable via
+     * admin score edits). The counter is intentionally NOT touched here — the
+     * authoritative value requires a world re-scan — so listeners can trigger
+     * {@code seedExistingBelowTierBlocks}. No-op by default.
+     */
+    private Consumer<Ward> tierDescendedCallback = ward -> { };
 
     public WardService(WardRepository wardRepository, WardTierProvider tierProvider, Duration upkeepInterval) {
         this.wardRepository = wardRepository;
@@ -94,14 +111,55 @@ public final class WardService {
     /**
      * Adds baseScore delta to the Ward and recalculates tier and radius.
      * Persists the updated Ward.
+     *
+     * <p>Below-tier surcharge policy on tier transitions (this is the single
+     * choke point for EVERY tier change: /ward upgrade, menu upgrades and
+     * admin score edits):
+     * <ul>
+     *   <li><b>Ascent</b> (new tier min-base-score strictly greater): the
+     *       {@code belowTierBlocks} counter is wiped to 0 before saving — a
+     *       higher phase now covers the previously under-ranked blocks, so
+     *       charging their surcharge forever would be unfair. The optional
+     *       {@code tierAlignedCallback} fires afterwards with (ward,
+     *       previousCount) so the presentation layer can notify the owner.</li>
+     *   <li><b>Descent</b> (admin-only via score remove/set): the counter is
+     *     intentionally NOT modified here — the authoritative value depends on
+     *     which gated blocks actually remain inside the (possibly shrunk) area.
+     *     A world re-scan is expected instead, wired through
+     *     {@link #setTierDescendedCallback(Consumer)}.</li>
+     *   <li><b>Intra-tier</b>: the counter is untouched.</li>
+     * </ul>
      */
     public void addBaseScore(Ward ward, int delta) {
         int newScore = Math.max(0, ward.baseScore() + delta);
+        String oldTierKey = ward.tier();
         ward.baseScore(newScore);
         WardTier tier = tierProvider.resolveForScore(newScore);
         ward.tier(tier.key());
         ward.radius(tier.computeRadius(newScore));
+
+        int previousBelowTier = ward.belowTierBlocks();
+        boolean ascended = false;
+        boolean descended = false;
+        Optional<WardTier> oldTier = tierProvider.findByKey(oldTierKey);
+        if (oldTier.isPresent()) {
+            int oldMin = oldTier.get().minBaseScore();
+            int newMin = tier.minBaseScore();
+            if (newMin > oldMin) {
+                ascended = true;
+                ward.belowTierBlocks(0);
+            } else if (newMin < oldMin) {
+                descended = true; // counter untouched: covered by re-scan hook
+            }
+        }
+
         wardRepository.save(ward);
+
+        if (ascended) {
+            tierAlignedCallback.accept(ward, previousBelowTier);
+        } else if (descended) {
+            tierDescendedCallback.accept(ward);
+        }
     }
 
     /**
@@ -176,6 +234,35 @@ public final class WardService {
         }
         ward.name(trimmed);
         wardRepository.save(ward);
+    }
+
+    /**
+     * Sets the below-tier gated block counter and persists the Ward.
+     * Used by the placement gate (increment) and its break counterpart
+     * (decrement). Clamped at ≥ 0.
+     */
+    public void setBelowTierBlocks(Ward ward, int count) {
+        ward.belowTierBlocks(count);
+        wardRepository.save(ward);
+    }
+
+    /**
+     * Registers the presentation-side notice fired when a tier ascent aligns
+     * the Ward's phase and wipes its below-tier surcharge counter.
+     * Receives (ward, previousCounterValue); null restores the no-op default.
+     */
+    public void setTierAlignedCallback(BiConsumer<Ward, Integer> callback) {
+        this.tierAlignedCallback = callback != null ? callback : (ward, previous) -> { };
+    }
+
+    /**
+     * Registers the hook fired when a tier transition descends. The plugin
+     * wires this to a world re-scan that replaces {@code belowTierBlocks} with
+     * the real current count (the domain itself stays Bukkit-free).
+     * Null restores the no-op default.
+     */
+    public void setTierDescendedCallback(Consumer<Ward> callback) {
+        this.tierDescendedCallback = callback != null ? callback : ward -> { };
     }
 
     /**

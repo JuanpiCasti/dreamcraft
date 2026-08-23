@@ -38,17 +38,19 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
             LegacyComponentSerializer.legacyAmpersand();
 
     /** Default icon resolution map: iconKey → Material name. */
-    private static final Map<String, String> DEFAULT_ICON_MAP = Map.of(
-            "icon.ward.active",    "SHIELD",
-            "icon.ward.inactive",  "CRACKED_STONE_BRICKS",
-            "icon.upkeep",         "CHEST",
-            "icon.members",        "PLAYER_HEAD",
-            "icon.city.overview",  "BEACON",
-            "icon.estate.overview","BOOK",
-            "icon.estate.zone-tp", "NETHER_STAR",
-            "icon.deposit",        "LIME_STAINED_GLASS_PANE",
-            "icon.filler",         "GRAY_STAINED_GLASS_PANE",
-            "icon.back",           "ARROW"
+    private static final Map<String, String> DEFAULT_ICON_MAP = Map.ofEntries(
+            Map.entry("icon.ward.active",    "SHIELD"),
+            Map.entry("icon.ward.inactive",  "CRACKED_STONE_BRICKS"),
+            Map.entry("icon.ward.orphan",    "BARRIER"),
+            Map.entry("icon.upkeep",         "CHEST"),
+            Map.entry("icon.members",        "PLAYER_HEAD"),
+            Map.entry("icon.city.overview",  "BEACON"),
+            Map.entry("icon.city.admin",     "COMMAND_BLOCK"),
+            Map.entry("icon.estate.overview","BOOK"),
+            Map.entry("icon.estate.zone-tp", "NETHER_STAR"),
+            Map.entry("icon.deposit",        "LIME_STAINED_GLASS_PANE"),
+            Map.entry("icon.filler",         "GRAY_STAINED_GLASS_PANE"),
+            Map.entry("icon.back",           "ARROW")
     );
 
     private final Map<String, String> iconMap;
@@ -243,6 +245,12 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
         var state = packState;
         boolean viewerHasPack = state != null && state.has(viewerId);
         registry.applyTo(iconKey, stack, meta, viewerHasPack);
+        // Contract keys are semantic ("ward.orphan") while menu items use the
+        // "icon.<domain>.<state>" shape: when the full key has no contract
+        // entry, retry with the stripped key so CMD/fallbacks still resolve.
+        if (iconKey != null && iconKey.startsWith("icon.") && registry.icon(iconKey).isEmpty()) {
+            registry.applyTo(iconKey.substring("icon.".length()), stack, meta, viewerHasPack);
+        }
     }
 
     private ItemStack buildFiller() {

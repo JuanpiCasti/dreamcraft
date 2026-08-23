@@ -70,6 +70,7 @@ public final class WardMenuFacade {
                         viewer != null && upgradeService.countItem(viewer, c.material()) >= c.amount()))
                 .toList();
         return new WardUpgradePreview(true, canAfford, quote.targetTierKey(),
-                quote.scoreGain(), quote.radiusAfter(), quote.upkeepPerInterval(), costLines);
+                quote.scoreGain(), quote.radiusAfter(), quote.upkeepPerInterval(), costLines,
+                quote.crossingTier());
     }
 }

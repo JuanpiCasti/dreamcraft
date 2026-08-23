@@ -1,7 +1,10 @@
 # Comandos del plugin — DreamCraftProtection
 
 Referencia de todos los comandos que registra el plugin (`src/main/resources/plugin.yml`).
-Todos los comandos son solo para jugadores (la consola no puede usarlos).
+Los comandos son solo para jugadores; excepciones ejecutables desde consola/RCON
+(ops admin sin ubicación): `/protection reload`, `/protection integrations`,
+`/estate disband <id>`, `/estate admin reset <id>`, `/ward admin delete <uuid|nombre>`
+y `/city admin delete <nombre>`.
 
 | Comando | Aliases | Permiso de uso |
 |---|---|---|
@@ -92,7 +95,7 @@ crafteo y los ítems aceptados se configuran en `config.yml` (sección `ward:`).
 | `/ward give` | Entrega la Baliza de Ward (admin) |
 | `/ward info [id]` | Nombre, ID, owner, tier, score, radio, upkeep y centro |
 | `/ward menu [id]` | Abre el menú gráfico del Ward (requiere `dreamcraft.ward.menu` o admin; ver abajo) |
-| `/ward score [add <n>]` | Consulta el score; con `add` suma puntos (solo owner) y redimensiona la región — rechaza crecimientos que alcanzarían una Ward ajena |
+| `/ward score [add <n>]` | Consulta el score; con `add` suma puntos (**solo** `dreamcraft.ward.admin`: el owner ya no puede subir fases por comando) y redimensiona la región — rechaza crecimientos que alcanzarían una Ward ajena |
 | `/ward upkeep [deposit <n>]` | Consulta el upkeep; con `deposit` deposita unidades |
 | `/ward upgrade` | Mejora el Ward al siguiente tier descontando los ítems definidos en `ward-upgrade-costs` (solo owner). Falla si el radio nuevo alcanzaría la Ward de otro jugador |
 | `/ward transfer <jugador>` | Transfiere el ownership a un jugador online (solo owner) |
@@ -103,6 +106,15 @@ crafteo y los ítems aceptados se configuran en `config.yml` (sección `ward:`).
 | `/ward city annex` | Anexa el Ward a tu ciudad (solo owner, debés ser miembro de una ciudad) |
 | `/ward city leave` | Desvincula el Ward de su ciudad (solo owner) |
 | `/ward delete [id]` | Elimina el Ward y su región vía el contrato único de disolución (solo owner o admin; owner recibe su Núcleo de vuelta) |
+| `/ward admin menu` | Panel admin de Núcleos (lore del servidor: `/sync admin menu`); sin argumentos |
+| `/ward admin delete <uuid\|nombre>` | Disolución forzada por UUID o nombre EXACTO del Núcleo (ruta sistema: el owner no recibe nada); acepta consola/RCON (lore: `/sync admin delete`) |
+
+`admin menu` abre una GUI sin estado paginada por payloads (`wardadmin.*` en
+`MenuActionDispatcher`): overview de 54 slots (45 ítems/página) con los
+huérfanos primero y luego orden alfabético; «Anterior» en 45, toggle «Solo
+sospechosos» en 49 (huérfanos o estado desconocido: chunk sin cargar / WG
+inactivo) y «Siguiente» en 53. El detalle de cada Núcleo (27 slots) ofrece
+*Abrir menú del Núcleo*, *TP al centro* y *DISOLVER NÚCLEO*.
 
 **Permisos públicos válidos** (`WardPermission`): `PUBLIC_BUILD`, `PUBLIC_BREAK`,
 `PUBLIC_CONTAINERS`, `PUBLIC_UPKEEP_DEPOSIT`, `PUBLIC_STATUS_VIEW`.
@@ -115,6 +127,37 @@ Admin: `dreamcraft.ward.admin` (default: op) permite borrar/modificar Wards ajen
 Menú: `dreamcraft.ward.menu` (default: false, pensado para VIPs) habilita
 `/ward menu`; los admins siempre pueden. El acceso principal al menú sigue
 siendo el clic derecho sobre la Baliza.
+
+### Bloques gated y sobrecosto
+
+Colocar un bloque de `ward.tier-gated-blocks` dentro de un Ward cuyo tier es
+inferior al requerido **no se cancela**: se permite y suma 1 al contador
+`belowTierBlocks` del Ward (ítem fundador exento; admins bypass). El upkeep de
+cada intervalo pasa a costar `upkeep-per-interval` del tier +
+`ward.below-tier-surcharge-units` (default 2) × bloques fuera de fase — cargo
+**recurrente por intervalo**, sin cobro único al colocar. Romper uno de esos
+bloques mientras el Ward siga debajo del tier decrementa el contador (no se
+registra quién lo colocó). Al alcanzar el tier requerido los bloques dejan de
+sumar sobrecosto.
+
+El contador se siembra al fundar: tanto `/ward create` como colocar la Baliza
+corren un re-scan inicial que cuenta los bloques gated pre-existentes dentro
+del radio y fija el contador con ese valor (los chunks no cargados quedan
+exentos hasta el próximo re-scan). Toda transición de tier pasa por el único
+punto de paso `WardService.addBaseScore`: subir de tier limpia el contador a 0
+(«Fase alineada…» avisa al owner — la fase nueva ya cubre esos bloques) y bajar
+de tier dispara un re-scan que REEMPLAZA el contador por el conteo actual del
+área; dentro del mismo tier no se toca.
+
+### Curva de mejoras (esquema B)
+
+Cada mejora suma `ward.score-per-upgrade` al base score; tier y radio se
+recalculan desde el score nuevo, así que **el radio crece en cada mejora**,
+pague o no. Solo cobra ítems la mejora que **cruza** el `min-base-score` del
+tier destino (`ward-upgrade-costs`, clave = tier destino); las mejoras
+intermedias son gratis («crecimiento»). Con los defaults (paso 100,
+reinforced ≥ 100, advanced ≥ 500): la mejora #1 cruza a *reinforced* y paga;
+#2–#4 son gratis; la que alcanza score 500 cruza a *advanced* y paga.
 
 ---
 
@@ -143,6 +186,16 @@ resuelve por tu membresía.
 `FREE_WARD_CREATION`, `COUNCIL_TREASURY_APPROVAL`, `PUBLIC_LISTING`.
 
 Admin: `dreamcraft.city.admin` (default: op).
+
+| Comando | Descripción |
+|---|---|
+| `/city admin menu` | Panel admin de ciudades (lore del servidor: `/matriz admin menu`); sin argumentos |
+| `/city admin delete <nombre>` | Elimina la ciudad indicada por nombre exacto (acepta nombres con espacios; lore: `/matriz admin delete`); acepta consola/RCON |
+
+Misma GUI paginada que la de Núcleos (payloads `cityadmin.*`), pero orden
+alfabético puro — las ciudades no tienen salud, así que no hay filtro de
+sospechosos. El detalle de cada Matriz ofrece *Abrir menú de ciudad* y
+*ELIMINAR CIUDAD* (desanexa todos sus Núcleos): **sin TP**.
 
 ---
 
@@ -249,7 +302,7 @@ Las áreas END/TRIAL_CHAMBER **no cubren toda la altura del mundo**:
 | `dreamcraft.protection.admin` | op | `give`, `reload`, `recalculate`, `/estate admin` |
 | `dreamcraft.ward.use` | todos | Uso de `/ward` |
 | `dreamcraft.ward.menu` | nadie | `/ward menu` (VIPs; los admins siempre pueden) |
-| `dreamcraft.ward.admin` | op | Borrar/modificar Wards de otros |
+| `dreamcraft.ward.admin` | op | Borrar/modificar Wards de otros; `abrir`, `admin menu`, `admin delete`, `score add` (exclusivo: el owner ya no puede subir fases) |
 | `dreamcraft.city.use` | todos | Uso de `/city` |
 | `dreamcraft.city.admin` | op | Administración de ciudades |
 | `dreamcraft.estate.use` | todos | Uso de `/estate` |
@@ -257,6 +310,12 @@ Las áreas END/TRIAL_CHAMBER **no cubren toda la altura del mundo**:
 
 Todos los comandos tienen autocompletado (tab completion) de subcomandos,
 jugadores online, roles, políticas y IDs propios.
+
+**Nota operativa (LuckPerms)**: el grupo `admin` necesita los nodos
+`dreamcraft.ward.admin` y `dreamcraft.city.admin` otorgados explícitamente —
+ambos tienen `default: op`, así que un admin no-op sin ellos no ve los
+subcomandos de administración (`/ward|sync admin …`, `/city|matriz admin …`)
+ni pasa sus gates.
 
 ---
 

@@ -22,11 +22,13 @@ icons:
   ward.tier:            { material: NETHER_STAR,              cmd: 41103, fallback: BEACON }
   ward.score:           { material: EXPERIENCE_BOTTLE,        cmd: 41104 }
   ward.upkeep:          { material: CHEST,                    cmd: 41105, fallback: CHEST }
+  ward.orphan:          { material: BARRIER,                  cmd: 41106 }
   # City — comunidad / administración
   city.icon:            { material: BEACON,                   cmd: 41201, fallback: BEACON }
   city.members:         { material: PLAYER_HEAD,              cmd: 0 }
   city.treasury:        { material: GOLD_BLOCK,               cmd: 41202 }
   city.score:           { material: EMERALD,                  cmd: 41203 }
+  city.admin:           { material: COMMAND_BLOCK,            cmd: 41204 }
   # Estate — aventura / grupo
   estate.icon:          { material: BOOK,                     cmd: 41301, fallback: BOOK }
   estate.adventure:     { material: ENDER_EYE,                cmd: 41302 }

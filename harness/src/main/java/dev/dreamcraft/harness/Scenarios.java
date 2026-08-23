@@ -108,6 +108,12 @@ final class Scenarios {
         list.add(Scenario.asserted("tab-completer-ward-nivel1", "comandos", () ->
                 tabLevel1Contains(Bukkit.getPluginCommand("ward"), Persona.jugadorBasico(), senders)));
 
+        // Regression: «admin» only surfaces for permission holders of the renamed roots
+        list.add(Scenario.asserted("tab-completer-sync-admin-por-permiso", "comandos", () ->
+                tabLevel1AdminVisibility(Bukkit.getPluginCommand("sync"), Persona.adminJugador(), senders)));
+        list.add(Scenario.asserted("tab-completer-matriz-admin-por-permiso", "comandos", () ->
+                tabLevel1AdminVisibility(Bukkit.getPluginCommand("matriz"), Persona.adminJugador(), senders)));
+
         // ── Dispatch + permisos ───────────────────────────────────────────────
         list.add(Scenario.asserted("consola-rechaza-comando-jugador", "dispatch", () -> {
             String out = dispatch(senders, Persona.console(), "sync");
@@ -276,6 +282,42 @@ final class Scenarios {
                     : Outcome.fail("nivel 1 contiene create/info",
                     tokens == null ? "null (→ Bukkit sugiere jugadores)" : String.join(",", tokens),
                     "Completer devolvió lista vacía o nula: cae al fallback de nombres de jugador");
+        } catch (Exception e) {
+            return Outcome.fail("invocar completer", e.toString(), "Excepción dentro del onTabComplete");
+        }
+    }
+
+    /**
+     * Level-1 tab completion surfaces the hidden «admin» subcommand ONLY to
+     * holders of its admin permission: present for the admin persona, absent
+     * for a regular player.
+     */
+    private static Outcome tabLevel1AdminVisibility(PluginCommand cmd, Persona admin,
+                                                    CapturingSenderFactory senders) {
+        if (cmd == null) {
+            return Outcome.fail("comando registrado para su completer", "no registrado", null);
+        }
+        TabCompleter completer = cmd.getTabCompleter();
+        if (completer == null) {
+            return Outcome.fail("tabCompleter cableado en /" + cmd.getName(),
+                    "null", "setTabCompleter no se llamó durante el onEnable");
+        }
+        try {
+            List<String> adminTokens = completer.onTabComplete(
+                    senders.forPersona(admin).sender(), cmd, cmd.getName(), new String[]{""});
+            if (adminTokens == null || !adminTokens.contains("admin")) {
+                return Outcome.fail("'admin' visible para el admin",
+                        adminTokens == null ? "null (→ Bukkit sugiere jugadores)" : String.join(",", adminTokens),
+                        "SubcommandSpec.admin oculta demasiado: ni un admin ve la entrada");
+            }
+            List<String> playerTokens = completer.onTabComplete(
+                    senders.forPersona(Persona.jugadorBasico()).sender(), cmd, cmd.getName(), new String[]{""});
+            boolean oculto = playerTokens == null || !playerTokens.contains("admin");
+            return oculto
+                    ? Outcome.pass()
+                    : Outcome.fail("'admin' oculto para jugadores básicos",
+                    String.join(",", playerTokens),
+                    "El completer no filtra SubcommandSpec.admin por permiso");
         } catch (Exception e) {
             return Outcome.fail("invocar completer", e.toString(), "Excepción dentro del onTabComplete");
         }

@@ -29,12 +29,12 @@ commands:
   ward:
     description: Gestiona tu Núcleo de Sincronía (lore «El Despertar»)
     aliases: [w]
-    usage: /ward [create|reclamar|info|rename|sintonizar|expulsar|permissions|upkeep|score|menu|tp|city|transfer|delete|abrir|give]
+    usage: /ward [create|reclamar|info|rename|sintonizar|expulsar|permissions|upkeep|score|menu|tp|city|transfer|delete|abrir|give|admin]
     permission: dreamcraft.ward.use
   city:
     description: Gestiona tu Ciudad
     aliases: [ciudad]
-    usage: /city [create|annex|invite|kick|roles|bank|policy|menu|info|transfer|delete]
+    usage: /city [create|annex|invite|kick|roles|bank|policy|menu|info|transfer|delete|admin]
     permission: dreamcraft.city.use
   estate:
     description: Gestiona tu Estate (grupo de aventura)

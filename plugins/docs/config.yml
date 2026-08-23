@@ -139,6 +139,12 @@ ward:
       D: DIAMOND
       N: NETHER_STAR
 
+  # Sobrecosto de upkeep por bloque gated (tier-gated-blocks) colocado con
+  # tier inferior al requerido: en vez de denegar, cada bloque suma unidades
+  # de mantenimiento recurrentes por intervalo. Romper el bloque reduce el
+  # contador. El Núcleo fundador está exento.
+  below-tier-surcharge-units: 2
+
 # Costo en ítems para mejorar el Ward a cada tier destino.
 # La clave es el tier DESTINO de la mejora. Si un tier no está listado, mejorarlo a ese tier es gratis.
 ward-upgrade-costs:

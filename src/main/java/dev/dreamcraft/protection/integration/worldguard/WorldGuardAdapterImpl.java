@@ -112,6 +112,18 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
     }
 
     @Override
+    public boolean regionExists(Ward ward) {
+        if (ward == null || !isAvailable() || ward.worldGuardRegionId() == null) return false;
+        try {
+            RegionManager rm = getRegionManager(ward.worldName());
+            return rm != null && rm.hasRegion(ward.worldGuardRegionId());
+        } catch (Exception e) {
+            logger.warning("[WorldGuard] regionExists failed for ward " + ward.id() + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
     public void replaceMembers(Ward ward, java.util.Collection<UUID> members) {
         if (!isAvailable() || ward.worldGuardRegionId() == null) return;
         try {

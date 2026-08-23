@@ -43,6 +43,13 @@ public final class Ward {
     /** Opaque reference to the WorldGuard region managed by the integration layer. */
     private String worldGuardRegionId;
     private final Set<WardPermission> permissions;
+    /**
+     * Gated blocks placed while the Ward tier was below the required rank
+     * (tier-gated-blocks). Each unit adds a recurring upkeep surcharge per
+     * interval instead of denying placement. Persisted as
+     * {@code below-tier-blocks}; absent entries load as 0 (legacy wards).
+     */
+    private int belowTierBlocks;
 
     public Ward(
             UUID id,
@@ -107,6 +114,7 @@ public final class Ward {
     public int centerZ() { return centerZ; }
     public String worldGuardRegionId() { return worldGuardRegionId; }
     public Set<WardPermission> permissions() { return permissions; }
+    public int belowTierBlocks() { return belowTierBlocks; }
 
     // ── Mutators ──────────────────────────────────────────────────────────────
 
@@ -120,6 +128,9 @@ public final class Ward {
     public void lastUpkeepAt(Instant lastUpkeepAt) { this.lastUpkeepAt = lastUpkeepAt; }
     public void nextUpkeepAt(Instant nextUpkeepAt) { this.nextUpkeepAt = nextUpkeepAt; }
     public void worldGuardRegionId(String worldGuardRegionId) { this.worldGuardRegionId = worldGuardRegionId; }
+    public void belowTierBlocks(int belowTierBlocks) {
+        this.belowTierBlocks = Math.max(0, belowTierBlocks);
+    }
 
     public void grantPermission(WardPermission permission) { permissions.add(permission); }
     public void revokePermission(WardPermission permission) { permissions.remove(permission); }

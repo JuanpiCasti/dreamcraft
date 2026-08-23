@@ -217,9 +217,10 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
             wardCmd.setTabCompleter(wardExecutor);
         }
         PluginCommand cityCmd = getCommand("city");
+        dev.dreamcraft.protection.command.CityCommand cityExecutor =
+                new dev.dreamcraft.protection.command.CityCommand(cityService, wardService, menuProvider,
+                        cityLevelService, worldGuardAdapter, commandOptions);
         if (cityCmd != null) {
-            CityCommand cityExecutor = new CityCommand(cityService, wardService, menuProvider,
-                    cityLevelService, worldGuardAdapter, commandOptions);
             cityCmd.setExecutor(cityExecutor);
             cityCmd.setTabCompleter(cityExecutor);
         }
@@ -232,6 +233,16 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
             // Admin zones GUI book button → opens that group's own menu
             dispatcher.setEstateMenuOpener(estateExecutor::openEstateMenuById);
         }
+
+        // 7b-ter. Admin GUIs (wards/cities): stateless payload navigation — the
+        // dispatcher renders and opens them; commands just trigger page 0.
+        dispatcher.setAdminMenuProvider(menuProvider);
+        dispatcher.setWardMenuOpener(wardExecutor::openWardMenu);
+        dispatcher.setCityMenuOpener(cityExecutor::openCityMenu);
+        dispatcher.setCityLevelService(cityLevelService);
+        dispatcher.setWardCoreMaterial(protectionConfig.wardMaterial());
+        wardExecutor.setAdminMenuOpener(player -> dispatcher.openWardAdminOverview(player, 0, false));
+        cityExecutor.setAdminMenuOpener(player -> dispatcher.openCityAdminOverview(player, 0));
 
         // 7b-bis. Versioned roots (/sync, /nexo, /matriz…) registered as real
         // commands sharing the canonical executors — Bukkit's commands.yml
@@ -247,24 +258,47 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         // the load guard restores our instances once aliases are in.
         dev.dreamcraft.protection.command.DynamicCommands.registerLoadGuard(this, getLogger());
 
-        // 7c. Ward block listener — placing the ward item founds a Ward centered on it;
+        // 7c. Tier-gated block surcharge — placement counting, break relief and
+        //     founding/descent backfill scans (built first so its seeder can be
+        //     shared by every founding route below)
+        dev.dreamcraft.protection.listener.WardBlockGateListener gateListener =
+                new dev.dreamcraft.protection.listener.WardBlockGateListener(
+                        wardService, tierProvider, protectionConfig, wardItems(), this::saveDomainData);
+        pm.registerEvents(gateListener, this);
+
+        // Tier-transition hooks from the domain: a real ascent wipes the counter
+        // there and we just notify the owner; a descent keeps whatever was stored
+        // until this authoritative world scan replaces it with the true count.
+        wardService.setTierAlignedCallback((ward, previousBlocks) -> {
+            org.bukkit.entity.Player owner = org.bukkit.Bukkit.getPlayer(ward.ownerId());
+            if (owner != null) {
+                owner.sendMessage(dev.dreamcraft.protection.command.CommandMessages.prefixed("ward",
+                        "Fase alineada: sobrecosto retirado (" + previousBlocks
+                                + " bloque(s) ahora cubiertos por tu nueva fase).",
+                        net.kyori.adventure.text.format.NamedTextColor.GREEN));
+            }
+        });
+        wardService.setTierDescendedCallback(gateListener::seedExistingBelowTierBlocks);
+        // Founding routes seed the same way: both share this single instance.
+        wardExecutor.setFoundingSeeder(gateListener::seedExistingBelowTierBlocks);
+
+        // 7c-bis. Unified Ward mechanic — placing the ward item founds a Ward centered on it;
         //     breaking it dissolves through the shared contract (vanilla drop suppressed)
         pm.registerEvents(new WardItemListener(
                 wardItems(),
                 wardService,
                 worldGuardAdapter,
                 wardExecutor::openWardMenu,
-                wardExecutor::canOpenWardMenu,
                 this::saveDomainData,
-                wardDissolutionService
+                wardDissolutionService,
+                gateListener::seedExistingBelowTierBlocks
         ), this);
 
-        // 7d. Ward upkeep tick + tier-gated blocks + region entry action bar
+        // 7d. Ward upkeep tick + region entry action bar
         new dev.dreamcraft.protection.service.WardUpkeepTickTask(
                 wardService, tierProvider, wardRepository,
-                protectionConfig.upkeepInterval(), this).register();
-        pm.registerEvents(new dev.dreamcraft.protection.listener.WardBlockGateListener(
-                wardService, tierProvider, protectionConfig), this);
+                protectionConfig.upkeepInterval(),
+                protectionConfig.belowTierSurchargeUnits(), this).register();
         pm.registerEvents(new dev.dreamcraft.protection.listener.WardRegionListener(wardService), this);
 
         // 7d-bis. Container transfer gate — hoppers/droppers can't cross Ward

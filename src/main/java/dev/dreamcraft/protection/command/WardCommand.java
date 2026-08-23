@@ -59,6 +59,24 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
     private final dev.dreamcraft.protection.config.CommandOptions options;
     /** Single source of truth for dispatch + tab completion. */
     private final CommandRegistry registry;
+    /**
+     * Backfill hook for freshly founded Wards: counts pre-existing below-tier
+     * gated blocks into the surcharge counter (no-op unless wired by the plugin).
+     */
+    private java.util.function.Consumer<Ward> foundingSeeder = ward -> { };
+
+    /** Admin overview GUI opener (/ward admin menu); wired by the plugin to the dispatcher. */
+    private java.util.function.Consumer<Player> adminMenuOpener = player -> { };
+
+    /** Optional wiring: world re-scan applied right after /ward found creates the Ward. */
+    public void setFoundingSeeder(java.util.function.Consumer<Ward> foundingSeeder) {
+        this.foundingSeeder = foundingSeeder != null ? foundingSeeder : ward -> { };
+    }
+
+    /** Wires the admin wards GUI opener (stateless overview at page 0). */
+    public void setAdminMenuOpener(java.util.function.Consumer<Player> opener) {
+        this.adminMenuOpener = opener != null ? opener : player -> { };
+    }
 
     public WardCommand(WardService wardService,
                        CityService cityService,
@@ -129,6 +147,8 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
                         .withAliases(options.aliases("ward", "menu")))
                 .register(SubcommandSpec.of("tp", this::handleTp)
                         .withAliases(options.aliases("ward", "tp")))
+                .register(SubcommandSpec.admin("admin", this::handleAdmin)
+                        .withAliases(options.aliases("ward", "admin")))
                 .register(SubcommandSpec.admin("abrir", this::handleAdminOpen)
                         .withAliases(options.aliases("ward", "abrir")))
                 .register(SubcommandSpec.admin("give", (p, a) -> handleGive(p))
@@ -138,8 +158,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(tr("common.players-only", "§cEste comando solo puede ser usado por jugadores."));
-            return true;
+            return handleConsole(sender, args);
         }
         if (!player.hasPermission(USE_PERM)) {
             error(player, WARD_PREFIX, tr("common.no-permission", "No tienes permiso para usar este comando."));
@@ -167,6 +186,88 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
 
     // ── Subcommand handlers ────────────────────────────────────────────────────
 
+    /**
+     * Console/RCON surface (SSH-friendly): only {@code admin delete} is
+     * reachable — a location-free forced dissolution by explicit id/name.
+     * Everything else keeps the players-only contract.
+     */
+    private boolean handleConsole(CommandSender sender, String[] args) {
+        boolean whitelisted = args.length >= 2
+                && args[0].equalsIgnoreCase("admin")
+                && args[1].equalsIgnoreCase("delete");
+        if (!whitelisted) {
+            error(sender, WARD_PREFIX, tr("common.players-only", "§cEste comando solo puede ser usado por jugadores."));
+            return true;
+        }
+        if (!sender.hasPermission(ADMIN_PERM)) {
+            error(sender, WARD_PREFIX, tr("common.no-permission", "No tienes permiso para usar este comando."));
+            return true;
+        }
+        return adminDelete(sender, args.length >= 3 ? args[2] : null);
+    }
+
+    /** /ward admin — staff surface: overview GUI and forced dissolution. */
+    private boolean handleAdmin(Player player, String[] args) {
+        if (!player.hasPermission(ADMIN_PERM)) {
+            error(player, WARD_PREFIX, tr("common.no-permission-action", "&cNo tienes permiso para este comando."));
+            return true;
+        }
+        if (args.length < 2) {
+            error(player, WARD_PREFIX, "Uso: " + CommandNames.cmd("ward",
+                    "admin menu &8|&f admin delete <id|nombre>"));
+            return true;
+        }
+        return switch (args[1].toLowerCase(Locale.ROOT)) {
+            case "menu" -> {
+                adminMenuOpener.accept(player);
+                yield true;
+            }
+            case "delete" -> adminDelete(player, args.length >= 3 ? args[2] : null);
+            default -> {
+                error(player, WARD_PREFIX, "Subcomando admin desconocido: " + args[1]);
+                yield true;
+            }
+        };
+    }
+
+    /** Resolves a ward by explicit UUID first, then by EXACT name match. */
+    private Ward findWardByIdOrName(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            var byId = wardService.findById(UUID.fromString(raw));
+            if (byId.isPresent()) return byId.get();
+        } catch (IllegalArgumentException ignored) {}
+        return wardService.findAll().stream()
+                .filter(w -> w.name().equalsIgnoreCase(raw))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Forced dissolution shared by the player and console admin routes:
+     * system path ({@code ownerDissolvingOwnWard=false}) — no founder refund.
+     */
+    private boolean adminDelete(CommandSender feedback, String raw) {
+        if (raw == null || raw.isBlank()) {
+            error(feedback, WARD_PREFIX, CommandNames.cmd("ward", "admin delete <uuid|nombre>"));
+            return true;
+        }
+        Ward ward = findWardByIdOrName(raw);
+        if (ward == null) {
+            error(feedback, WARD_PREFIX, tr("sync.nucleus-not-found",
+                    "{name.ward} no encontrado. Usa <id> o el nombre de un jugador online.")
+                    + " §8(" + raw + ")");
+            return true;
+        }
+        var result = dissolutionService != null
+                ? dissolutionService.dissolve(ward,
+                        feedback instanceof Player p ? p : null, false)
+                : legacyDissolve(ward);
+        ok(feedback, WARD_PREFIX, "Núcleo §f" + ward.name() + "§a disuelto por admin"
+                + (!result.coreBlockRemoved() ? " §7(sin bloque físico)" : ""));
+        return true;
+    }
+
     private boolean handleCreate(Player player) {
         Ward ward = wardService.createWard(
                 player.getUniqueId(),
@@ -183,6 +284,8 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         if (regionId != null) {
             wardService.assignWorldGuardRegion(ward, regionId);
         }
+        // Backfill: pre-existing below-tier gated blocks enter the surcharge counter
+        foundingSeeder.accept(ward);
         ok(player, WARD_PREFIX, "Núcleo §f" + ward.name() + "§a despertado (fase " + ward.tier() + ", radio " + ward.radius() + ").");
         title(player, "✦ Territorio Despierto ✦", ward.name(), NamedTextColor.AQUA);
         return true;
@@ -518,7 +621,9 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
                 ? dissolutionService.dissolve(ward, player, owner)
                 : legacyDissolve(ward);
         ok(player, WARD_PREFIX, "Núcleo eliminado."
-                + (result.refunded() ? " §7(Tu Núcleo volvió a tu inventario.)" : ""));
+                + (result.refunded() ? " §7(Tu Núcleo volvió a tu inventario.)"
+                        : owner && !result.coreBlockRemoved()
+                                ? " §7(sin bloque físico: nada devuelto)" : ""));
         return true;
     }
 
@@ -533,8 +638,10 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         Ward ward = resolveWard(player, args);
         if (ward == null) return true;
         if (args.length >= 3 && "add".equalsIgnoreCase(args[1])) {
-            if (!ward.ownerId().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
-                error(player, WARD_PREFIX, "Solo el owner puede modificar el score.");
+            // HARDENED (breaking change): raising phases is now ADMIN-ONLY
+            // (previously owner OR admin). Owners grow via /ward menu upgrades.
+            if (!player.hasPermission(ADMIN_PERM)) {
+                error(player, WARD_PREFIX, "Solo un admin puede modificar el score.");
                 return true;
             }
             // Lore: raising a phase requires the physical nucleus (or remote link)
@@ -820,6 +927,9 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
 
     private void sendHelp(Player player) {
         helpBlock(player, "help.ward");
+        if (player.hasPermission(ADMIN_PERM)) {
+            helpAdminSection(player, "help.ward.admin");
+        }
     }
 
     // ── Tab completion ─────────────────────────────────────────────────────────
@@ -827,13 +937,20 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();
+        boolean admin = sender.hasPermission(ADMIN_PERM);
         if (args.length == 1) {
-            filter(registry.completionTokens(args[0]), args[0]).forEach(completions::add);
+            // Admin-only subcommands stay hidden from non-admin senders
+            filter(registry.completionTokens(args[0], spec -> !spec.isAdminOnly() || admin), args[0])
+                    .forEach(completions::add);
             return completions;
         }
         if (args.length == 2) {
             SubcommandSpec spec = registry.resolve(args[0]);
             String sub = (spec != null ? spec.name() : args[0]).toLowerCase(Locale.ROOT);
+            if ("admin".equals(sub)) {
+                if (admin) filter(List.of("menu", "delete"), args[1]).forEach(completions::add);
+                return completions;
+            }
             switch (sub) {
                 case "transfer" -> filter(onlinePlayers(args[1]), args[1]).forEach(completions::add);
                 case "permissions" -> {
@@ -854,6 +971,14 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         if (args.length == 3) {
             SubcommandSpec spec = registry.resolve(args[0]);
             String sub = (spec != null ? spec.name() : args[0]).toLowerCase(Locale.ROOT);
+            if ("admin".equals(sub) && "delete".equalsIgnoreCase(args[1])) {
+                if (sender.hasPermission(ADMIN_PERM)) {
+                    wardNames().stream()
+                            .filter(n -> n.toLowerCase(Locale.ROOT).startsWith(args[2].toLowerCase(Locale.ROOT)))
+                            .forEach(completions::add);
+                }
+                return completions;
+            }
             if ("upkeep".equals(sub) && "deposit".equalsIgnoreCase(args[1]) && upkeepService != null) {
                 upkeepService.acceptedMaterials().keySet().stream()
                         .map(Enum::name)
@@ -890,6 +1015,10 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         return wardService.findByOwner(player.getUniqueId()).stream()
                 .map(w -> w.id().toString())
                 .toList();
+    }
+
+    private List<String> wardNames() {
+        return wardService.findAll().stream().map(Ward::name).toList();
     }
 
     private List<String> filter(List<String> options, String prefix) {

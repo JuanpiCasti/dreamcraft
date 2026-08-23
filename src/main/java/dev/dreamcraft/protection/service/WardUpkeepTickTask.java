@@ -37,6 +37,8 @@ public final class WardUpkeepTickTask extends BukkitRunnable {
     private final WardTierProvider tierProvider;
     private final dev.dreamcraft.protection.persistence.YamlWardRepository wardRepository;
     private final Duration notifyThrottle;
+    /** Recurring surcharge per gated block placed below its tier (ward.below-tier-surcharge-units). */
+    private final int belowTierSurchargeUnits;
     private final JavaPlugin plugin;
     private final Map<UUID, Instant> lastDebtWarning = new HashMap<>();
 
@@ -44,11 +46,13 @@ public final class WardUpkeepTickTask extends BukkitRunnable {
                               WardTierProvider tierProvider,
                               dev.dreamcraft.protection.persistence.YamlWardRepository wardRepository,
                               Duration upkeepInterval,
+                              int belowTierSurchargeUnits,
                               JavaPlugin plugin) {
         this.wardService = wardService;
         this.tierProvider = tierProvider;
         this.wardRepository = wardRepository;
         this.notifyThrottle = upkeepInterval;
+        this.belowTierSurchargeUnits = Math.max(0, belowTierSurchargeUnits);
         this.plugin = plugin;
     }
 
@@ -67,9 +71,12 @@ public final class WardUpkeepTickTask extends BukkitRunnable {
         for (Ward ward : wardService.findAll()) {
             if (ward.nextUpkeepAt().isAfter(now)) continue;
 
-            int cost = tierProvider.findByKey(ward.tier())
+            // Effective upkeep: base tier cost + surcharge for each gated block
+            // placed while the Ward was below the required rank
+            int baseCost = tierProvider.findByKey(ward.tier())
                     .map(dev.dreamcraft.protection.domain.model.WardTier::upkeepPerInterval)
                     .orElse(1);
+            int cost = baseCost + belowTierSurchargeUnits * Math.max(0, ward.belowTierBlocks());
             boolean paid = wardService.deductUpkeep(ward, cost);
             processed++;
             if (paid) {
@@ -98,8 +105,12 @@ public final class WardUpkeepTickTask extends BukkitRunnable {
 
         Player owner = Bukkit.getPlayer(ward.ownerId());
         if (owner == null) return;
+        int surcharge = belowTierSurchargeUnits * Math.max(0, ward.belowTierBlocks());
+        String extra = surcharge > 0
+                ? " (incluye +" + surcharge + " de sobrecosto por " + ward.belowTierBlocks()
+                + " bloque(s) fuera de fase)" : "";
         owner.sendMessage("§c[Sincronía] Tu Núcleo §f" + ward.name()
-                + "§c no pudo pagar el mantenimiento (" + cost
-                + " unidades). Alimentalo en su bloque o con §f/" + CommandNames.root("ward") + " upkeep deposit§c.");
+                + "§c no pudo pagar el mantenimiento (" + cost + " unidades)" + extra
+                + ". Alimentalo en su bloque o con §f/" + CommandNames.root("ward") + " upkeep deposit§c.");
     }
 }
