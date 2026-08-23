@@ -49,6 +49,23 @@ public final class WardMenuFacade {
                           MenuProvider menuProvider,
                           List<String> upkeepMaterialLines,
                           dev.dreamcraft.protection.service.UpkeepProjectionCalculator upkeepCalculator) {
+        this(tierProvider, cityService, upgradeService, menuProvider, upkeepMaterialLines,
+                upkeepCalculator, 0);
+    }
+
+    /**
+     * @param upkeepCalculator        optional balance → protection-time projector; null disables
+     *                                the "Protección:" lore lines and vault-open summary
+     * @param belowTierSurchargeUnits recurring surcharge per gated block below tier
+     *                                (mirrors {@code WardUpkeepTickTask}); 0 → base rate only
+     */
+    public WardMenuFacade(WardTierProvider tierProvider,
+                          CityService cityService,
+                          dev.dreamcraft.protection.service.WardUpgradeService upgradeService,
+                          MenuProvider menuProvider,
+                          List<String> upkeepMaterialLines,
+                          dev.dreamcraft.protection.service.UpkeepProjectionCalculator upkeepCalculator,
+                          int belowTierSurchargeUnits) {
         this.upgradeService = upgradeService;
         this.menuProvider = menuProvider;
         this.viewModelBuilder = new WardViewModelBuilder(
@@ -57,7 +74,8 @@ public final class WardMenuFacade {
                 id -> cityService.findById(id).map(City::name).orElse(null),
                 this::buildUpgradePreview,
                 upkeepMaterialLines,
-                upkeepCalculator);
+                upkeepCalculator,
+                belowTierSurchargeUnits);
     }
 
     /** Opens the Ward menu for the viewer with freshly computed state. */

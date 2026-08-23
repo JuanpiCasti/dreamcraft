@@ -48,8 +48,9 @@ public final class WardMenuBuilder {
                 )));
 
         // Slot 10 — Upkeep vault opener
-        // Lore (≤ 9 lines): protection time by state, consumption, balance,
-        // top-4 material → time equivalences, action hint.
+        // Lore (≤ 10 lines): protection time by state, consumption, below-tier
+        // surcharge (when active), balance, ALL material → time equivalences
+        // (two per line to stay compact), action hint.
         List<String> upkeepLore = new ArrayList<>();
         var projection = vm.upkeepProjection();
         if (projection != null) {
@@ -57,14 +58,25 @@ public final class WardMenuBuilder {
             upkeepLore.add(stateColor + "&lProtección: &f" + projection.timeRemainingText()
                     + " &7(" + projection.state().displayName() + ")");
             upkeepLore.add("&7Consumo: &f" + projection.unitsPerInterval() + " u/intervalo");
+            if (vm.belowTierBlocks() > 0 && vm.belowTierSurchargePerInterval() > 0) {
+                upkeepLore.add("&cSobrecosto: &f+" + vm.belowTierSurchargePerInterval()
+                        + " u/intervalo &7(" + vm.belowTierBlocks()
+                        + " bloque(s) fuera de fase)");
+            }
             upkeepLore.add("&7Balance: &f" + projection.balanceUnits() + " u disponibles");
-            if (!projection.equivalences().isEmpty()) {
+            var equivalences = projection.equivalences();
+            if (!equivalences.isEmpty()) {
                 upkeepLore.add("");
-                int shown = 0;
-                for (var eq : projection.equivalences()) {
-                    if (shown >= 4) break;
-                    upkeepLore.add("&8· &f1×" + eq.label() + " &7≈ &b" + eq.timeBoughtText());
-                    shown++;
+                for (int i = 0; i < equivalences.size(); i += 2) {
+                    StringBuilder line = new StringBuilder();
+                    for (int j = i; j < Math.min(i + 2, equivalences.size()); j++) {
+                        var eq = equivalences.get(j);
+                        if (j > i) line.append(" &8· ");
+                        else line.append("&8· ");
+                        line.append("&f1×").append(eq.label())
+                                .append(" &7≈ &b").append(eq.timeBoughtText());
+                    }
+                    upkeepLore.add(line.toString());
                 }
             }
         } else {

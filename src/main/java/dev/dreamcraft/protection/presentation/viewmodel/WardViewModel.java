@@ -48,7 +48,12 @@ public record WardViewModel(
         boolean canDisband,
         /** Pre-computed upkeep time projection (state + remaining time + material
          *  equivalences); null when the calculator was not wired upstream. */
-        UpkeepProjectionCalculator.Projection upkeepProjection
+        UpkeepProjectionCalculator.Projection upkeepProjection,
+        /** Gated blocks placed while the Ward was below its tier (drives the surcharge). */
+        int belowTierBlocks,
+        /** Total extra units charged per interval due to below-tier blocks
+         *  (surchargeUnits × belowTierBlocks, mirrored from WardUpkeepTickTask). */
+        int belowTierSurchargePerInterval
 ) {
     /** Legacy-arity constructor — projection unavailable (null). */
     public WardViewModel(
@@ -84,6 +89,6 @@ public record WardViewModel(
                 baseScore, tier, radius, upkeepBalance, nextUpkeepAt,
                 centerX, centerY, centerZ, permissions, hasCityMembership, upgradePreview,
                 upkeepMaterials, canUpgrade, canDeposit, canManage, canTransfer,
-                canSetPermissions, canAnnexToCity, canDisband, null);
+                canSetPermissions, canAnnexToCity, canDisband, null, 0, 0);
     }
 }

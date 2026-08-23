@@ -25,6 +25,8 @@ public final class WardViewModelBuilder {
     private final java.util.List<String> upkeepMaterialLines;
     /** Optional: projects balance → remaining protection time + material equivalences. */
     private final dev.dreamcraft.protection.service.UpkeepProjectionCalculator upkeepCalculator;
+    /** Recurring surcharge per gated block placed below the Ward's tier (config). */
+    private final int belowTierSurchargeUnits;
 
     public WardViewModelBuilder(WardTierProvider tierProvider, Function<UUID, String> nameResolver) {
         this(tierProvider, nameResolver, id -> null);
@@ -70,12 +72,33 @@ public final class WardViewModelBuilder {
                                 BiFunction<Ward, UUID, WardUpgradePreview> upgradePreviewResolver,
                                 java.util.List<String> upkeepMaterialLines,
                                 dev.dreamcraft.protection.service.UpkeepProjectionCalculator upkeepCalculator) {
+        this(tierProvider, nameResolver, cityNameResolver, upgradePreviewResolver,
+                upkeepMaterialLines, upkeepCalculator, 0);
+    }
+
+    /**
+     * @param nameResolver           resolves player UUIDs to display names
+     * @param cityNameResolver       resolves city UUIDs to city names (null when unknown)
+     * @param upgradePreviewResolver computes the upgrade preview; null → unavailable preview
+     * @param upkeepMaterialLines    pre-formatted accepted-material lines (legacy ctor path)
+     * @param upkeepCalculator       projects balance → protection time; null → no projection
+     * @param belowTierSurchargeUnits recurring surcharge per gated block placed below
+     *                                the tier (mirrors {@code WardUpkeepTickTask}); 0 → base rate only
+     */
+    public WardViewModelBuilder(WardTierProvider tierProvider,
+                                Function<UUID, String> nameResolver,
+                                Function<UUID, String> cityNameResolver,
+                                BiFunction<Ward, UUID, WardUpgradePreview> upgradePreviewResolver,
+                                java.util.List<String> upkeepMaterialLines,
+                                dev.dreamcraft.protection.service.UpkeepProjectionCalculator upkeepCalculator,
+                                int belowTierSurchargeUnits) {
         this.tierProvider = tierProvider;
         this.nameResolver = nameResolver;
         this.cityNameResolver = cityNameResolver;
         this.upgradePreviewResolver = upgradePreviewResolver;
         this.upkeepMaterialLines = java.util.List.copyOf(upkeepMaterialLines);
         this.upkeepCalculator = upkeepCalculator;
+        this.belowTierSurchargeUnits = Math.max(0, belowTierSurchargeUnits);
     }
 
     /**
@@ -98,8 +121,12 @@ public final class WardViewModelBuilder {
         WardUpgradePreview preview = upgradePreviewResolver != null
                 ? upgradePreviewResolver.apply(ward, viewerId)
                 : WardUpgradePreview.unavailable();
+        // Effective upkeep mirrors WardUpkeepTickTask.run(): base tier cost plus
+        // the surcharge for every gated block placed below the required rank.
+        int surcharge = belowTierSurchargeUnits * Math.max(0, ward.belowTierBlocks());
         var projection = upkeepCalculator == null ? null
-                : upkeepCalculator.project(ward.upkeepBalance(), unitsPerInterval(ward));
+                : upkeepCalculator.project(ward.upkeepBalance(),
+                        unitsPerInterval(ward) + surcharge);
 
         return new WardViewModel(
                 ward.id(),
@@ -129,7 +156,9 @@ public final class WardViewModelBuilder {
                 isOwner,         // canSetPermissions
                 isOwner && !hasCity, // canAnnexToCity — owner with no city
                 isOwner,         // canDisband
-                projection
+                projection,
+                ward.belowTierBlocks(),
+                surcharge
         );
     }
 

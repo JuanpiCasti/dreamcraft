@@ -162,6 +162,56 @@ class UpkeepProjectionCalculatorTest {
         assertSame(calc.equivalences(8), calc.equivalences(8)); // cached instance
     }
 
+    // ── Effective rate: tier base + below-tier surcharge (mirrors TickTask) ──
+
+    @Test
+    void effectiveSurchargeCanDropProtectedIntoGrace() {
+        // WardUpkeepTickTask charges base + surcharge×blocks. A balance that paid
+        // exactly one interval at the base rate (8) cannot cover the next charge
+        // once the effective rate rises to 12 (8 + 2×2 gated blocks) → GRACIA.
+        var calc = calculator(Duration.ofHours(24), Duration.ofHours(24), Duration.ofHours(6));
+        assertEquals(State.PROTEGIDO, calc.project(8, 8).state());
+
+        Projection effective = calc.project(8, 12);
+        assertEquals(State.GRACIA, effective.state());
+        assertEquals(Duration.ofHours(16), effective.timeRemaining()); // 24h × 8/12
+        assertEquals("16h", effective.timeRemainingText());
+    }
+
+    @Test
+    void effectiveSurchargeCanDropProtectedIntoPorVencer() {
+        // Base rate 12: 24 u → 48h coverage ≥ warning 44h → PROTEGIDO.
+        // Effective rate 16 (surcharge): coverage falls to 36h < expiring 40h
+        // while still covering one full interval (24 ≥ 16) → POR_VENCER.
+        var calc = calculator(Duration.ofHours(24), Duration.ofHours(44), Duration.ofHours(40));
+        assertEquals(State.PROTEGIDO, calc.project(24, 12).state());
+        Projection p = calc.project(24, 16);
+        assertEquals(State.POR_VENCER, p.state());
+        assertEquals(Duration.ofHours(36), p.timeRemaining());
+        assertEquals("1d 12h", p.timeRemainingText());
+        assertEquals(1, p.intervalsRemaining());
+    }
+
+    @Test
+    void equivalencesCoverEveryConfiguredMaterialAtEffectiveRate() {
+        // Rate 12 u/intervalo over 24h — every material in the config map must be
+        // present (COAL included) with its time recalculated at the passed rate.
+        List<Equivalence> eqs = calculator(Duration.ofHours(24), Duration.ofHours(24),
+                Duration.ofHours(6)).equivalences(12);
+
+        assertEquals(List.of("DIAMOND", "EMERALD", "GOLD_INGOT", "IRON_INGOT", "COAL"),
+                eqs.stream().map(Equivalence::materialName).toList());
+        assertEquals(Duration.ofHours(128), eqs.get(0).timeBought()); // DIAMOND 64/12 → 5⅓ intervals
+        assertEquals("5d 8h", eqs.get(0).timeBoughtText());
+        assertEquals(Duration.ofDays(4), eqs.get(1).timeBought());    // EMERALD 48/12
+        assertEquals(Duration.ofHours(32), eqs.get(2).timeBought());  // GOLD_INGOT 16/12 → 1d 8h
+        assertEquals("1d 8h", eqs.get(2).timeBoughtText());
+        assertEquals(Duration.ofHours(16), eqs.get(3).timeBought());  // IRON_INGOT 8/12
+        assertEquals("16h", eqs.get(3).timeBoughtText());
+        assertEquals(Duration.ofHours(4), eqs.get(4).timeBought());   // COAL 2/12
+        assertEquals("4h", eqs.get(4).timeBoughtText());
+    }
+
     // ── Humanizer edges ───────────────────────────────────────────────────────
 
     @Test

@@ -47,11 +47,13 @@ public final class WardUpkeepVaultListener implements Listener {
     private final UpkeepProjectionCalculator projectionCalculator;
     /** Resolves a Ward's tier consumption in units per interval. */
     private final java.util.function.ToIntFunction<Ward> unitsPerInterval;
+    /** Recurring surcharge per gated block placed below the Ward's tier (config). */
+    private final int belowTierSurchargeUnits;
 
     public WardUpkeepVaultListener(WardService wardService,
                                    WardUpkeepService upkeepService,
                                    Runnable saveAction) {
-        this(wardService, upkeepService, saveAction, null, ward -> 1);
+        this(wardService, upkeepService, saveAction, null, ward -> 1, 0);
     }
 
     public WardUpkeepVaultListener(WardService wardService,
@@ -59,11 +61,28 @@ public final class WardUpkeepVaultListener implements Listener {
                                    Runnable saveAction,
                                    UpkeepProjectionCalculator projectionCalculator,
                                    java.util.function.ToIntFunction<Ward> unitsPerInterval) {
+        this(wardService, upkeepService, saveAction, projectionCalculator,
+                unitsPerInterval, 0);
+    }
+
+    /**
+     * @param projectionCalculator    balance → protection-time projector (null disables the summary)
+     * @param unitsPerInterval        resolves the Ward's base tier consumption per interval
+     * @param belowTierSurchargeUnits recurring surcharge per gated block placed below the
+     *                                tier (mirrors {@code WardUpkeepTickTask}); 0 → base rate only
+     */
+    public WardUpkeepVaultListener(WardService wardService,
+                                   WardUpkeepService upkeepService,
+                                   Runnable saveAction,
+                                   UpkeepProjectionCalculator projectionCalculator,
+                                   java.util.function.ToIntFunction<Ward> unitsPerInterval,
+                                   int belowTierSurchargeUnits) {
         this.wardService = wardService;
         this.upkeepService = upkeepService;
         this.saveAction = saveAction;
         this.projectionCalculator = projectionCalculator;
         this.unitsPerInterval = unitsPerInterval != null ? unitsPerInterval : ward -> 1;
+        this.belowTierSurchargeUnits = Math.max(0, belowTierSurchargeUnits);
     }
 
     /** Compact open-time summary — read-only, never modifies the vault inventory. */
@@ -75,8 +94,11 @@ public final class WardUpkeepVaultListener implements Listener {
         Ward ward = wardService.findById(holder.wardId()).orElse(null);
         if (ward == null) return;
 
+        // Effective upkeep mirrors WardUpkeepTickTask.run(): base tier cost plus
+        // the surcharge for every gated block placed below the required rank.
+        int surcharge = belowTierSurchargeUnits * Math.max(0, ward.belowTierBlocks());
         var projection = projectionCalculator.project(
-                ward.upkeepBalance(), unitsPerInterval.applyAsInt(ward));
+                ward.upkeepBalance(), unitsPerInterval.applyAsInt(ward) + surcharge);
 
         player.sendMessage(CommandMessages.WARD_PREFIX
                 .append(Component.text("Protección: ", NamedTextColor.GRAY))
@@ -87,9 +109,14 @@ public final class WardUpkeepVaultListener implements Listener {
                                 + " u cada " + UpkeepProjectionCalculator.humanize(projectionCalculator.interval())
                                 + " · Balance: " + projection.balanceUnits() + " u",
                         NamedTextColor.GRAY)));
+        if (surcharge > 0) {
+            player.sendMessage(CommandMessages.WARD_PREFIX
+                    .append(Component.text("Sobrecosto: +" + surcharge + " u/intervalo ("
+                            + ward.belowTierBlocks() + " bloque(s) fuera de fase)",
+                            NamedTextColor.RED)));
+        }
         List<String> eq = new ArrayList<>();
         for (var e : projection.equivalences()) {
-            if (eq.size() >= 4) break;
             eq.add("1×" + e.label() + " ≈ " + e.timeBoughtText());
         }
         if (!eq.isEmpty()) {

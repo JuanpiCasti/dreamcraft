@@ -195,7 +195,7 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         dev.dreamcraft.protection.command.WardMenuFacade wardMenuFacade =
                 new dev.dreamcraft.protection.command.WardMenuFacade(
                         tierProvider, cityService, upgradeService, menuProvider, upkeepLines,
-                        upkeepProjection);
+                        upkeepProjection, protectionConfig.belowTierSurchargeUnits());
 
         // 7a. Wire the action + deposit dispatchers to the vanilla menu provider
         MenuActionDispatcher dispatcher = new MenuActionDispatcher(
@@ -327,7 +327,8 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                 wardService, upkeepService, this::saveDomainData, upkeepProjection,
                 ward -> tierProvider.findByKey(ward.tier())
                         .map(dev.dreamcraft.protection.domain.model.WardTier::upkeepPerInterval)
-                        .orElse(1)), this);
+                        .orElse(1),
+                protectionConfig.belowTierSurchargeUnits()), this);
 
         // 7f. City treasury vault — persists contents when the vault inventory closes
         pm.registerEvents(new dev.dreamcraft.protection.listener.CityTreasuryVaultListener(
