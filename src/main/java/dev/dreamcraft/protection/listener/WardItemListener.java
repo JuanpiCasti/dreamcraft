@@ -28,7 +28,10 @@ import java.util.function.BiConsumer;
  * <ul>
  *   <li>Placing the Ward item founds a Ward whose protection radius is centered
  *       on the placed block.</li>
- *   <li>Breaking the center block dissolves the Ward (owner or admin only).</li>
+ *   <li>Breaking the center block dissolves the Ward through the shared
+ *       {@link dev.dreamcraft.protection.service.WardDissolutionService}
+ *       (owner gets the tagged core back; admin teardown returns nothing).
+ *       The break event is cancelled so the vanilla generic drop never appears.</li>
  *   <li>Right-clicking the center block opens the Ward menu (admins/VIPs only,
  *       same restriction as {@code /ward menu}).</li>
  * </ul>
@@ -41,6 +44,8 @@ public final class WardItemListener implements Listener {
     private final BiConsumer<Player, Ward> menuOpener;
     private final java.util.function.Predicate<Player> menuAccess;
     private final Runnable saveAction;
+    /** Single dissolution contract — same teardown as /ward delete and the menu. */
+    private final dev.dreamcraft.protection.service.WardDissolutionService dissolutionService;
 
     public WardItemListener(WardItems wardItems,
                             WardService wardService,
@@ -48,12 +53,23 @@ public final class WardItemListener implements Listener {
                             BiConsumer<Player, Ward> menuOpener,
                             java.util.function.Predicate<Player> menuAccess,
                             Runnable saveAction) {
+        this(wardItems, wardService, worldGuardAdapter, menuOpener, menuAccess, saveAction, null);
+    }
+
+    public WardItemListener(WardItems wardItems,
+                            WardService wardService,
+                            WorldGuardAdapter worldGuardAdapter,
+                            BiConsumer<Player, Ward> menuOpener,
+                            java.util.function.Predicate<Player> menuAccess,
+                            Runnable saveAction,
+                            dev.dreamcraft.protection.service.WardDissolutionService dissolutionService) {
         this.wardItems = wardItems;
         this.wardService = wardService;
         this.worldGuardAdapter = worldGuardAdapter;
         this.menuOpener = menuOpener;
         this.menuAccess = menuAccess;
         this.saveAction = saveAction;
+        this.dissolutionService = dissolutionService;
     }
 
     // ── Block place ───────────────────────────────────────────────────────────
@@ -104,18 +120,30 @@ public final class WardItemListener implements Listener {
 
         Player player = event.getPlayer();
         Ward ward = center.get();
-        boolean admin = player.hasPermission("dreamcraft.ward.admin");
-        if (!ward.ownerId().equals(player.getUniqueId()) && !admin) {
+        boolean owner = ward.ownerId().equals(player.getUniqueId());
+        if (!owner && !player.hasPermission("dreamcraft.ward.admin")) {
             event.setCancelled(true);
             player.sendMessage("§c[Sincronía] Solo el owner puede retirar su Núcleo de Sincronía.");
             return;
         }
+        // Cancel first: the vanilla material drop is replaced by the tagged
+        // founder item the dissolution service hands back to owners.
+        event.setCancelled(true);
+        var result = dissolutionService != null
+                ? dissolutionService.dissolve(ward, player, owner)
+                : legacyDissolve(ward);
+        if (dissolutionService == null) saveAction.run();
+        player.sendMessage(CommandMessages.prefixed("ward",
+                "Núcleo §f" + ward.name() + "§a desactivado. Área liberada."
+                        + (result.refunded() ? " §7(Tu Núcleo volvió a tu inventario.)" : ""),
+                NamedTextColor.GREEN));
+    }
+
+    /** Pre-contract fallback (service not wired): region + repository teardown only. */
+    private dev.dreamcraft.protection.service.WardDissolutionService.Result legacyDissolve(Ward ward) {
         worldGuardAdapter.removeRegion(ward);
         wardService.delete(ward);
-        saveAction.run();
-        player.sendMessage(CommandMessages.prefixed("ward",
-                "Núcleo §f" + ward.name() + "§a desactivado. Área liberada.",
-                NamedTextColor.GREEN));
+        return new dev.dreamcraft.protection.service.WardDissolutionService.Result(false, false);
     }
 
     // ── Right-click ───────────────────────────────────────────────────────────

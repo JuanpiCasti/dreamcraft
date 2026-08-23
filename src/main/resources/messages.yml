@@ -34,12 +34,20 @@ sync:
   tp-done: "Teletransporte al núcleo completado."
   nucleus-not-found: "&c{name.ward} no encontrado. Usa <id> o el nombre de un jugador online."
 
+# Primer núcleo gratis (/{cmd.ward} reclamar) — una vez por jugador
+ward:
+  reclamar:
+    ok: "&a¡Primer núcleo gratis! Colócalo para despertar tu territorio."
+    ya-reclamado: "&cYa reclamaste tu primer núcleo gratis. El próximo obtenlo crafteándolo."
+    error: "&cNo se pudo registrar tu reclamo: intentá de nuevo en unos segundos."
+
 help:
   ward:
     header: "&b&lDreamCraft {name.ward}"
     subtitle: "&7Gestiona tu territorio. Raíz actual: &f/{cmd.ward}"
     lines:
       - "&f/{cmd.ward} create              &7— Crear Ward en tu posición"
+      - "&f/{cmd.ward} reclamar            &7— Recibe tu primer núcleo gratis &8(una vez)"
       - "&f/{cmd.ward} rename <nombre>    &7— Renombrar tu Ward"
       - "&f/{cmd.ward} info [id]          &7— Ver información del Ward"
       - "&f/{cmd.ward} sintonizar         &7— Abrir acceso público de construcción"
@@ -153,3 +161,5 @@ menu:
   hint.city-kick: "Usa /{cmd.city} kick <jugador>"
   hint.city-roles: "Usa /{cmd.city} roles <jugador> <rol>"
   hint.estate-invite: "Usa /{cmd.estate} invite <jugador>"
+  # Aviso extra al disolver el propio Ward desde el menú (ítem devuelto)
+  ward.disbanded-refund: " Tu Núcleo volvió a tu inventario."

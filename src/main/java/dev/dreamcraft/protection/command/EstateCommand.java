@@ -112,8 +112,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(tr("common.players-only", "§cEste comando solo puede ser usado por jugadores."));
-            return true;
+            return handleConsole(sender, args);
         }
         if (!player.hasPermission(USE_PERM)) {
             error(player, ESTATE_PREFIX, tr("common.no-permission", "No tienes permiso para usar este comando."));
@@ -304,22 +303,22 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
     }
 
     /** Forces the instance world reset (map restore + dragon respawn). */
-    private boolean handleAdminReset(Player player, String[] args) {
+    private boolean handleAdminReset(CommandSender sender, String[] args) {
         if (args.length < 3) {
-            error(player, ESTATE_PREFIX, CommandNames.cmd("estate", "admin reset <id>"));
+            error(sender, ESTATE_PREFIX, CommandNames.cmd("estate", "admin reset <id>"));
             return true;
         }
         Estate estate = findEstateByIdOrName(args[2]);
         if (estate == null) {
-            error(player, ESTATE_PREFIX, "Instancia no encontrada: " + args[2]);
+            error(sender, ESTATE_PREFIX, "Instancia no encontrada: " + args[2]);
             return true;
         }
         if (instanceService == null || !estate.type().usesEndInstance()) {
-            error(player, ESTATE_PREFIX, "Esta zona no tiene instancia de End.");
+            error(sender, ESTATE_PREFIX, "Esta zona no tiene instancia de End.");
             return true;
         }
         instanceService.resetInstance(estate);
-        ok(player, ESTATE_PREFIX, "Instancia reiniciada: mapa restaurado y dragona lista.");
+        ok(sender, ESTATE_PREFIX, "Instancia reiniciada: mapa restaurado y dragona lista.");
         return true;
     }
 
@@ -515,18 +514,19 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
     private boolean handleDisband(Player player, String[] args) {
         Estate estate = resolveEstate(player, args);
         if (estate == null) return true;
-        if (!estate.isOwner(player.getUniqueId())) {
+        boolean admin = player.hasPermission("dreamcraft.protection.admin");
+        if (!admin && !estate.isOwner(player.getUniqueId())) {
             error(player, ESTATE_PREFIX, "Solo el owner puede disolver el Estate.");
+            return true;
+        }
+        if (estate.persistent() && !admin) {
+            error(player, ESTATE_PREFIX, "Esta zona de aventura la administra el servidor.");
             return true;
         }
         if (instanceService != null && estate.type().usesEndInstance()) {
             instanceService.resetInstance(estate);
         }
-        // The estate is gone: its pending zone edits must not outlive it
-        if (instanceService != null) instanceService.clearZoneEdits(estate.id());
-        if (worldGuardAdapter != null) worldGuardAdapter.removeEstateAreaRegion(estate);
-        estateService.delete(estate);
-        ok(player, ESTATE_PREFIX, "Instancia " + estate.name() + " disuelta.");
+        deleteEstate(estate, player);
         return true;
     }
 
@@ -626,6 +626,56 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         MenuContext ctx = new MenuContext(player.getUniqueId(), player.getName(),
                 Map.of("estateId", estate.id()));
         menuProvider.open(def, ctx);
+    }
+
+    // ── Console / RCON surface ────────────────────────────────────────────────
+
+    /**
+     * Non-player senders (console, RCON, command blocks) reach only the
+     * location-free admin operations — disband by id and instance reset;
+     * everything else keeps the historical players-only contract.
+     */
+    private boolean handleConsole(CommandSender sender, String[] args) {
+        String sub = args.length == 0 ? "" : args[0].toLowerCase(Locale.ROOT);
+        boolean whitelisted = sub.equals("disband")
+                || (sub.equals("admin") && args.length >= 2 && args[1].equalsIgnoreCase("reset"));
+        if (!whitelisted) {
+            error(sender, ESTATE_PREFIX, tr("common.players-only", "§cEste comando solo puede ser usado por jugadores."));
+            return true;
+        }
+        if (!sender.hasPermission("dreamcraft.protection.admin")) {
+            error(sender, ESTATE_PREFIX, tr("common.no-permission", "No tienes permiso para usar este comando."));
+            return true;
+        }
+        if (sub.equals("disband")) return disbandById(sender, args);
+        return handleAdminReset(sender, args);
+    }
+
+    /** Console variant of disband: explicit id/name required, admin trust assumed. */
+    private boolean disbandById(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            error(sender, ESTATE_PREFIX, CommandNames.cmd("estate", "disband <id>"));
+            return true;
+        }
+        Estate estate = findEstateByIdOrName(args[1]);
+        if (estate == null) {
+            error(sender, ESTATE_PREFIX, "Instancia no encontrada: " + args[1]);
+            return true;
+        }
+        deleteEstate(estate, sender);
+        return true;
+    }
+
+    /** Shared teardown for both the player and the console disband paths. */
+    private void deleteEstate(Estate estate, CommandSender feedback) {
+        if (instanceService != null && estate.type().usesEndInstance()) {
+            instanceService.resetInstance(estate);
+        }
+        // The estate is gone: its pending zone edits must not outlive it
+        if (instanceService != null) instanceService.clearZoneEdits(estate.id());
+        if (worldGuardAdapter != null) worldGuardAdapter.removeEstateAreaRegion(estate);
+        estateService.delete(estate);
+        ok(feedback, ESTATE_PREFIX, "Instancia " + estate.name() + " disuelta.");
     }
 
     // ── Estate resolution ──────────────────────────────────────────────────────

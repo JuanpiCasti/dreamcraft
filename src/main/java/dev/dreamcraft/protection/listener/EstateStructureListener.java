@@ -94,29 +94,30 @@ public final class EstateStructureListener implements Listener {
         Player player = event.getPlayer();
         List<Estate> zones = zonesAt(block);
         if (zones.isEmpty()) return;
-        if (isAdmin(player)) return; // admin setup bypasses every zone rule
-        if (!isMemberAnywhere(zones, player.getUniqueId())) {
+        boolean admin = isAdmin(player);
+        if (!admin && !isMemberAnywhere(zones, player.getUniqueId())) {
             event.setCancelled(true);
             gateTitle(player, zones.get(0));
             return;
         }
 
-        if (protectStructure && isProtected(block.getType())) {
+        if (!admin && protectStructure && isProtected(block.getType())) {
             event.setCancelled(true);
             notice(player);
             return;
         }
         // Loot vessels stay in place even when general protection is off
-        if (isContainer(block.getType()) && !player.hasPermission("dreamcraft.ward.admin")) {
+        if (!admin && isContainer(block.getType()) && !player.hasPermission("dreamcraft.ward.admin")) {
             event.setCancelled(true);
             notice(player);
             return;
         }
-        // Silverfish spawners fall through here: the journal snapshots their
-        // full BlockData and the rollback restores them on session close.
+        // Members AND admins journal here: admin setup edits are attributed to
+        // the persistent zone ({@link #owningZone}), so the scheduled portal
+        // reset restores everything — including silverfish spawners an op broke.
         if (regenerateZone && journal != null) {
             UUID zoneId = owningZone(player.getUniqueId(), zones);
-            journal.record(zoneId, block, block.getBlockData());
+            journal.record(zoneId, block, block.getState());
         }
     }
 

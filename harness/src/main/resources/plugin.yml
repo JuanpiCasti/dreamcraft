@@ -1,0 +1,19 @@
+name: DreamCraftTestHarness
+version: ${version}
+main: dev.dreamcraft.harness.HarnessPlugin
+api-version: '1.21'
+description: Local test harness — scenario runner that exercises DreamCraftProtection from inside a real server
+authors: [DreamCraft]
+softdepend:
+  - DreamCraftProtection
+
+commands:
+  dctest:
+    description: Ejecuta la suite de pruebas locales del sistema de protección
+    usage: /dctest [run|list]
+    permission: dctest.run
+
+permissions:
+  dctest.run:
+    description: Permite ejecutar la suite de pruebas
+    default: op

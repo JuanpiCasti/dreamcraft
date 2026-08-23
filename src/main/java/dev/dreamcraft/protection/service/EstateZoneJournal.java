@@ -3,7 +3,10 @@ package dev.dreamcraft.protection.service;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.CreatureSpawner;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.entity.EntityType;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +18,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -57,17 +61,39 @@ public final class EstateZoneJournal {
 
     /** Records the original state of a block about to be changed inside a zone. */
     public void record(UUID estateId, Block block, BlockData originalState) {
+        record(estateId, block, originalState, null);
+    }
+
+    /**
+     * Same as {@link #record(UUID, Block, BlockData)} but captures the tile
+     * state too — silverfish spawners restore their {@code SpawnedType}, which
+     * plain {@code BlockData} drops (a restored spawner would default to PIG
+     * and never spawn silverfish again).
+     */
+    public void record(UUID estateId, Block block, BlockState snapshot) {
+        String entity = null;
+        if (snapshot instanceof CreatureSpawner spawner) {
+            EntityType type = spawner.getSpawnedType();
+            if (type != null && type.isAlive()) entity = type.name();
+        }
+        record(estateId, block, snapshot.getBlockData(), entity);
+    }
+
+    private void record(UUID estateId, Block block, BlockData originalState, String entityType) {
         if (estateId == null || originalState == null || block.getWorld() == null) return;
-        String line = String.join(";",
+        StringBuilder line = new StringBuilder(String.join(";",
                 block.getWorld().getName(),
                 String.valueOf(block.getX()),
                 String.valueOf(block.getY()),
                 String.valueOf(block.getZ()),
-                originalState.getAsString());
+                originalState.getAsString()));
+        // Optional 6th field keeps spawner restores exact; legacy 5-field
+        // lines still parse (empty type treated as absent).
+        if (entityType != null) line.append(';').append(entityType);
         Deque<String> entries = memory.computeIfAbsent(estateId, k -> new ArrayDeque<>());
         synchronized (entries) {
             if (entries.size() >= MAX_ENTRIES) return;
-            entries.addLast(line);
+            entries.addLast(line.toString());
         }
         try {
             Files.writeString(entryFile(estateId), line + System.lineSeparator(),
@@ -104,7 +130,7 @@ public final class EstateZoneJournal {
         int restored = 0;
         // Reverse order: undo applies newest-first so the final state is exact
         for (int i = lines.size() - 1; i >= 0; i--) {
-            String[] parts = lines.get(i).split(";", 5);
+            String[] parts = lines.get(i).split(";", 6);
             if (parts.length < 5) continue;
             try {
                 World world = Bukkit.getWorld(parts[0]);
@@ -112,7 +138,17 @@ public final class EstateZoneJournal {
                 int x = Integer.parseInt(parts[1]);
                 int y = Integer.parseInt(parts[2]);
                 int z = Integer.parseInt(parts[3]);
-                world.getBlockAt(x, y, z).setBlockData(Bukkit.createBlockData(parts[4]));
+                BlockState state = world.getBlockAt(x, y, z).getState();
+                state.setBlockData(Bukkit.createBlockData(parts[4]));
+                if (parts.length >= 6 && !parts[5].isEmpty()
+                        && state instanceof CreatureSpawner spawner) {
+                    try {
+                        spawner.setSpawnedType(EntityType.valueOf(parts[5].toUpperCase(Locale.ROOT)));
+                    } catch (IllegalArgumentException ignored) {
+                        // Unknown/renamed entity — spawner restores with its default type
+                    }
+                }
+                state.update(true, false);
                 restored++;
             } catch (Exception ignored) {
                 // Corrupt/legacy line — skip it, the rest still restores

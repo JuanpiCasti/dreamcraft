@@ -70,19 +70,25 @@ posición → primer Ward que te pertenece.
 
 ### Creación con la Baliza de Ward
 
-1. Un admin entrega la Baliza con `/ward give`.
+1. Reclamás tu primer núcleo gratis con `/ward reclamar` (una vez por jugador,
+   persistido), lo crafteás con la receta de `ward.recipe` (por defecto
+   8 diamantes + estrella del Nether) o un admin te lo entrega (`/ward give`).
 2. Colocás la Baliza: se funda el Ward centrado en ese bloque (falla si el
    lugar queda dentro de otro claim o Ward).
 3. Clic derecho sobre la Baliza abre el menú del Ward.
-4. Romper la Baliza disuelve el Ward (solo el owner o un admin pueden).
+4. Romper la Baliza disuelve el Ward a través del contrato único de disolución
+   (solo el owner o un admin pueden): el drop vainilla se suprime y el owner
+   recibe de vuelta el ítem taggeado (al inventario, o a sus pies si está
+   lleno). Un admin que disuelve el Ward ajeno no recibe nada.
 
-El bloque, el item-id, el custom model data y el score por mejora se configuran
-en `config.yml` (sección `ward:`).
+El bloque, el item-id, el custom model data, el score por mejora, la receta de
+crafteo y los ítems aceptados se configuran en `config.yml` (sección `ward:`).
 
 | Comando | Descripción |
 |---|---|
 | `/ward` | Muestra la ayuda |
 | `/ward create` | Crea un Ward centrado en tu posición (crea también la región de WorldGuard) |
+| `/ward reclamar` | Entrega tu primer Núcleo gratis (una vez por jugador; inventario lleno → drop a los pies) |
 | `/ward give` | Entrega la Baliza de Ward (admin) |
 | `/ward info [id]` | Nombre, ID, owner, tier, score, radio, upkeep y centro |
 | `/ward menu [id]` | Abre el menú gráfico del Ward (requiere `dreamcraft.ward.menu` o admin; ver abajo) |
@@ -96,7 +102,7 @@ en `config.yml` (sección `ward:`).
 | `/ward city` | Muestra la ciudad a la que pertenece el Ward |
 | `/ward city annex` | Anexa el Ward a tu ciudad (solo owner, debés ser miembro de una ciudad) |
 | `/ward city leave` | Desvincula el Ward de su ciudad (solo owner) |
-| `/ward delete [id]` | Elimina el Ward y su región (solo owner o admin) |
+| `/ward delete [id]` | Elimina el Ward y su región vía el contrato único de disolución (solo owner o admin; owner recibe su Núcleo de vuelta) |
 
 **Permisos públicos válidos** (`WardPermission`): `PUBLIC_BUILD`, `PUBLIC_BREAK`,
 `PUBLIC_CONTAINERS`, `PUBLIC_UPKEEP_DEPOSIT`, `PUBLIC_STATUS_VIEW`.

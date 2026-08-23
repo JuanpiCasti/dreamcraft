@@ -71,6 +71,8 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
     private final WardUpkeepService upkeepService;
     private final WardMenuFacade menuFacade;
     private final Runnable reloadAction;
+    /** Single dissolution contract shared by every route that removes a Ward. */
+    private dev.dreamcraft.protection.service.WardDissolutionService dissolutionService;
     /** Per-server subcommand aliases/enabled flags. */
     private final dev.dreamcraft.protection.config.CommandOptions options;
     /** Single source of truth for dispatch + tab completion. */
@@ -123,6 +125,12 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
         this.assetMode = mode;
     }
 
+    /** Installs the shared dissolution contract used by dissolve/abandon/delete. */
+    public void setDissolutionService(
+            dev.dreamcraft.protection.service.WardDissolutionService dissolutionService) {
+        this.dissolutionService = dissolutionService;
+    }
+
     /**
      * Builds the subcommand table: canonical names here, aliases merged from
      * config.yml (commands.protection.subcommands.&lt;name&gt;.aliases). Several
@@ -169,8 +177,7 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(tr("common.players-only", "§cEste comando solo puede ser usado por jugadores."));
-            return true;
+            return handleConsoleAdmin(sender, args);
         }
         if (!player.hasPermission(USE_PERM)) {
             error(player, WARD_PREFIX, tr("common.no-permission", "No tienes permiso para usar este comando."));
@@ -194,6 +201,18 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
             }
             return true;
         }
+    }
+
+    /**
+     * Console/RCON surface: reload and integrations are location-free admin
+     * operations; everything else keeps the players-only contract.
+     */
+    private boolean handleConsoleAdmin(CommandSender sender, String[] args) {
+        String sub = args.length == 0 ? "" : args[0].toLowerCase(Locale.ROOT);
+        if (sub.equals("reload")) return handleReload(sender);
+        if (sub.equals("integrations")) return handleIntegrations(sender);
+        error(sender, WARD_PREFIX, tr("common.players-only", "§cEste comando solo puede ser usado por jugadores."));
+        return true;
     }
 
     // ── Help ──────────────────────────────────────────────────────────────────
@@ -496,14 +515,24 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
     private boolean handleAbandon(Player player) {
         Ward ward = resolveWard(player);
         if (ward == null) return true;
-        if (!ward.ownerId().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
+        boolean owner = ward.ownerId().equals(player.getUniqueId());
+        if (!owner && !player.hasPermission(ADMIN_PERM)) {
             error(player, WARD_PREFIX, "Solo el owner puede disolver el Núcleo.");
             return true;
         }
+        var result = dissolutionService != null
+                ? dissolutionService.dissolve(ward, player, owner)
+                : legacyDissolve(ward);
+        ok(player, WARD_PREFIX, "Ward §f" + ward.name() + "§a disuelto. El área ya no está protegida."
+                + (result.refunded() ? " §7(Tu Núcleo volvió a tu inventario.)" : ""));
+        return true;
+    }
+
+    /** Pre-contract fallback (service not wired): region + repository teardown only. */
+    private dev.dreamcraft.protection.service.WardDissolutionService.Result legacyDissolve(Ward ward) {
         worldGuardAdapter.removeRegion(ward);
         wardService.delete(ward);
-        ok(player, WARD_PREFIX, "Ward §f" + ward.name() + "§a disuelto. El área ya no está protegida.");
-        return true;
+        return new dev.dreamcraft.protection.service.WardDissolutionService.Result(false, false);
     }
 
     // ── Admin subcommands ─────────────────────────────────────────────────────
@@ -519,13 +548,13 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    private boolean handleReload(Player player) {
-        if (!player.hasPermission(ADMIN_PERM)) {
-            error(player, WARD_PREFIX, "No tienes permiso para este comando.");
+    private boolean handleReload(CommandSender sender) {
+        if (!sender.hasPermission(ADMIN_PERM)) {
+            error(sender, WARD_PREFIX, "No tienes permiso para este comando.");
             return true;
         }
         reloadAction.run();
-        ok(player, WARD_PREFIX, "Configuración recargada.");
+        ok(sender, WARD_PREFIX, "Configuración recargada.");
         return true;
     }
 
@@ -546,12 +575,12 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
      * /protection integrations — MD §19: reports infrastructure AND presentation
      * integrations with their capabilities (perm: dreamcraft.integrations.status).
      */
-    private boolean handleIntegrations(Player player) {
-        if (!player.hasPermission("dreamcraft.integrations.status")) {
-            error(player, WARD_PREFIX, tr("common.no-permission-action", "No tienes permiso para este comando."));
+    private boolean handleIntegrations(CommandSender sender) {
+        if (!sender.hasPermission("dreamcraft.integrations.status")) {
+            error(sender, WARD_PREFIX, tr("common.no-permission-action", "No tienes permiso para este comando."));
             return true;
         }
-        info(player, WARD_PREFIX, "Integration Registry (infraestructura):");
+        info(sender, WARD_PREFIX, "Integration Registry (infraestructura):");
         if (capabilityRegistry != null) {
             for (var entry : capabilityRegistry.allStatuses().entrySet()) {
                 var status = entry.getValue();
@@ -559,21 +588,21 @@ public final class ProtectionCommand implements CommandExecutor, TabCompleter {
                 StringBuilder line = new StringBuilder(mark + " &f" + entry.getKey().name());
                 if (status.detectedVersion() != null) line.append(" &7v").append(status.detectedVersion());
                 if (status.unavailableReason() != null) line.append(" &8— ").append(status.unavailableReason());
-                info(player, WARD_PREFIX, line.toString());
+                info(sender, WARD_PREFIX, line.toString());
             }
         }
-        info(player, WARD_PREFIX, "Presentación:");
-        info(player, WARD_PREFIX, "- modo de assets: &f" + assetMode.name().toLowerCase(Locale.ROOT));
+        info(sender, WARD_PREFIX, "Presentación:");
+        info(sender, WARD_PREFIX, "- modo de assets: &f" + assetMode.name().toLowerCase(Locale.ROOT));
         if (assetRegistry != null && !assetRegistry.providerName().isBlank()) {
-            info(player, WARD_PREFIX, "- proveedor de assets: &f" + assetRegistry.providerName()
+            info(sender, WARD_PREFIX, "- proveedor de assets: &f" + assetRegistry.providerName()
                     + (assetRegistry.isAvailable() ? " &a(disponible)" : " &c(sin entradas)"));
-            info(player, WARD_PREFIX, "- iconos en contrato: &f" + assetRegistry.iconCount());
-            info(player, WARD_PREFIX, "- capabilities: custom-models=&f"
+            info(sender, WARD_PREFIX, "- iconos en contrato: &f" + assetRegistry.iconCount());
+            info(sender, WARD_PREFIX, "- capabilities: custom-models=&f"
                     + (assetRegistry.isAvailable() ? "sí" : "no")
                     + "&7, custom-sounds=&f" + (assetRegistry.sound("menu.click") != null ? "sí" : "no"));
         }
         if (capabilityRegistry != null) {
-            info(player, WARD_PREFIX, "- Oraxen detectado: &f"
+            info(sender, WARD_PREFIX, "- Oraxen detectado: &f"
                     + (capabilityRegistry.isAvailable(dev.dreamcraft.protection.integration.registry.IntegrationKey.ORAXEN) ? "sí" : "no")
                     + "&7 | DeluxeMenus detectado: &f"
                     + (capabilityRegistry.isAvailable(dev.dreamcraft.protection.integration.registry.IntegrationKey.DELUXE_MENUS) ? "sí" : "no"));

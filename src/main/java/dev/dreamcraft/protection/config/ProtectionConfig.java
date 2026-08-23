@@ -46,7 +46,8 @@ public record ProtectionConfig(
         Map<String, List<WardUpgradeCost>> wardUpgradeCosts,
         Map<Material, Integer> wardUpkeepMaterials,
         Map<Material, String> wardTierGatedBlocks,
-        List<CityLevelDefinition> cityLevels
+        List<CityLevelDefinition> cityLevels,
+        WardRecipe wardRecipe
 ) {
     /** Convenience constructor: no ward upkeep materials, no gated blocks, no city levels. */
     public ProtectionConfig(
@@ -85,7 +86,7 @@ public record ProtectionConfig(
                 resourcePackEnabled, resourcePackOptional, resourcePackFallbackVanilla, customModelData,
                 resourceItemId, wardMaterial, wardItemId, wardCustomModelData, wardScorePerUpgrade,
                 tiers, categoryBaseCosts, materialOverrides, wardUpgradeCosts,
-                Map.of(), Map.of(), List.of());
+                Map.of(), Map.of(), List.of(), WardRecipe.DEFAULT);
     }
 
     public static ProtectionConfig load(FileConfiguration config) {
@@ -260,7 +261,8 @@ public record ProtectionConfig(
                 wardUpgradeCosts,
                 wardUpkeepMaterials,
                 wardTierGatedBlocks,
-                cityLevels
+                cityLevels,
+                WardRecipe.load(ward)
         );
     }
 }

@@ -1,0 +1,5 @@
+# DreamCraftTestHarness — configuración de la suite local
+# autorun: ejecuta la suite sola poco después del arranque del server.
+# delay-ticks: espera tras el boot para que todos los plugins asienten.
+autorun: true
+delay-ticks: 300

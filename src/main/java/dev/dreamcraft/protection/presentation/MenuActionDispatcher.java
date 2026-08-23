@@ -53,6 +53,8 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     private java.util.function.BiConsumer<Player, UUID> estateMenuOpener = null;
     /** Optional: manages private End instances for END-type estates. */
     private dev.dreamcraft.protection.service.EndInstanceService endInstanceService = null;
+    /** Optional: single dissolution contract for the ward disband button. */
+    private dev.dreamcraft.protection.service.WardDissolutionService wardDissolutionService = null;
     /** Optional: asset contract — resolves menu sounds (presentation-assets.yml). */
     private volatile dev.dreamcraft.protection.presentation.resourcepack.PresentationAssetRegistry presentationAssets;
 
@@ -103,6 +105,12 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     /** Registers the End instance service for END-type estate actions. */
     public void setEndInstanceService(dev.dreamcraft.protection.service.EndInstanceService service) {
         this.endInstanceService = service;
+    }
+
+    /** Registers the shared Ward dissolution contract (menu disband route). */
+    public void setWardDissolutionService(
+            dev.dreamcraft.protection.service.WardDissolutionService service) {
+        this.wardDissolutionService = service;
     }
 
     /** Registers the asset registry used to resolve menu sounds. */
@@ -395,11 +403,23 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
             feedback(player, msg("menu.ward.owner-only-disband", "Solo el owner puede disolver el Ward."), NamedTextColor.RED);
             return;
         }
+        // Single dissolution contract: region + repository + physical core +
+        // tagged founder item back to the owner (inventory or drop at feet).
+        boolean refunded = wardDissolutionService != null
+                ? wardDissolutionService.dissolve(ward, player, true).refunded()
+                : legacyDissolve(ward);
+        player.closeInventory();
+        feedback(player, msg("menu.ward.disbanded", "Ward disuelto.")
+                + (refunded ? msg("menu.ward.disbanded-refund",
+                        " Tu Núcleo volvió a tu inventario.") : ""), NamedTextColor.GREEN);
+        playSuccess(player);
+    }
+
+    /** Pre-contract fallback (service not wired): region + repository teardown only. */
+    private boolean legacyDissolve(Ward ward) {
         worldGuardAdapter.removeRegion(ward);
         wardService.delete(ward);
-        player.closeInventory();
-        feedback(player, msg("menu.ward.disbanded", "Ward disuelto."), NamedTextColor.GREEN);
-        playSuccess(player);
+        return false;
     }
 
     // ── City actions ──────────────────────────────────────────────────────────
@@ -562,11 +582,12 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     private void handleEstateDisband(Player player, MenuContext ctx) {
         Estate estate = resolveEstate(player, ctx);
         if (estate == null) return;
-        if (!estate.isOwner(player.getUniqueId())) {
+        boolean admin = player.hasPermission("dreamcraft.protection.admin");
+        if (!admin && !estate.isOwner(player.getUniqueId())) {
             feedback(player, msg("menu.estate.owner-only-disband", "Solo el owner puede disolver la instancia."), NamedTextColor.RED);
             return;
         }
-        if (estate.persistent()) {
+        if (estate.persistent() && !admin) {
             // Admin zones outlive groups: they are managed via /{cmd.estate} admin
             feedback(player, msg("menu.estate.admin-zone",
                     "Esta zona la administra el servidor: creá tu grupo con /{cmd.estate} discover."), NamedTextColor.RED);

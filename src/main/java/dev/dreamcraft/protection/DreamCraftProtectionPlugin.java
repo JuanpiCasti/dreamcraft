@@ -45,6 +45,7 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
     private ProtectionConfig protectionConfig;
     private WardItems wardItems;
     private dev.dreamcraft.protection.persistence.CityTreasuryStore treasuryStore;
+    private dev.dreamcraft.protection.persistence.NucleusClaimStore nucleusClaimStore;
 
     // ── Integration layer ─────────────────────────────────────────────────────
     private CapabilityRegistry capabilityRegistry;
@@ -63,6 +64,8 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
     private WardService wardService;
     private CityService cityService;
     private EstateService estateService;
+    /** Single dissolution contract for every route that removes a Ward. */
+    private dev.dreamcraft.protection.service.WardDissolutionService wardDissolutionService;
 
     // ── Estate adventure instances (End / Trial Chamber) ─────────────────────
     private dev.dreamcraft.protection.config.EndInstanceConfig endInstanceConfig;
@@ -84,6 +87,7 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
     public CityService        cityService()          { return cityService; }
     public EstateService      estateService()        { return estateService; }
     public dev.dreamcraft.protection.service.EndInstanceService endInstanceService() { return endInstanceService; }
+    public dev.dreamcraft.protection.service.WardDissolutionService wardDissolutionService() { return wardDissolutionService; }
     public VanillaMenuProvider menuProvider()        { return menuProvider; }
 
     @Override
@@ -159,6 +163,11 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                 new dev.dreamcraft.protection.service.WardUpgradeService(tierProvider, protectionConfig);
         dev.dreamcraft.protection.service.WardUpkeepService upkeepService =
                 new dev.dreamcraft.protection.service.WardUpkeepService(protectionConfig, wardService);
+        // Single dissolution contract: WG region + repository + physical core +
+        // tagged founder item refund (owner) — shared by all four removal routes.
+        wardDissolutionService = new dev.dreamcraft.protection.service.WardDissolutionService(
+                wardService, worldGuardAdapter, wardItems(),
+                protectionConfig.wardMaterial(), this::saveDomainData);
         dev.dreamcraft.protection.service.CityLevelService cityLevelService =
                 new dev.dreamcraft.protection.service.CityLevelService(wardService,
                         protectionConfig.cityLevels(),
@@ -179,6 +188,7 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         menuProvider.setDepositHandler(dispatcher);
         dispatcher.setCityTreasuryStore(cityTreasuryStore());
         dispatcher.setEndInstanceService(endInstanceService());
+        dispatcher.setWardDissolutionService(wardDissolutionService);
         // Menu sounds resolve through the presentation-assets.yml contract
         dispatcher.setPresentationAssets(assetRegistry);
 
@@ -193,13 +203,14 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                     upgradeService, upkeepService, wardMenuFacade, this::reloadPluginConfig,
                     commandOptions);
             executor.setStatusSources(capabilityRegistry, assetRegistry, presentationOptions.assetMode());
+            executor.setDissolutionService(wardDissolutionService);
             command.setExecutor(executor);
             command.setTabCompleter(executor);
         }
 
         WardCommand wardExecutor = new WardCommand(
                 wardService, cityService, worldGuardAdapter, wardItems(), wardMenuFacade, upkeepService,
-                commandOptions);
+                wardDissolutionService, nucleusClaimStore(), commandOptions);
         PluginCommand wardCmd = getCommand("ward");
         if (wardCmd != null) {
             wardCmd.setExecutor(wardExecutor);
@@ -232,15 +243,20 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         if (estateCmd != null) canonicalRoots.put("estate", estateCmd);
         dev.dreamcraft.protection.command.DynamicCommands.registerVersionedRoots(
                 this, getLogger(), canonicalRoots);
+        // commands.yml aliases load AFTER onEnable and clobber the bare names;
+        // the load guard restores our instances once aliases are in.
+        dev.dreamcraft.protection.command.DynamicCommands.registerLoadGuard(this, getLogger());
 
-        // 7c. Ward block listener — placing the ward item founds a Ward centered on it
+        // 7c. Ward block listener — placing the ward item founds a Ward centered on it;
+        //     breaking it dissolves through the shared contract (vanilla drop suppressed)
         pm.registerEvents(new WardItemListener(
                 wardItems(),
                 wardService,
                 worldGuardAdapter,
                 wardExecutor::openWardMenu,
                 wardExecutor::canOpenWardMenu,
-                this::saveDomainData
+                this::saveDomainData,
+                wardDissolutionService
         ), this);
 
         // 7d. Ward upkeep tick + tier-gated blocks + region entry action bar
@@ -275,6 +291,10 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         // 8c. Instance world events — exit-portal generation when the dragon falls
         pm.registerEvents(endInstanceService(), this);
 
+        // 9. Configurable core recipe (ward.recipe) — result is the TAGGED item,
+        //    so crafted cores are indistinguishable from claimed/given ones.
+        registerWardRecipe();
+
         getLogger().info("[DreamCraft] Domain layer active — Ward/City/Estate ready.");
     }
 
@@ -308,6 +328,10 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                 new File(getDataFolder(), "treasuries.yml"),
                 protectionConfig.wardUpkeepMaterials());
         this.treasuryStore.loadAll();
+        // One-time free nucleus per player UUID ("/ward reclamar")
+        this.nucleusClaimStore = new dev.dreamcraft.protection.persistence.NucleusClaimStore(
+                new File(getDataFolder(), "nucleus-claims.yml"));
+        this.nucleusClaimStore.loadAll();
     }
 
     private void bootDomainPersistence() {
@@ -373,7 +397,36 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         bootServices();
         bootDomainPersistence();
         dev.dreamcraft.protection.message.Messages.load(this);
+        registerWardRecipe();
         getLogger().info("[DreamCraftProtection] Recarga completada.");
+    }
+
+    /**
+     * Registers the shaped core recipe from {@code ward.recipe} (config.yml).
+     * The result is {@link WardItems#createWardItem()} — the PDC-tagged item —
+     * so anything crafted founds a Ward exactly like a claimed/given one.
+     * removeRecipe-then-addRecipe keeps this idempotent across /protection recargar.
+     */
+    private void registerWardRecipe() {
+        dev.dreamcraft.protection.config.WardRecipe recipe = protectionConfig.wardRecipe();
+        if (!recipe.enabled()) {
+            getLogger().info("[Config] ward.recipe disabled: no se registra receta del Núcleo.");
+            return;
+        }
+        String invalid = recipe.validationError();
+        if (invalid != null) {
+            getLogger().warning("[Config] ward.recipe inválido (" + invalid + "): receta no registrada.");
+            return;
+        }
+        org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(this, "ward_recipe");
+        getServer().removeRecipe(key);
+        org.bukkit.inventory.ShapedRecipe shaped =
+                new org.bukkit.inventory.ShapedRecipe(key, wardItems.createWardItem());
+        shaped.shape(recipe.bukkitShape());
+        recipe.ingredients().forEach(shaped::setIngredient);
+        getServer().addRecipe(shaped);
+        getLogger().info("[DreamCraft] Receta del Núcleo registrada: "
+                + String.join(" / ", recipe.shape()) + ".");
     }
 
     // ── Config validation ─────────────────────────────────────────────────────
@@ -394,4 +447,5 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
 
     private WardItems wardItems() { return wardItems; }
     private dev.dreamcraft.protection.persistence.CityTreasuryStore cityTreasuryStore() { return treasuryStore; }
+    private dev.dreamcraft.protection.persistence.NucleusClaimStore nucleusClaimStore() { return nucleusClaimStore; }
 }

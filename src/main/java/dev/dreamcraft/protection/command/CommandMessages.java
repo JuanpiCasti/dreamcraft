@@ -5,6 +5,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 /**
@@ -129,20 +130,20 @@ public final class CommandMessages {
         }
     }
 
-    static void error(Player player, Component prefix, String message) {
-        player.sendMessage(prefix.append(parseLegacy(message)));
+    static void error(CommandSender sender, Component prefix, String message) {
+        sender.sendMessage(prefix.append(parseLegacy(message)));
     }
 
-    static void warn(Player player, Component prefix, String message) {
-        player.sendMessage(prefix.append(parseLegacy(message).colorIfAbsent(NamedTextColor.YELLOW)));
+    static void warn(CommandSender sender, Component prefix, String message) {
+        sender.sendMessage(prefix.append(parseLegacy(message).colorIfAbsent(NamedTextColor.YELLOW)));
     }
 
-    static void ok(Player player, Component prefix, String message) {
-        player.sendMessage(prefix.append(parseLegacy(message).colorIfAbsent(NamedTextColor.GREEN)));
+    static void ok(CommandSender sender, Component prefix, String message) {
+        sender.sendMessage(prefix.append(parseLegacy(message).colorIfAbsent(NamedTextColor.GREEN)));
     }
 
-    static void info(Player player, Component prefix, String message) {
-        player.sendMessage(prefix.append(parseLegacy(message).colorIfAbsent(NamedTextColor.GRAY)));
+    static void info(CommandSender sender, Component prefix, String message) {
+        sender.sendMessage(prefix.append(parseLegacy(message).colorIfAbsent(NamedTextColor.GRAY)));
     }
 
     /** Discrete actionbar feedback (non-intrusive). */

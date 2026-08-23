@@ -51,6 +51,10 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
     private final WardMenuFacade menuFacade;
     /** Optional: item-based upkeep deposits. */
     private final dev.dreamcraft.protection.service.WardUpkeepService upkeepService;
+    /** Single dissolution contract shared by every route that removes a Ward. */
+    private final dev.dreamcraft.protection.service.WardDissolutionService dissolutionService;
+    /** Optional: one-time free nucleus claim store (nucleus-claims.yml). */
+    private final dev.dreamcraft.protection.persistence.NucleusClaimStore claimStore;
     /** Per-server subcommand aliases/enabled flags. */
     private final dev.dreamcraft.protection.config.CommandOptions options;
     /** Single source of truth for dispatch + tab completion. */
@@ -63,7 +67,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
                        WardMenuFacade menuFacade,
                        dev.dreamcraft.protection.service.WardUpkeepService upkeepService) {
         this(wardService, cityService, worldGuardAdapter, wardItems, menuFacade, upkeepService,
-                dev.dreamcraft.protection.config.CommandOptions.empty());
+                null, null, dev.dreamcraft.protection.config.CommandOptions.empty());
     }
 
     public WardCommand(WardService wardService,
@@ -72,6 +76,8 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
                        dev.dreamcraft.protection.ui.WardItems wardItems,
                        WardMenuFacade menuFacade,
                        dev.dreamcraft.protection.service.WardUpkeepService upkeepService,
+                       dev.dreamcraft.protection.service.WardDissolutionService dissolutionService,
+                       dev.dreamcraft.protection.persistence.NucleusClaimStore claimStore,
                        dev.dreamcraft.protection.config.CommandOptions options) {
         this.wardService = wardService;
         this.cityService = cityService;
@@ -79,6 +85,8 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         this.wardItems = wardItems;
         this.menuFacade = menuFacade;
         this.upkeepService = upkeepService;
+        this.dissolutionService = dissolutionService;
+        this.claimStore = claimStore;
         this.options = options;
         this.registry = buildRegistry();
     }
@@ -95,6 +103,8 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         return new CommandRegistry("ward")
                 .register(SubcommandSpec.of("create", (p, a) -> handleCreate(p))
                         .withAliases(options.aliases("ward", "create")))
+                .register(SubcommandSpec.of("reclamar", (p, a) -> handleReclamar(p))
+                        .withAliases(options.aliases("ward", "reclamar")))
                 .register(SubcommandSpec.of("rename", this::handleRename)
                         .withAliases(options.aliases("ward", "rename")))
                 .register(SubcommandSpec.of("info", this::handleInfo)
@@ -186,6 +196,38 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         }
         player.getInventory().addItem(wardItems.createWardItem());
         ok(player, WARD_PREFIX, "Núcleo de Sincronía entregado. Colocalo para despertar tu territorio.");
+        return true;
+    }
+
+    /**
+     * /ward reclamar — first nucleus free: hands the tagged core item to the
+     * caller exactly once per UUID (persisted in nucleus-claims.yml).
+     * Full inventory → the item drops at their feet.
+     */
+    private boolean handleReclamar(Player player) {
+        if (claimStore == null) {
+            error(player, WARD_PREFIX, tr("common.error", "Error: {message}", "message", "reclamo no disponible"));
+            return true;
+        }
+        boolean granted;
+        try {
+            granted = claimStore.claimPersistently(player.getUniqueId());
+        } catch (java.io.IOException e) {
+            error(player, WARD_PREFIX, tr("ward.reclamar.error",
+                    "No se pudo registrar tu reclamo: intentá de nuevo en unos segundos."));
+            return true;
+        }
+        if (!granted) {
+            warn(player, WARD_PREFIX, tr("ward.reclamar.ya-reclamado",
+                    "Ya reclamaste tu primer núcleo gratis. El próximo obtenlo crafteándolo."));
+            return true;
+        }
+        var leftovers = player.getInventory().addItem(wardItems.createWardItem());
+        leftovers.values().forEach(stack ->
+                player.getWorld().dropItemNaturally(player.getLocation(), stack));
+        ok(player, WARD_PREFIX, tr("ward.reclamar.ok",
+                "¡Primer núcleo gratis! Colócalo para despertar tu territorio."));
+        playSyncFeedback(player);
         return true;
     }
 
@@ -467,14 +509,24 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
     private boolean handleDelete(Player player, String[] args) {
         Ward ward = resolveWard(player, args);
         if (ward == null) return true;
-        if (!ward.ownerId().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
+        boolean owner = ward.ownerId().equals(player.getUniqueId());
+        if (!owner && !player.hasPermission(ADMIN_PERM)) {
             error(player, WARD_PREFIX, "Solo el owner puede eliminar el Núcleo.");
             return true;
         }
+        var result = dissolutionService != null
+                ? dissolutionService.dissolve(ward, player, owner)
+                : legacyDissolve(ward);
+        ok(player, WARD_PREFIX, "Núcleo eliminado."
+                + (result.refunded() ? " §7(Tu Núcleo volvió a tu inventario.)" : ""));
+        return true;
+    }
+
+    /** Pre-contract fallback (service not wired): region + repository teardown only. */
+    private dev.dreamcraft.protection.service.WardDissolutionService.Result legacyDissolve(Ward ward) {
         worldGuardAdapter.removeRegion(ward);
         wardService.delete(ward);
-        ok(player, WARD_PREFIX, "Núcleo eliminado.");
-        return true;
+        return new dev.dreamcraft.protection.service.WardDissolutionService.Result(false, false);
     }
 
     private boolean handleScore(Player player, String[] args) {
