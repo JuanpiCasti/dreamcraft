@@ -7,7 +7,7 @@ necesidad de compilar. Se regeneran con `.\gradlew.bat build` + este paso.
 
 | Archivo | Origen | Qué es |
 |---|---|---|
-| `dreamcraft-protection-0.1.0-SNAPSHOT.jar` | `build/libs/` | Plugin compilado (Paper 1.21.x). Soltar en `plugins/` del server. |
+| `dreamcraft-protection-0.1.1-SNAPSHOT.jar` | `build/libs/` | Plugin compilado (Paper 1.21.x). Soltar en `plugins/` del server. |
 | `plugin.yml` | `src/main/resources/plugin.yml` | Manifiesto: comandos (`/protection`, `/ward` `/sync`, `/city` `/matriz`, `/estate` `/nexo`) y permisos. |
 | `config.yml` | `plugin-configs/DreamCraftProtection/config.yml` | Config efectiva desplegada al server (incluye sección `ward.recipe` del crafteo configurable). |
 | `messages.yml` | `plugin-configs/DreamCraftProtection/messages.yml` | Overrides de mensajes (vocabulario «El Despertar») aplicados sobre los embebidos. |
