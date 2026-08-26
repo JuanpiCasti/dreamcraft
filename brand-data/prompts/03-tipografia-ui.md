@@ -1,0 +1,3 @@
+# DreamCraft — Prompt: Tipografía de UI
+
+Diseña la **tipografía de UI** de DreamCraft para el resource-pack. Usa una sans serif aprobada: **Orbitron, Exo 2 o Montserrat SemiBold** para navegación, etiquetas y datos; y **Inter o Montserrat Regular** para texto corrido, reglas y anuncios. La fuente debe priorizar legibilidad para todas las edades y niveles de experiencia, con glifos claros y sin ornamentos que comprometan la lectura. Incluye el set de caracteres del español (A–Z, a–z, 0–9, signos, acentos y ñ). No uses el pixel art gótico para la UI. El estilo debe ser coherente con DreamCraft: limpio, cercano y legible, sin estética esports ni decoración excesiva. Entrega las fuentes bitmap listas para `assets/dreamcraft/fonts/`.

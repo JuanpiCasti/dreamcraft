@@ -1,0 +1,94 @@
+# ── presentation-assets.example.yml ──────────────────────────────────────────
+# PLANTILLA — no se usa tal cual. Copia este archivo como
+# presentation-assets.yml (aquí o en plugins/DreamCraftProtection/) y edita
+# los CMDs que tu resource pack realmente use.
+#
+# Contrato completo y convenciones: docs/presentation-assets.md
+# Reglas: toda entrada es opcional; sin pack → "fallback"; sin entrada → vanilla.
+
+options:
+  enabled: true
+
+icons:
+  ward.icon:     { material: SHIELD,              cmd: 41101, fallback: SHIELD }
+  ward.inactive: { material: CRACKED_STONE_BRICKS, cmd: 41102 }
+  ward.tier:     { material: NETHER_STAR,         cmd: 41103, fallback: BEACON }
+  ward.orphan:   { material: BARRIER,             cmd: 41106 }
+  city.icon:     { material: BEACON,              cmd: 41201, fallback: BEACON }
+  city.treasury: { material: GOLD_BLOCK,          cmd: 41202 }
+  city.admin:    { material: COMMAND_BLOCK,       cmd: 41204 }
+  estate.icon:   { material: BOOK,                cmd: 41301, fallback: BOOK }
+  estate.dragon: { material: DRAGON_HEAD,         cmd: 41304 }
+  nucleus.icon:  { material: BEACON,              cmd: 41002, fallback: BEACON }
+
+  # Menú genérico — gestión (PAPER+CMD con hide-name; patrón menu.profile)
+  menu.invite:   { material: PAPER,               cmd: 41405, fallback: PAPER, hide-name: true }
+  menu.kick:     { material: PAPER,               cmd: 41406, fallback: PAPER, hide-name: true }
+  menu.roles:    { material: PAPER,               cmd: 41407, fallback: PAPER, hide-name: true }
+  menu.members:  { material: PAPER,               cmd: 41408, fallback: PAPER, hide-name: true }
+  menu.confirm:  { material: PAPER,               cmd: 41409, fallback: PAPER, hide-name: true }
+  menu.line:     { material: PAPER,               cmd: 41410, fallback: PAPER, hide-name: true }
+
+  # Cuadrantes 2×2 (botones grandes: 4 tiles tl/tr/bl/br, misma acción; CMDs 41501-41540)
+  icon.upkeep.tl:          { material: PAPER, cmd: 41501, fallback: PAPER }
+  icon.upkeep.tr:          { material: PAPER, cmd: 41502, fallback: PAPER }
+  icon.upkeep.bl:          { material: PAPER, cmd: 41503, fallback: PAPER }
+  icon.upkeep.br:          { material: PAPER, cmd: 41504, fallback: PAPER }
+  icon.ward.tier.tl:       { material: PAPER, cmd: 41505, fallback: PAPER }
+  icon.ward.tier.tr:       { material: PAPER, cmd: 41506, fallback: PAPER }
+  icon.ward.tier.bl:       { material: PAPER, cmd: 41507, fallback: PAPER }
+  icon.ward.tier.br:       { material: PAPER, cmd: 41508, fallback: PAPER }
+  icon.city.overview.tl:   { material: PAPER, cmd: 41509, fallback: PAPER }
+  icon.city.overview.tr:   { material: PAPER, cmd: 41510, fallback: PAPER }
+  icon.city.overview.bl:   { material: PAPER, cmd: 41511, fallback: PAPER }
+  icon.city.overview.br:   { material: PAPER, cmd: 41512, fallback: PAPER }
+  city.treasury.tl:        { material: PAPER, cmd: 41513, fallback: PAPER }
+  city.treasury.tr:        { material: PAPER, cmd: 41514, fallback: PAPER }
+  city.treasury.bl:        { material: PAPER, cmd: 41515, fallback: PAPER }
+  city.treasury.br:        { material: PAPER, cmd: 41516, fallback: PAPER }
+  menu.invite.tl:          { material: PAPER, cmd: 41517, fallback: PAPER }
+  menu.invite.tr:          { material: PAPER, cmd: 41518, fallback: PAPER }
+  menu.invite.bl:          { material: PAPER, cmd: 41519, fallback: PAPER }
+  menu.invite.br:          { material: PAPER, cmd: 41520, fallback: PAPER }
+  menu.roles.tl:           { material: PAPER, cmd: 41521, fallback: PAPER }
+  menu.roles.tr:           { material: PAPER, cmd: 41522, fallback: PAPER }
+  menu.roles.bl:           { material: PAPER, cmd: 41523, fallback: PAPER }
+  menu.roles.br:           { material: PAPER, cmd: 41524, fallback: PAPER }
+  icon.estate.overview.tl: { material: PAPER, cmd: 41525, fallback: PAPER }
+  icon.estate.overview.tr: { material: PAPER, cmd: 41526, fallback: PAPER }
+  icon.estate.overview.bl: { material: PAPER, cmd: 41527, fallback: PAPER }
+  icon.estate.overview.br: { material: PAPER, cmd: 41528, fallback: PAPER }
+  icon.back.tl:            { material: PAPER, cmd: 41529, fallback: PAPER }
+  icon.back.tr:            { material: PAPER, cmd: 41530, fallback: PAPER }
+  icon.back.bl:            { material: PAPER, cmd: 41531, fallback: PAPER }
+  icon.back.br:            { material: PAPER, cmd: 41532, fallback: PAPER }
+  icon.ward.active.tl:     { material: PAPER, cmd: 41533, fallback: PAPER }
+  icon.ward.active.tr:     { material: PAPER, cmd: 41534, fallback: PAPER }
+  icon.ward.active.bl:     { material: PAPER, cmd: 41535, fallback: PAPER }
+  icon.ward.active.br:     { material: PAPER, cmd: 41536, fallback: PAPER }
+  icon.ward.inactive.tl:   { material: PAPER, cmd: 41537, fallback: PAPER }
+  icon.ward.inactive.tr:   { material: PAPER, cmd: 41538, fallback: PAPER }
+  icon.ward.inactive.bl:   { material: PAPER, cmd: 41539, fallback: PAPER }
+  icon.ward.inactive.br:   { material: PAPER, cmd: 41540, fallback: PAPER }
+  icon.estate.zone-tp.tl:  { material: PAPER, cmd: 41541, fallback: PAPER }
+  icon.estate.zone-tp.tr:  { material: PAPER, cmd: 41542, fallback: PAPER }
+  icon.estate.zone-tp.bl:  { material: PAPER, cmd: 41543, fallback: PAPER }
+  icon.estate.zone-tp.br:  { material: PAPER, cmd: 41544, fallback: PAPER }
+
+sounds:
+  menu.click:  ui.button.click
+  menu.error:  block.note_block.bass
+  menu.success: entity.experience_orb.pickup
+
+fonts:
+  dc.hud: "dreamcraft:hud"
+
+symbols:
+  bar.full:  "\uE000"
+  bar.empty: "\uE001"
+  # Fondos temáticos por dominio (matriz=azul, nexo=violeta, synt=menu.bg.*)
+  menu.bg.matriz.54: { glyph: "\uE115", font: dc.gui }
+  menu.bg.nexo.54:   { glyph: "\uE125", font: dc.gui }
+
+particles:
+  ward.active: ENCHANT

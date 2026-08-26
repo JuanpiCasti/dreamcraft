@@ -2,9 +2,12 @@ por ahora para levantarlo en tu compu solo con `docker compose up` funca.
 
 ## Estructura
 
-- `docker-compose.yml`: definición del server (versión, plugins, memoria, seed).
+- `docker-compose.yml`: definición del server (versión, plugins, memoria, seed) más un sidecar nginx (`pack-http`) que sirve el resource pack en `http://localhost:8081`. Las variables `RESOURCE_PACK` y `RESOURCE_PACK_SHA1` apuntan al zip actual (la URL lleva `?v=<sha1>` del build para cache-busting).
 - `data/`: todo lo que genera el server (mundos, logs, bases de datos de los plugins, jars descargados). No se trackea en git — se regenera solo con `docker compose up`.
 - `plugin-configs/`: los configs de los plugins que editamos a mano. Esto sí se trackea en git.
+- `resource-packs/`: fuentes del resource pack + scripts de validación/build (ver `resource-packs/README.md`). El zip generado queda en `resource-packs/dist/`.
+- `brand-data/`: contrato de assets gráficos con el diseñador (`graphic-assets.md`, `presentation-assets.md`) y prompts/hojas de referencia.
+- `docs/`: notas internas de desarrollo (workflow para agentes).
 
 Al levantar el server, un servicio (`config-sync`) copia automáticamente todo lo que hay en `plugin-configs/` sobre `data/plugins/`, así que el config trackeado siempre pisa al generado.
 

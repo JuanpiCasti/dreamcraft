@@ -1,0 +1,11 @@
+{
+  "providers": [
+    {
+      "type": "ttf",
+      "file": "dreamcraft:font/gothic.ttf",
+      "size": 10,
+      "oversample": 8,
+      "shift": [0, 0]
+    }
+  ]
+}

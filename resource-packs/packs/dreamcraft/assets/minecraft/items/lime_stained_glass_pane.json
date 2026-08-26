@@ -1,0 +1,19 @@
+{
+  "model": {
+    "type": "minecraft:range_dispatch",
+    "property": "minecraft:custom_model_data",
+    "entries": [
+      {
+        "threshold": 41401,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/deposit"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "minecraft:block/lime_stained_glass_pane_post"
+    }
+  }
+}

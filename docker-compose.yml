@@ -6,6 +6,16 @@ services:
       - ./data/plugins:/dest
     command: sh -c "mkdir -p /dest && cp -rf /src/. /dest/ && chown -R 1000:1000 /dest"
 
+  # Servidor HTTP estatico para distribuir el pack en test local.
+  # El cliente MC descarga de aca; en produccion se reemplaza por el host publico.
+  pack-http:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    volumes:
+      - ./resource-packs/dist:/usr/share/nginx/html:ro
+
   mc:
     image: itzg/minecraft-server:stable-java25
     pull_policy: daily
@@ -15,10 +25,10 @@ services:
       config-sync:
         condition: service_completed_successfully
     ports:
-      - "25565:25565"
-      - "19132:19132/udp"
+      - "25566:25565"
+      - "19133:19132/udp"
     environment:
-      MEMORY: 6G
+      MEMORY: 3G
       EULA: TRUE
       TYPE: PAPER
       VERSION: 26.1.2
@@ -31,6 +41,12 @@ services:
       MOTD: '\u00A7f\u00A7l>> \u00A75\u00A7lDREAM\u00A71\u00A7lCRAFT \u00A7f\u00A7l<<\n\u00A7oExplora, construye tu ciudad y combate'
       ICON: /data/server-icon.png
       OVERRIDE_ICON: TRUE
+      # Resource pack (soporte nativo itzg). SHA1 = build actual de dist/.
+      # URL temporal de test local (nginx sidecar). PENDIENTE host definitivo
+      # (repo publico dreamcraft-pack); recalcular SHA1 en cada rebuild.
+      RESOURCE_PACK: http://localhost:8081/dreamcraft-resource-pack-75a7e29f.zip?v=75a7e29f70770d0b695934fb9db5d524a2c37838
+      RESOURCE_PACK_SHA1: 75a7e29f70770d0b695934fb9db5d524a2c37838
+      RESOURCE_PACK_ENFORCE: "true"
       PLUGINS: |
         https://cdn.modrinth.com/data/Lu3KuzdV/versions/Kma0kBsY/CoreProtect-CE-24.0.jar
         https://download.luckperms.net/1658/bukkit/loader/LuckPerms-Bukkit-5.5.71.jar

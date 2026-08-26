@@ -1,0 +1,19 @@
+{
+  "model": {
+    "type": "minecraft:range_dispatch",
+    "property": "minecraft:custom_model_data",
+    "entries": [
+      {
+        "threshold": 41202,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/city/treasury"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "minecraft:block/gold_block"
+    }
+  }
+}

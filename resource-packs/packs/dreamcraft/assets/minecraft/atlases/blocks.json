@@ -1,0 +1,16 @@
+{
+  "sources": [
+    {
+      "type": "single",
+      "resource": "dreamcraft:item/nucleus/icon"
+    },
+    {
+      "type": "single",
+      "resource": "dreamcraft:block/nucleus_face_active"
+    },
+    {
+      "type": "single",
+      "resource": "dreamcraft:block/nucleus_face_inactive"
+    }
+  ]
+}
