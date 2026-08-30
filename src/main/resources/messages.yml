@@ -180,6 +180,7 @@ menu:
   # Feedback de los menús (MenuActionDispatcher) — acción bar / chat.
   unknown-action: "&cAcción no reconocida: {action}"
   internal-error: "Error interno"
+  perfil.soon: "Tu perfil estará disponible pronto."
   # Selectores de jugadores (pick.*) — ejecutan la acción desde el propio menú
   title.pick-player: "&8Seleccionar jugador"
   title.pick-role: "&8Rol para &f{name}"
@@ -219,5 +220,7 @@ menu:
   ward.self-transfer: "No puedes transferirte el Ward a ti mismo."
   ward.transferred: "Ownership transferido a {player}."
   ward.transferred-target: "{player} te transfirió su Ward {ward}."
+  ward.none-found: "No tienes ningún Núcleo."
+  city.open-no-city: "Este Núcleo ya no pertenece a una Matriz."
   # Aviso extra al disolver el propio Ward desde el menú (ítem devuelto)
   ward.disbanded-refund: " Tu Núcleo volvió a tu inventario."

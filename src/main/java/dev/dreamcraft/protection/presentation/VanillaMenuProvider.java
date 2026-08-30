@@ -1,5 +1,6 @@
 package dev.dreamcraft.protection.presentation;
 
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
@@ -42,15 +43,76 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
             Map.entry("icon.ward.active",    "SHIELD"),
             Map.entry("icon.ward.inactive",  "CRACKED_STONE_BRICKS"),
             Map.entry("icon.ward.orphan",    "BARRIER"),
+            Map.entry("icon.ward.tier",      "NETHER_STAR"),
+            // Toggle vanilla del filtro «solo sospechosos» (admin): REDSTONE_TORCH
+            // encendida = filtro activo, TORCH apagada = lista completa.
+            Map.entry("icon.toggle.on",      "REDSTONE_TORCH"),
+            Map.entry("icon.toggle.off",     "TORCH"),
+            Map.entry("icon.nucleus",        "BEACON"),
             Map.entry("icon.upkeep",         "CHEST"),
             Map.entry("icon.members",        "PLAYER_HEAD"),
+            Map.entry("city.score",          "EMERALD"),
+            Map.entry("city.treasury",       "GOLD_BLOCK"),
             Map.entry("icon.city.overview",  "BEACON"),
             Map.entry("icon.city.admin",     "COMMAND_BLOCK"),
             Map.entry("icon.estate.overview","BOOK"),
             Map.entry("icon.estate.zone-tp", "NETHER_STAR"),
             Map.entry("icon.deposit",        "LIME_STAINED_GLASS_PANE"),
             Map.entry("icon.filler",         "GRAY_STAINED_GLASS_PANE"),
-            Map.entry("icon.back",           "ARROW")
+            Map.entry("icon.back",           "ARROW"),
+            Map.entry("menu.back",           "ARROW"),
+            Map.entry("menu.invite",         "PAPER"),
+            Map.entry("menu.kick",           "PAPER"),
+            Map.entry("menu.roles",          "PAPER"),
+            Map.entry("menu.members",        "PAPER"),
+            Map.entry("menu.confirm",        "PAPER"),
+            // ── 2×2 quarter tiles (pack CMDs 41501-41540): each block shows one
+            //    big button split across four slots; same action on all four.
+            Map.entry("icon.upkeep.tl",        "PAPER"),
+            Map.entry("icon.upkeep.tr",        "PAPER"),
+            Map.entry("icon.upkeep.bl",        "PAPER"),
+            Map.entry("icon.upkeep.br",        "PAPER"),
+            Map.entry("icon.ward.tier.tl",     "PAPER"),
+            Map.entry("icon.ward.tier.tr",     "PAPER"),
+            Map.entry("icon.ward.tier.bl",     "PAPER"),
+            Map.entry("icon.ward.tier.br",     "PAPER"),
+            Map.entry("icon.city.overview.tl", "PAPER"),
+            Map.entry("icon.city.overview.tr", "PAPER"),
+            Map.entry("icon.city.overview.bl", "PAPER"),
+            Map.entry("icon.city.overview.br", "PAPER"),
+            Map.entry("city.treasury.tl",      "PAPER"),
+            Map.entry("city.treasury.tr",      "PAPER"),
+            Map.entry("city.treasury.bl",      "PAPER"),
+            Map.entry("city.treasury.br",      "PAPER"),
+            Map.entry("menu.invite.tl",        "PAPER"),
+            Map.entry("menu.invite.tr",        "PAPER"),
+            Map.entry("menu.invite.bl",        "PAPER"),
+            Map.entry("menu.invite.br",        "PAPER"),
+            Map.entry("menu.roles.tl",         "PAPER"),
+            Map.entry("menu.roles.tr",         "PAPER"),
+            Map.entry("menu.roles.bl",         "PAPER"),
+            Map.entry("menu.roles.br",         "PAPER"),
+            Map.entry("icon.estate.overview.tl", "PAPER"),
+            Map.entry("icon.estate.overview.tr", "PAPER"),
+            Map.entry("icon.estate.overview.bl", "PAPER"),
+            Map.entry("icon.estate.overview.br", "PAPER"),
+            Map.entry("icon.back.tl",          "PAPER"),
+            Map.entry("icon.back.tr",          "PAPER"),
+            Map.entry("icon.back.bl",          "PAPER"),
+            Map.entry("icon.back.br",          "PAPER"),
+            Map.entry("icon.ward.active.tl",   "PAPER"),
+            Map.entry("icon.ward.active.tr",   "PAPER"),
+            Map.entry("icon.ward.active.bl",   "PAPER"),
+            Map.entry("icon.ward.active.br",   "PAPER"),
+            Map.entry("icon.ward.inactive.tl", "PAPER"),
+            Map.entry("icon.ward.inactive.tr", "PAPER"),
+            Map.entry("icon.ward.inactive.bl", "PAPER"),
+            Map.entry("icon.ward.inactive.br", "PAPER"),
+            Map.entry("icon.estate.zone-tp.tl", "PAPER"),
+            Map.entry("icon.estate.zone-tp.tr", "PAPER"),
+            Map.entry("icon.estate.zone-tp.bl", "PAPER"),
+            Map.entry("icon.estate.zone-tp.br", "PAPER"),
+            Map.entry("menu.line",           "PAPER")
     );
 
     /**
@@ -59,11 +121,25 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
      */
     public static final String PLAYER_HEAD_PREFIX = "icon.player.";
 
+    /** Menu iconKey → contract key when the shapes differ (presentation-assets.yml). */
+    private static final Map<String, String> CONTRACT_KEY_ALIASES = Map.ofEntries(
+            Map.entry("icon.ward.active",     "ward.icon"),
+            Map.entry("icon.upkeep",          "ward.upkeep"),
+            Map.entry("icon.members",         "city.members"),
+            Map.entry("icon.city.overview",   "city.icon"),
+            Map.entry("icon.estate.overview", "estate.icon"),
+            Map.entry("icon.deposit",         "menu.deposit"),
+            Map.entry("icon.filler",          "menu.filler"),
+            Map.entry("icon.back",            "menu.back")
+    );
+
     private final Map<String, String> iconMap;
     /** Optional asset contract (presentation-assets.yml): CMD per viewer + fallbacks. */
     private volatile dev.dreamcraft.protection.presentation.resourcepack.PresentationAssetRegistry assets;
     /** Optional per-player resource pack state (menus.provider: auto). */
     private volatile dev.dreamcraft.protection.presentation.resourcepack.PackState packState;
+    /** Glyph background titles from the resource pack (menus.custom-title). */
+    private volatile boolean customTitles = true;
     private final Map<UUID, String> openMenus           = new ConcurrentHashMap<>();
     private final Map<UUID, MenuDefinition> openDefs    = new ConcurrentHashMap<>();
     private final Map<UUID, MenuContext> openContexts   = new ConcurrentHashMap<>();
@@ -112,6 +188,19 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
         this.packState = state;
     }
 
+    /** Enables/disables glyph background titles (config {@code menus.custom-title}). */
+    public void setCustomTitles(boolean enabled) {
+        this.customTitles = enabled;
+    }
+
+    /** Composes title component (HD background glyph if pack loaded, or plain text). */
+    public Component composeTitle(MenuDefinition definition, UUID viewerId) {
+        return customTitles
+                ? dev.dreamcraft.protection.presentation.resourcepack.MenuTitleComposer
+                        .compose(assets, packState, definition, viewerId)
+                : LEGACY.deserialize(definition.title());
+    }
+
     // ── MenuProvider ──────────────────────────────────────────────────────────
 
     @Override
@@ -119,10 +208,15 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
         Player player = Bukkit.getPlayer(context.viewerId());
         if (player == null) return;
 
-        // Clean title — menu identification lives in the MenuHolder, not in
-        // the visible text the player reads.
-        Component titleComp = LEGACY.deserialize(definition.title());
+        // With the pack loaded the title is an HD background glyph covering the
+        // vanilla container; otherwise (or with custom-title: false) plain text.
+        Component titleComp = composeTitle(definition, context.viewerId());
         MenuHolder holder = new MenuHolder(definition.menuId());
+        org.bukkit.Bukkit.getLogger().info("[DreamCraft][MenuDebug] menu=" + definition.menuId()
+                + " size=" + definition.size()
+                + " hasPack=" + viewerHasPack(context.viewerId())
+                + " customTitles=" + customTitles
+                + " assetsAvail=" + (assets != null && assets.isAvailable()));
         Inventory inv = Bukkit.createInventory(holder, definition.size(), titleComp);
         holder.attach(inv);
         populate(inv, definition, context.viewerId());
@@ -214,7 +308,11 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
     // ── Render helpers ────────────────────────────────────────────────────────
 
     private void populate(Inventory inv, MenuDefinition definition, UUID viewerId) {
-        ItemStack filler = buildFiller();
+        // With the pack loaded the background glyph shows through the empty
+        // slots; vanilla viewers keep the classic glass-pane filler.
+        ItemStack filler = viewerHasPack(viewerId)
+                ? new ItemStack(Material.AIR)
+                : buildFiller();
         for (int i = 0; i < definition.size(); i++) inv.setItem(i, filler);
         for (MenuItem item : definition.items()) {
             if (item.slot() >= 0 && item.slot() < definition.size()) {
@@ -223,12 +321,19 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
         }
     }
 
+    private boolean viewerHasPack(UUID viewerId) {
+        var registry = assets;
+        var state = packState;
+        return registry != null && registry.isAvailable()
+                && state != null && state.has(viewerId);
+    }
+
     private ItemStack buildItemStack(MenuItem item, UUID viewerId) {
         Material mat = resolveIcon(item.iconKey());
         ItemStack stack = new ItemStack(mat);
         ItemMeta meta = stack.getItemMeta();
         if (meta == null) return stack;
-        meta.displayName(LEGACY.deserialize(item.displayName()));
+        meta.displayName(itemName(item, viewerId));
         if (!item.lore().isEmpty()) {
             List<Component> loreLine = item.lore().stream()
                     .<Component>map(LEGACY::deserialize)
@@ -242,6 +347,16 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
     }
 
     /**
+     * Display name of a menu item as plain legacy text. The gothic TTF is
+     * valid (glyf, cmap fmt 4) but its pixel glyphs are illegible at item-name
+     * size (user-facing "00000") — decorative use only, never item names.
+     * Lore and chat are never affected.
+     */
+    private Component itemName(MenuItem item, UUID viewerId) {
+        return LEGACY.deserialize(item.displayName());
+    }
+
+    /**
      * Applies the asset contract for this icon: CustomModelData when the viewer
      * loaded the pack, configured vanilla fallback otherwise. Respects the
      * provider mode — {@code vanilla} never applies CMD.
@@ -252,11 +367,14 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
         var state = packState;
         boolean viewerHasPack = state != null && state.has(viewerId);
         registry.applyTo(iconKey, stack, meta, viewerHasPack);
-        // Contract keys are semantic ("ward.orphan") while menu items use the
+        // Contract keys are semantic ("ward.icon") while menu items use the
         // "icon.<domain>.<state>" shape: when the full key has no contract
-        // entry, retry with the stripped key so CMD/fallbacks still resolve.
+        // entry, retry with its aliased contract key (or the stripped key)
+        // so CMD/fallbacks still resolve.
         if (iconKey != null && iconKey.startsWith("icon.") && registry.icon(iconKey).isEmpty()) {
-            registry.applyTo(iconKey.substring("icon.".length()), stack, meta, viewerHasPack);
+            String contractKey = CONTRACT_KEY_ALIASES.getOrDefault(iconKey,
+                    iconKey.substring("icon.".length()));
+            registry.applyTo(contractKey, stack, meta, viewerHasPack);
         }
     }
 

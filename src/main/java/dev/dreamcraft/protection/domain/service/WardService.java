@@ -25,6 +25,8 @@ public final class WardService {
     private final WardRepository wardRepository;
     private final WardTierProvider tierProvider;
     private final Duration upkeepInterval;
+    /** Hard ceiling for a single Ward's radius (ward.max-radius); MAX_VALUE = uncapped. */
+    private final int maxRadius;
 
     /**
      * Optional presentation hook fired when a real tier ascent wipes the
@@ -42,9 +44,20 @@ public final class WardService {
     private Consumer<Ward> tierDescendedCallback = ward -> { };
 
     public WardService(WardRepository wardRepository, WardTierProvider tierProvider, Duration upkeepInterval) {
+        this(wardRepository, tierProvider, upkeepInterval, Integer.MAX_VALUE);
+    }
+
+    public WardService(WardRepository wardRepository, WardTierProvider tierProvider,
+                       Duration upkeepInterval, int maxRadius) {
         this.wardRepository = wardRepository;
         this.tierProvider = tierProvider;
         this.upkeepInterval = upkeepInterval;
+        this.maxRadius = Math.max(1, maxRadius);
+    }
+
+    /** Clamps any computed radius to the configured {@code ward.max-radius} ceiling. */
+    private int clampRadius(int radius) {
+        return Math.min(radius, maxRadius);
     }
 
     /**
@@ -83,7 +96,7 @@ public final class WardService {
     ) {
         int baseScore = 0;
         WardTier tier = tierProvider.resolveForScore(baseScore);
-        int radius = tier.computeRadius(baseScore);
+        int radius = clampRadius(tier.computeRadius(baseScore));
         Instant now = Instant.now();
 
         Ward ward = new Ward(
@@ -136,7 +149,7 @@ public final class WardService {
         ward.baseScore(newScore);
         WardTier tier = tierProvider.resolveForScore(newScore);
         ward.tier(tier.key());
-        ward.radius(tier.computeRadius(newScore));
+        ward.radius(clampRadius(tier.computeRadius(newScore)));
 
         int previousBelowTier = ward.belowTierBlocks();
         boolean ascended = false;
@@ -169,7 +182,7 @@ public final class WardService {
      */
     public int computeRadiusAfter(Ward ward, int delta) {
         int newScore = Math.max(0, ward.baseScore() + delta);
-        return tierProvider.resolveForScore(newScore).computeRadius(newScore);
+        return clampRadius(tierProvider.resolveForScore(newScore).computeRadius(newScore));
     }
 
     /**

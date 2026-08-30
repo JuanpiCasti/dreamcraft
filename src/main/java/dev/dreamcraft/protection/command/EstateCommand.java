@@ -340,12 +340,16 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
         }
 
         List<MenuItem> items = new ArrayList<>();
-        int slot = 0;
-        for (Estate zone : zones) {
-            if (slot >= 52) break; // keep the close button clear at slot 53
+        // 2×2 quarter blocks: each zone = TP block (cols 0-1 / 4-5) + menu block
+        // (cols 2-3 / 6-7); 2 zones per 2-row band, 3 bands → 6 zones max.
+        // Slot 53 stays clear for the close button.
+        for (int i = 0; i < zones.size(); i++) {
+            if (i >= 6) break;
+            Estate zone = zones.get(i);
             String id = zone.id().toString();
             boolean active = instanceService != null && zone.type().usesEndInstance()
                     && Bukkit.getWorld(instanceService.worldNameFor(zone)) != null;
+            int tpAnchor = (i / 2) * 18 + (i % 2) * 4;
 
             List<String> tpLore = new ArrayList<>();
             tpLore.add("&7Tipo: &f" + zone.type().displayName());
@@ -359,7 +363,7 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             if (zone.type().usesEndInstance()) {
                 tpLore.add("&7Reiniciar: &f" + CommandNames.cmd("estate", "admin reset"));
             }
-            items.add(MenuItem.button(slot++, "icon.estate.zone-tp", "&6&l" + zone.name(),
+            items.addAll(MenuItem.block2x2Button(54, tpAnchor, "icon.estate.zone-tp", "&6&l" + zone.name(),
                     tpLore, zone.hasArea() ? MenuAction.of("estateadmin.tp", id) : null));
 
             List<String> bookLore = new ArrayList<>();
@@ -368,10 +372,10 @@ public final class EstateCommand implements CommandExecutor, TabCompleter {
             bookLore.add("");
             bookLore.add("&eClic &7— abrir el menú de la instancia");
             bookLore.add("&7(unirte o gestionarla)");
-            items.add(MenuItem.button(slot++, "icon.estate.overview", "&d&l" + zone.name(),
+            items.addAll(MenuItem.block2x2Button(54, tpAnchor + 2, "icon.estate.overview", "&d&l" + zone.name(),
                     bookLore, MenuAction.of("estateadmin.menu", id)));
         }
-        items.add(MenuItem.button(53, "icon.back", "&c&lCerrar",
+        items.add(MenuItem.button(53, "menu.close", "&c&lCerrar",
                 List.of("&7Cerrar menú"), MenuAction.of("menu.close")));
 
         var def = new MenuDefinition("estate_admin_zones",

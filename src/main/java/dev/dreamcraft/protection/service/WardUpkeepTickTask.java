@@ -41,6 +41,8 @@ public final class WardUpkeepTickTask extends BukkitRunnable {
     private final int belowTierSurchargeUnits;
     private final JavaPlugin plugin;
     private final Map<UUID, Instant> lastDebtWarning = new HashMap<>();
+    /** Optional: refreshes the core block's active/inactive visual after charges. */
+    private java.util.function.Consumer<Ward> coreVisualRefresh = ward -> { };
 
     public WardUpkeepTickTask(WardService wardService,
                               WardTierProvider tierProvider,
@@ -54,6 +56,11 @@ public final class WardUpkeepTickTask extends BukkitRunnable {
         this.notifyThrottle = upkeepInterval;
         this.belowTierSurchargeUnits = Math.max(0, belowTierSurchargeUnits);
         this.plugin = plugin;
+    }
+
+    /** Wires the core-block visual refresher (see {@link WardCoreVisual}). */
+    public void setCoreVisualRefresh(java.util.function.Consumer<Ward> consumer) {
+        this.coreVisualRefresh = consumer == null ? ward -> { } : consumer;
     }
 
     /** Registers this task on the Bukkit scheduler. */
@@ -78,6 +85,7 @@ public final class WardUpkeepTickTask extends BukkitRunnable {
                     .orElse(1);
             int cost = baseCost + belowTierSurchargeUnits * Math.max(0, ward.belowTierBlocks());
             boolean paid = wardService.deductUpkeep(ward, cost);
+            coreVisualRefresh.accept(ward);
             processed++;
             if (paid) {
                 lastDebtWarning.remove(ward.id());

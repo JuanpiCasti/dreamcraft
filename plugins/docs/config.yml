@@ -119,8 +119,10 @@ claim:
 
 # Bloque especial que crea un Ward al colocarlo.
 # La protección del Ward es un radio alrededor de este bloque (su centro).
+# NOTE_BLOCK con estado mágico (instrument=flute,note=14,powered=false) para que el resource
+# pack pueda darle aspecto propio de cubo sin tocar el beacon vanilla.
 ward:
-  material: BEACON
+  material: NOTE_BLOCK
   item-id: dreamcraft:ward_beacon
   custom-model-data: 41002
   # Puntos de score que suma cada mejora desde el menú del Ward

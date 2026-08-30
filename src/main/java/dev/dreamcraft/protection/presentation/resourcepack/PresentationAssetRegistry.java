@@ -42,6 +42,8 @@ public final class PresentationAssetRegistry implements ResourcePackProvider {
     private final Map<String, String> sounds = new HashMap<>();
     private final Map<String, String> fonts = new HashMap<>();
     private final Map<String, String> symbols = new HashMap<>();
+    /** Symbols resolved to renderable glyphs: {codepoint, Adventure font}. */
+    private final Map<String, GlyphRef> symbolRefs = new HashMap<>();
     private final Map<String, String> particles = new HashMap<>();
 
     private PresentationAssetRegistry(boolean enabled) {
@@ -105,13 +107,40 @@ public final class PresentationAssetRegistry implements ResourcePackProvider {
                 if (material == null) continue;
                 int cmd = entry.getInt("cmd", 0);
                 Material fallback = matchOrNull(entry.getString("fallback"));
-                icons.put(path, new IconAsset(material, cmd, fallback));
+                icons.put(path, new IconAsset(material, cmd, fallback,
+                        entry.getBoolean("hide-name", false)));
             }
         }
         fillSimple(cfg, "sounds", sounds);
         fillSimple(cfg, "fonts", fonts);
         fillFieldLeaves(cfg, "symbols", symbols, "glyph");
+        parseSymbolRefs(cfg);
         fillSimple(cfg, "particles", particles);
+    }
+
+    /**
+     * Second symbol pass: entries shaped {@code {glyph: c, font: key}} become
+     * renderable {@link GlyphRef}s with the font key resolved through the
+     * {@code fonts} section (e.g. {@code dc.gui → dreamcraft:gui}); an
+     * unresolved font key is kept verbatim so the contract stays the single
+     * source of truth.
+     */
+    private void parseSymbolRefs(FileConfiguration cfg) {
+        ConfigurationSection section = cfg.getConfigurationSection("symbols");
+        if (section == null) return;
+        for (String path : section.getKeys(true)) {
+            if (!section.isConfigurationSection(path)) continue;
+            String glyph = blankToNull(section.getString(path + ".glyph"));
+            if (glyph == null) continue;
+            String rawFont = blankToNull(section.getString(path + ".font"));
+            String resolvedFont = rawFont == null ? null : fonts.getOrDefault(rawFont, rawFont);
+            if (resolvedFont == null) continue;
+            symbolRefs.put(path, new GlyphRef(glyph, resolvedFont));
+        }
+    }
+
+    private static String blankToNull(String raw) {
+        return raw == null || raw.isBlank() ? null : raw;
     }
 
     private static Material matchOrNull(String raw) {
@@ -140,11 +169,26 @@ public final class PresentationAssetRegistry implements ResourcePackProvider {
         String prefix = sectionName + ".";
         for (String path : section.getKeys(true)) {
             if (section.isConfigurationSection(path)) continue;
+            if (isWrapperSibling(section, path, field)) continue;
             String value = leafValue(section, path, field);
             if (value != null) {
                 target.put(relativize(path, prefix, field), value);
             }
         }
+    }
+
+    /**
+     * True for metadata leaves of a wrapped entry ({@code {glyph: c, font: f}}
+     * stores both {@code .glyph} and {@code .font}); only the {@code <field>}
+     * leaf names the asset. Bare-string entries never qualify — their parent
+     * has no {@code <field>} probe.
+     */
+    private static boolean isWrapperSibling(ConfigurationSection section, String path, String field) {
+        int dot = path.lastIndexOf('.');
+        if (dot <= 0 || path.endsWith("." + field)) return false;
+        String parent = path.substring(0, dot);
+        return section.isConfigurationSection(parent)
+                && leafValue(section, parent + "." + field, field) != null;
     }
 
     private static String leafValue(ConfigurationSection section, String path, String wrapperKey) {
@@ -188,6 +232,16 @@ public final class PresentationAssetRegistry implements ResourcePackProvider {
     @Override public String symbol(String assetKey) { return symbols.get(assetKey); }
     @Override public String particle(String assetKey) { return particles.get(assetKey); }
 
+    /** Renderable glyph ({@link GlyphRef}) for a symbol key, if defined. */
+    public Optional<GlyphRef> symbolRef(String assetKey) {
+        return Optional.ofNullable(symbolRefs.get(assetKey));
+    }
+
+    /** Raw contract entry for an icon key (status output/tests). */
+    public Optional<IconAsset> iconAsset(String assetKey) {
+        return Optional.ofNullable(icons.get(assetKey));
+    }
+
     /** Number of registered icon entries (status output/tests). */
     public int iconCount() { return icons.size(); }
 
@@ -205,6 +259,8 @@ public final class PresentationAssetRegistry implements ResourcePackProvider {
         if (entry == null) return;
         if (viewerHasResourcePack && entry.cmd() > 0) {
             meta.setCustomModelData(entry.cmd());
+            // The CMD texture paints its own label — hide the vanilla item name
+            if (entry.hideName()) meta.displayName(net.kyori.adventure.text.Component.space());
             return;
         }
         if (entry.fallback() != null && !entry.fallback().equals(stack.getType())) {

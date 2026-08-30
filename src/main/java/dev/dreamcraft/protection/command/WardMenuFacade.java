@@ -78,6 +78,11 @@ public final class WardMenuFacade {
                 belowTierSurchargeUnits);
     }
 
+    /** The view-model builder — shared so admin GUIs reuse the same protection-state rule. */
+    public WardViewModelBuilder viewModelBuilder() {
+        return viewModelBuilder;
+    }
+
     /** Opens the Ward menu for the viewer with freshly computed state. */
     public void open(Player player, Ward ward) {
         WardViewModel vm = viewModelBuilder.build(ward, player.getUniqueId());

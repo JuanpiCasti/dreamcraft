@@ -127,6 +127,11 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         // 4. Domain persistence
         bootDomainPersistence();
 
+        // 4a. Radius cap migration — Wards created before ward.max-radius existed
+        //     may exceed the ceiling (e.g. score 1000 → radius 164). Clamp the
+        //     stored radius AND shrink the WorldGuard region to match.
+        migrateWardRadii();
+
         // 4b. Container protection migration — regions created before chest-access
         //     was enforced get their flag state re-applied on every boot.
         migrateContainerFlags();
@@ -146,12 +151,14 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
             }
             case AUTO -> {
                 menuProvider.setAssetRegistry(assetRegistry);
-                var tracker = new dev.dreamcraft.protection.presentation.resourcepack.PackStatusTracker();
+                var tracker = new dev.dreamcraft.protection.presentation.resourcepack.PackStatusTracker(this);
                 getServer().getPluginManager().registerEvents(tracker, this);
                 menuProvider.setPackTracker(tracker);
             }
             case VANILLA -> { /* pure legacy rendering — golden rule MD §23 */ }
         }
+        // menus.custom-title: false keeps vanilla text titles even with the pack loaded
+        menuProvider.setCustomTitles(presentationOptions.customTitle());
 
         // 6. Register Bukkit listeners (menu provider only)
         var pm = getServer().getPluginManager();
@@ -258,6 +265,8 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         dispatcher.setCityMenuOpener(cityExecutor::openCityMenu);
         dispatcher.setCityLevelService(cityLevelService);
         dispatcher.setWardCoreMaterial(protectionConfig.wardMaterial());
+        // Admin GUIs mirror the sync menu's protection-state icon rule.
+        dispatcher.setUnprotectedWards(wardMenuFacade.viewModelBuilder()::isUnprotected);
         wardExecutor.setAdminMenuOpener(player -> dispatcher.openWardAdminOverview(player, 0, false));
         cityExecutor.setAdminMenuOpener(player -> dispatcher.openCityAdminOverview(player, 0));
 
@@ -280,8 +289,13 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         //     shared by every founding route below)
         dev.dreamcraft.protection.listener.WardBlockGateListener gateListener =
                 new dev.dreamcraft.protection.listener.WardBlockGateListener(
-                        wardService, tierProvider, protectionConfig, wardItems(), this::saveDomainData);
+                        wardService, tierProvider, protectionConfig, wardItems(), this::saveDomainData,
+                        this);
         pm.registerEvents(gateListener, this);
+        // Reconciliation sweep: self-heals surcharge counters when a gated block
+        // was placed inside the Ward but its placement event never incremented
+        // them (blocks added AFTER founding included).
+        gateListener.startReconciliationTask(this);
 
         // Tier-transition hooks from the domain: a real ascent wipes the counter
         // there and we just notify the owner; a descent keeps whatever was stored
@@ -301,7 +315,10 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
 
         // 7c-bis. Unified Ward mechanic — placing the ward item founds a Ward centered on it;
         //     breaking it dissolves through the shared contract (vanilla drop suppressed)
-        pm.registerEvents(new WardItemListener(
+        // Core visual: flips the note block's powered state (active/inactive cube)
+        var wardCoreVisual = new dev.dreamcraft.protection.service.WardCoreVisual(
+                wardMenuFacade.viewModelBuilder()::isUnprotected, protectionConfig.wardMaterial());
+        WardItemListener wardItemListener = new WardItemListener(
                 wardItems(),
                 wardService,
                 worldGuardAdapter,
@@ -309,13 +326,22 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                 this::saveDomainData,
                 wardDissolutionService,
                 gateListener::seedExistingBelowTierBlocks
-        ), this);
+        );
+        wardItemListener.setCoreVisualRefresh(ward ->
+                // 1 tick después: vanilla finaliza el estado del note block
+                // tras el evento y pisaría lo aplicado inline.
+                org.bukkit.Bukkit.getScheduler().runTask(this,
+                        () -> wardCoreVisual.applyMagicState(ward)));
+        pm.registerEvents(wardItemListener, this);
 
         // 7d. Ward upkeep tick + region entry action bar
-        new dev.dreamcraft.protection.service.WardUpkeepTickTask(
-                wardService, tierProvider, wardRepository,
-                protectionConfig.upkeepInterval(),
-                protectionConfig.belowTierSurchargeUnits(), this).register();
+        dev.dreamcraft.protection.service.WardUpkeepTickTask upkeepTick =
+                new dev.dreamcraft.protection.service.WardUpkeepTickTask(
+                        wardService, tierProvider, wardRepository,
+                        protectionConfig.upkeepInterval(),
+                        protectionConfig.belowTierSurchargeUnits(), this);
+        upkeepTick.setCoreVisualRefresh(wardCoreVisual::refresh);
+        upkeepTick.register();
         pm.registerEvents(new dev.dreamcraft.protection.listener.WardRegionListener(wardService), this);
 
         // 7d-bis. Container transfer gate — hoppers/droppers can't cross Ward
@@ -323,12 +349,15 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         pm.registerEvents(new dev.dreamcraft.protection.listener.WardContainerProtectionListener(wardService), this);
 
         // 7e. Ward upkeep vault — settles contents when the vault inventory closes
-        pm.registerEvents(new dev.dreamcraft.protection.listener.WardUpkeepVaultListener(
-                wardService, upkeepService, this::saveDomainData, upkeepProjection,
-                ward -> tierProvider.findByKey(ward.tier())
-                        .map(dev.dreamcraft.protection.domain.model.WardTier::upkeepPerInterval)
-                        .orElse(1),
-                protectionConfig.belowTierSurchargeUnits()), this);
+        dev.dreamcraft.protection.listener.WardUpkeepVaultListener upkeepVaultListener =
+                new dev.dreamcraft.protection.listener.WardUpkeepVaultListener(
+                        wardService, upkeepService, this::saveDomainData, upkeepProjection,
+                        ward -> tierProvider.findByKey(ward.tier())
+                                .map(dev.dreamcraft.protection.domain.model.WardTier::upkeepPerInterval)
+                                .orElse(1),
+                        protectionConfig.belowTierSurchargeUnits());
+        upkeepVaultListener.setCoreVisualRefresh(wardCoreVisual::refresh);
+        pm.registerEvents(upkeepVaultListener, this);
 
         // 7f. City treasury vault — persists contents when the vault inventory closes
         pm.registerEvents(new dev.dreamcraft.protection.listener.CityTreasuryVaultListener(
@@ -403,7 +432,8 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         Duration upkeepInterval = protectionConfig.upkeepInterval();
         WardTierProvider tierProvider = new ConfigWardTierProvider(getConfig());
 
-        wardService  = new WardService(wardRepository, tierProvider, upkeepInterval);
+        wardService  = new WardService(wardRepository, tierProvider, upkeepInterval,
+                protectionConfig.wardMaxRadius());
         cityService  = new CityService(cityRepository);
         estateService = new EstateService(estateRepository);
 
@@ -429,6 +459,31 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         }
         if (applied > 0) {
             getLogger().info("[DreamCraft] chest-access sincronizado en " + applied + " región(es) de Ward.");
+        }
+    }
+
+    /**
+     * Clamps every stored Ward radius to {@code ward.max-radius} and resizes its
+     * WorldGuard region accordingly. Idempotent: only touches Wards above the
+     * ceiling, so restarts after the first migration are no-ops.
+     */
+    private void migrateWardRadii() {
+        if (wardService == null) return;
+        int cap = protectionConfig.wardMaxRadius();
+        int fixed = 0;
+        for (dev.dreamcraft.protection.domain.model.Ward ward : wardService.findAll()) {
+            if (ward.radius() <= cap) continue;
+            ward.radius(cap);
+            if (ward.worldGuardRegionId() != null && worldGuardAdapter.isAvailable()) {
+                worldGuardAdapter.resizeRegion(ward, -64, 320);
+            }
+            wardRepository.save(ward);
+            fixed++;
+        }
+        if (fixed > 0) {
+            flushDomainData();
+            getLogger().info("[DreamCraft] max-radius " + cap + ": "
+                    + fixed + " Ward(s) re-escalados y región WG ajustada.");
         }
     }
 

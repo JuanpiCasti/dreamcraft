@@ -23,7 +23,7 @@ public final class WardItems {
     }
 
     public ItemStack createWardItem() {
-        Material material = config.wardMaterial() == null ? Material.BEACON : config.wardMaterial();
+        Material material = config.wardMaterial() == null ? Material.NOTE_BLOCK : config.wardMaterial();
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         dev.dreamcraft.protection.message.Messages msgs = dev.dreamcraft.protection.message.Messages.get();

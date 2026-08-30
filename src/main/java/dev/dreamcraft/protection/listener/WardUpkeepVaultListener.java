@@ -43,6 +43,8 @@ public final class WardUpkeepVaultListener implements Listener {
     private final WardService wardService;
     private final WardUpkeepService upkeepService;
     private final Runnable saveAction;
+    /** Optional: refreshes the core block visual after deposits. */
+    private java.util.function.Consumer<dev.dreamcraft.protection.domain.model.Ward> coreVisualRefresh = ward -> { };
     /** Optional: balance → protection time projector; null disables the open summary. */
     private final UpkeepProjectionCalculator projectionCalculator;
     /** Resolves a Ward's tier consumption in units per interval. */
@@ -168,6 +170,7 @@ public final class WardUpkeepVaultListener implements Listener {
         if (totalUnits > 0) {
             wardService.depositUpkeep(ward, totalUnits);
             saveAction.run();
+            coreVisualRefresh.accept(ward);
         }
         giveBack(player, rejected);
 
@@ -201,4 +204,9 @@ public final class WardUpkeepVaultListener implements Listener {
         leftover.values().forEach(stack ->
                 player.getWorld().dropItemNaturally(player.getLocation(), stack));
     }
+    /** Wires the core-block visual refresher (see {@link WardCoreVisual}). */
+    public void setCoreVisualRefresh(java.util.function.Consumer<dev.dreamcraft.protection.domain.model.Ward> consumer) {
+        this.coreVisualRefresh = consumer == null ? ward -> { } : consumer;
+    }
+
 }

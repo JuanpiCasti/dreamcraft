@@ -44,11 +44,14 @@ public final class WardUpgradeService {
     private final WardTierProvider tierProvider;
     private final int scorePerUpgrade;
     private final Map<String, List<WardUpgradeCost>> costsByTargetTier;
+    /** Mirrors ward.max-radius so quoted radii match what the domain will apply. */
+    private final int maxRadius;
 
     public WardUpgradeService(WardTierProvider tierProvider, ProtectionConfig config) {
         this.tierProvider = tierProvider;
         this.scorePerUpgrade = config.wardScorePerUpgrade();
         this.costsByTargetTier = config.wardUpgradeCosts();
+        this.maxRadius = Math.max(1, config.wardMaxRadius());
     }
 
     // ── Quoting ───────────────────────────────────────────────────────────────
@@ -72,7 +75,7 @@ public final class WardUpgradeService {
         return Optional.of(new UpgradeQuote(
                 next.key(),
                 scorePerUpgrade,
-                next.computeRadius(newScore),
+                Math.min(maxRadius, next.computeRadius(newScore)),
                 next.upkeepPerInterval(),
                 costsForCrossing(newScore, next.minBaseScore(), costsFor(next.key())),
                 crossingTier

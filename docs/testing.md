@@ -108,3 +108,29 @@ vocabulario, actualizar la expectativa (el texto es parte del contrato).
    queda cubierta black-box por `receta-nucleo-registrada-taggeada` (PDC).
 2. La salida de comandos externos (LuckPerms, etc.) va al log del server, no
    al reporte.
+
+## QA manual del resource pack (fuera del arnes v1)
+
+El arnes no simula clicks ni la carga de packs: estos escenarios se verifican
+a mano con dos clientes (uno con el pack aceptado, otro sin el).
+
+### Jugador CON pack
+- [ ]Titulo sin texto legible: se ve el fondo grafico (bg_<size>) cubriendo contenedor e inventario
+- [ ]Slots vacios en AIR (el fondo se ve a traves); Perfil/Cerrar con textura CMD (PAPER remapeado, sin nombre)
+- [ ]Clicks: perfil -> mensaje + sonido; cerrar -> cierra el inventario
+- [ ]Drag y shift-click hacia el menu bloqueados
+
+### Jugador SIN pack
+- [ ]Titulo legacy legible; filler GRAY_PANE clasico
+- [ ]Perfil = PLAYER_HEAD (nombre dorado); Cerrar = BARRIER
+- [ ]Todo funcional sin pack
+
+### Regresion
+- [ ]proteccion reload conserva assets y custom-title
+- [ ]Relogin resetea PackState (modo auto re-detecta el pack)
+- [ ]menus.custom-title: false -> titulos vanilla aun con pack cargado
+
+### Bedrock/Geyser (puerto 19132)
+Los clientes Bedrock NO cargan packs Java ni renderizan titulos con fuentes
+custom: siempre ven el fallback vanilla. El modo auto ya lo cubre (PackStatus
+nunca carga); no requiere codigo, solo no esperar ahi los graficos custom.

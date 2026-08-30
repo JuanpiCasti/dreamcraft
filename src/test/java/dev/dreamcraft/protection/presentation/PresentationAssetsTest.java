@@ -45,6 +45,32 @@ class PresentationAssetsTest {
               ward.active: ENCHANT
             """;
 
+    /** GUI contract: profile/close buttons + background glyphs (menu.bg.*). */
+    private static final String MENU_CONTRACT = """
+            options:
+              enabled: true
+            icons:
+              menu.profile:
+                material: PAPER
+                cmd: 41403
+                fallback: PLAYER_HEAD
+                hide-name: true
+              menu.close:
+                material: PAPER
+                cmd: 41404
+                fallback: BARRIER
+                hide-name: true
+            fonts:
+              dc.gui: "dreamcraft:gui"
+            symbols:
+              menu.bg.9:  { glyph: "\\uE100", font: dc.gui }
+              menu.bg.18: { glyph: "\\uE101", font: dc.gui }
+              menu.bg.27: { glyph: "\\uE102", font: dc.gui }
+              menu.bg.36: { glyph: "\\uE103", font: dc.gui }
+              menu.bg.45: { glyph: "\\uE104", font: dc.gui }
+              menu.bg.54: { glyph: "\\uE105", font: dc.gui }
+            """;
+
     @Test
     void iconWithCmdResolvesCustomModelForPackViewers() {
         var registry = PresentationAssetRegistry.fromConfiguration(yaml(CONTRACT));
@@ -104,5 +130,49 @@ class PresentationAssetsTest {
         assertFalse(registry.isAvailable());
         assertTrue(registry.icon("ward.icon").isEmpty());
         assertEquals(0, registry.iconCount());
+    }
+
+    @Test
+    void guiButtonsParseWithCmdFallbackAndHideName() {
+        var registry = PresentationAssetRegistry.fromConfiguration(yaml(MENU_CONTRACT));
+
+        var profile = registry.iconAsset("menu.profile").orElseThrow();
+        assertEquals(Material.PAPER, profile.material());
+        assertEquals(41403, profile.cmd());
+        assertTrue(profile.hideName());
+
+        var close = registry.iconAsset("menu.close").orElseThrow();
+        assertEquals(Material.PAPER, close.material());
+        assertEquals(41404, close.cmd());
+        assertTrue(close.hideName());
+    }
+
+    @Test
+    void guiButtonFallbacksApplyWithoutPack() {
+        // options.enabled: false forces the vanilla fallback branch of icon()
+        YamlConfiguration cfg = yaml(MENU_CONTRACT);
+        cfg.set("options.enabled", false);
+        var registry = PresentationAssetRegistry.fromConfiguration(cfg);
+
+        assertEquals(Material.PLAYER_HEAD, registry.icon("menu.profile").orElseThrow().material());
+        assertEquals(Material.BARRIER, registry.icon("menu.close").orElseThrow().material());
+    }
+
+    @Test
+    void guiFontAndBackgroundGlyphsResolve() {
+        var registry = PresentationAssetRegistry.fromConfiguration(yaml(MENU_CONTRACT));
+
+        assertEquals("dreamcraft:gui", registry.font("dc.gui"));
+        var ref = registry.symbolRef("menu.bg.54").orElseThrow();
+        assertEquals("\uE105", ref.glyph());
+        assertEquals("dreamcraft:gui", ref.fontKey());
+        // Wrapper siblings ({glyph:, font:}) never leak into the raw symbol map
+        assertNull(registry.symbol("menu.bg.54.font"));
+    }
+
+    @Test
+    void missingGlyphRefDegradesToEmpty() {
+        var registry = PresentationAssetRegistry.fromConfiguration(yaml(CONTRACT));
+        assertTrue(registry.symbolRef("menu.bg.54").isEmpty());
     }
 }

@@ -49,8 +49,10 @@ public record ProtectionConfig(
         List<CityLevelDefinition> cityLevels,
         WardRecipe wardRecipe,
         /** Recurring upkeep units charged per interval for EACH gated block placed below tier. */
-        int belowTierSurchargeUnits
-) {
+        int belowTierSurchargeUnits,
+        /** Hard ceiling for a single Ward's protection radius (ward.max-radius), all tiers. */
+        int wardMaxRadius
+    ) {
     /** Convenience constructor: no ward upkeep materials, no gated blocks, no city levels. */
     public ProtectionConfig(
             boolean enabled,
@@ -88,7 +90,7 @@ public record ProtectionConfig(
                 resourcePackEnabled, resourcePackOptional, resourcePackFallbackVanilla, customModelData,
                 resourceItemId, wardMaterial, wardItemId, wardCustomModelData, wardScorePerUpgrade,
                 tiers, categoryBaseCosts, materialOverrides, wardUpgradeCosts,
-                Map.of(), Map.of(), List.of(), WardRecipe.DEFAULT, 2);
+                Map.of(), Map.of(), List.of(), WardRecipe.DEFAULT, 2, 80);
     }
 
     public static ProtectionConfig load(FileConfiguration config) {
@@ -253,7 +255,7 @@ public record ProtectionConfig(
                 resourcePack == null || resourcePack.getBoolean("fallback-vanilla", true),
                 resourcePack == null ? 41001 : resourcePack.getInt("custom-model-data", 41001),
                 resourcePack == null ? "dreamcraft:protection_wardrobe" : resourcePack.getString("item-id", "dreamcraft:protection_wardrobe"),
-                Material.matchMaterial(ward == null ? "BEACON" : ward.getString("material", "BEACON")),
+                Material.matchMaterial(ward == null ? "NOTE_BLOCK" : ward.getString("material", "NOTE_BLOCK")),
                 ward == null ? "dreamcraft:ward_beacon" : ward.getString("item-id", "dreamcraft:ward_beacon"),
                 ward == null ? 41002 : ward.getInt("custom-model-data", 41002),
                 ward == null ? 100 : ward.getInt("score-per-upgrade", 100),
@@ -267,7 +269,9 @@ public record ProtectionConfig(
                 WardRecipe.load(ward),
                 // Recurring surcharge per gated block placed below its tier
                 // (ward.below-tier-surcharge-units); default 2 for legacy configs.
-                ward == null ? 2 : ward.getInt("below-tier-surcharge-units", 2)
+                ward == null ? 2 : ward.getInt("below-tier-surcharge-units", 2),
+                // Hard ceiling for one Ward's protection radius (ward.max-radius).
+                Math.max(1, ward == null ? 80 : ward.getInt("max-radius", 80))
         );
     }
 }

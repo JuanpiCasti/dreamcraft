@@ -9,7 +9,8 @@ import java.util.Locale;
  *
  * <pre>
  * menus:
- *   provider: auto   # auto | vanilla | rp
+ *   provider: auto      # auto | vanilla | rp
+ *   custom-title: true  # glyph background titles from the resource pack
  * </pre>
  *
  * <ul>
@@ -20,7 +21,7 @@ import java.util.Locale;
  *       everyone else gets the configured vanilla fallback (MD §9).</li>
  * </ul>
  */
-public record PresentationOptions(Mode assetMode) {
+public record PresentationOptions(Mode assetMode, boolean customTitle) {
 
     public enum Mode { VANILLA, RP, AUTO }
 
@@ -31,6 +32,7 @@ public record PresentationOptions(Mode assetMode) {
             case "rp", "resource-pack", "resourcepack" -> Mode.RP;
             default -> Mode.AUTO;
         };
-        return new PresentationOptions(mode);
+        boolean customTitle = cfg.getBoolean("menus.custom-title", true);
+        return new PresentationOptions(mode, customTitle);
     }
 }

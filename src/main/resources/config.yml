@@ -58,15 +58,24 @@ command-names:
 # presentation-assets.yml — contrato con el equipo del resource pack.
 menus:
   provider: auto
+  # Títulos-glifo del resource pack como fondo gráfico de los menús (false = título vanilla).
+  custom-title: true
 
 # Bloque especial que crea un Ward al colocarlo.
 # La protección del Ward es un radio alrededor de este bloque (su centro).
+# LODESTONE (bloque completo, sin estados de orientación) para que el resource
+# pack pueda darle aspecto propio de cubo sin tocar el beacon vanilla.
 ward:
-  material: BEACON
+  material: LODESTONE
   item-id: dreamcraft:ward_beacon
   custom-model-data: 41002
   # Puntos de score que suma cada mejora desde el menú del Ward
   score-per-upgrade: 100
+
+  # Techo DURO del radio de protección de UN núcleo (todos los tiers).
+  # La fórmula del tier nunca supera este valor aunque el score siga creciendo;
+  # Wards creados antes del techo se re-escalan al arrancar (región WG incluida).
+  max-radius: 80
 
   # ── Receta de crafteo del Núcleo ──
   # El resultado es el ítem TAGGEADO (mismo que reclamar/give): lo crafteado
@@ -202,6 +211,8 @@ ward-upgrade-costs:
 
 # Ward tiers — sistema de progresión score→tier→radio y costo de upkeep por intervalo.
 #
+# El radio efectivo NUNCA supera ward.max-radius (techo duro por núcleo).
+#
 # Fields per tier:
 #   min-base-score   — lowest score that qualifies for this tier
 #   max-base-score   — highest score that qualifies (use 2147483647 for "no cap")
@@ -220,11 +231,11 @@ ward-tiers:
     min-base-score: 100
     max-base-score: 499
     base-radius: 32
-    radius-per-score: 0.1
+    radius-per-score: 0.06
     upkeep-per-interval: 3
   advanced:
     min-base-score: 500
     max-base-score: 2147483647
     base-radius: 64
-    radius-per-score: 0.1
+    radius-per-score: 0.02
     upkeep-per-interval: 10

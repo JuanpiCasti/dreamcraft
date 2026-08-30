@@ -169,6 +169,21 @@ public final class WardViewModelBuilder {
                 .orElse(1);
     }
 
+    /**
+     * True when the Ward is NOT currently protected by its upkeep balance
+     * (no projection wired, GRACE or EXPIRED). Same rule the status icon in
+     * the sync menu follows — exposed so admin GUIs can mirror it.
+     */
+    public boolean isUnprotected(Ward ward) {
+        int surcharge = belowTierSurchargeUnits * Math.max(0, ward.belowTierBlocks());
+        var projection = upkeepCalculator == null ? null
+                : upkeepCalculator.project(ward.upkeepBalance(),
+                        unitsPerInterval(ward) + surcharge);
+        return projection == null
+                || projection.state() == dev.dreamcraft.protection.service.UpkeepProjectionCalculator.State.GRACIA
+                || projection.state() == dev.dreamcraft.protection.service.UpkeepProjectionCalculator.State.EXPIRADO;
+    }
+
     private boolean hasNextTier(int currentScore, String currentTierKey) {
         var current = tierProvider.findByKey(currentTierKey);
         if (current.isEmpty()) return false;

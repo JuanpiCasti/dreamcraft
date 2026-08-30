@@ -10,6 +10,7 @@ import dev.dreamcraft.protection.domain.service.EstateService;
 import dev.dreamcraft.protection.domain.service.WardService;
 import dev.dreamcraft.protection.service.CityLevelService;
 import dev.dreamcraft.protection.presentation.MenuDefinition;
+import dev.dreamcraft.protection.presentation.MenuItem;
 import dev.dreamcraft.protection.presentation.menu.CityMenuBuilder;
 import dev.dreamcraft.protection.presentation.menu.EstateMenuBuilder;
 import dev.dreamcraft.protection.presentation.menu.WardMenuBuilder;
@@ -536,15 +537,50 @@ class DomainCommandFlowTest {
 
         MenuDefinition def = WardMenuBuilder.build(vm);
 
-        assertEquals("ward_status", def.menuId());
-        assertEquals(27, def.size());
-        assertEquals(8, def.items().size()); // 8 items defined
-        // Slot 4 is display, slot 22 is close button
-        assertNotNull(def.itemAt(4));
-        assertNotNull(def.itemAt(22));
-        // Close button has an action
-        assertTrue(def.itemAt(22).getAction().isPresent());
-        assertEquals("menu.close", def.itemAt(22).getAction().get().actionId());
+        // 35 items: close(36) + perfil(37) + permisos(38)/transfer(39)/disband(43) singles
+        // + upkeep 2x2 (4) + fase 2x2 (4) + matriz 2x2 (4) + 9 separator tiles + 9 status tiles (3x3)
+        assertEquals(35, def.items().size());
+        // Fila 5: Close en slot 36 (flecha a la izquierda)
+        assertTrue(def.itemAt(36).getAction().isPresent());
+        assertEquals("cerrar", def.itemAt(36).getAction().get().actionId());
+        // Perfil en slot 37
+        assertNotNull(def.itemAt(37));
+        assertEquals("perfil", def.itemAt(37).getAction().get().actionId());
+        // Permisos en slot 38 (papel)
+        assertNotNull(def.itemAt(38));
+        assertEquals("ward.permissions", def.itemAt(38).getAction().get().actionId());
+        // Transferir en slot 39 (personitas)
+        assertNotNull(def.itemAt(39));
+        assertEquals("ward.transfer", def.itemAt(39).getAction().get().actionId());
+        // Disband en slot 43 (engranaje)
+        assertNotNull(def.itemAt(43));
+        assertEquals("ward.disband", def.itemAt(43).getAction().get().actionId());
+        // En menú horneado, los visuales están en el fondo y los items son catchers
+        assertEquals("menu.catcher", def.itemAt(16).iconKey());
+        // Los 9 slots del cristal 3x3 (3,4,5, 12,13,14, 21,22,23) responden como catchers
+        for (int s : new int[]{3, 4, 5, 12, 13, 14, 21, 22, 23}) {
+            assertNotNull(def.itemAt(s), "Slot " + s + " de status debe estar presente");
+            assertEquals("menu.catcher", def.itemAt(s).iconKey());
+            assertTrue(def.itemAt(s).displayName().contains(vm.name()));
+        }
+    }
+
+    @Test
+    void wardMenuMatrizSlotOpensCityOverviewForMember() {
+        City city = cityService.createCity(ownerId, "Matrix");
+        Ward ward = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 0, 64, 0);
+        wardService.setCityMembership(ward, city.id());
+        var builder = new WardViewModelBuilder(new TestWardTierProvider(), uuid -> "Owner",
+                id -> "Matrix");
+
+        MenuDefinition def = WardMenuBuilder.build(builder.build(ward, ownerId));
+
+        MenuItem item = def.itemAt(40);
+        assertNotNull(item);
+        assertEquals("menu.catcher", item.iconKey());
+        assertTrue(item.getAction().isPresent());
+        assertEquals("city.open", item.getAction().get().actionId());
+        assertTrue(item.lore().stream().anyMatch(l -> l.contains("Clic para gestionar la Matriz")));
     }
 
     @Test
@@ -554,10 +590,10 @@ class DomainCommandFlowTest {
         WardViewModel vm = builder.build(ward, ownerId);
 
         MenuDefinition def = WardMenuBuilder.build(vm);
-        // Slot 12 is the upgrade button — should be active (button with action)
-        assertNotNull(def.itemAt(12));
-        assertTrue(def.itemAt(12).getAction().isPresent());
-        assertEquals("ward.upgrade", def.itemAt(12).getAction().get().actionId());
+        // Slot 16 (fase block anchor) is the upgrade button — should be active
+        assertNotNull(def.itemAt(16));
+        assertTrue(def.itemAt(16).getAction().isPresent());
+        assertEquals("ward.upgrade", def.itemAt(16).getAction().get().actionId());
     }
 
     @Test
@@ -576,9 +612,39 @@ class DomainCommandFlowTest {
 
         assertFalse(vm.canUpgrade());
         MenuDefinition def = WardMenuBuilder.build(vm);
-        // Slot 12 should be display-only (no action)
-        assertNotNull(def.itemAt(12));
-        assertTrue(def.itemAt(12).getAction().isEmpty());
+        // Slot 16 should be display-only (no action), still with the tier quarter tile
+        assertNotNull(def.itemAt(16));
+        assertTrue(def.itemAt(16).getAction().isEmpty());
+        assertEquals("menu.catcher", def.itemAt(16).iconKey());
+    }
+
+    @Test
+    void wardMenuStatusIconFollowsRealProtectionState() {
+        var calc = new dev.dreamcraft.protection.service.UpkeepProjectionCalculator(
+                Duration.ofHours(24), Duration.ZERO, Duration.ZERO, java.util.Map.of());
+        var builder = new WardViewModelBuilder(new TestWardTierProvider(), uuid -> "Owner",
+                id -> null, null, java.util.List.of(), calc);
+
+        // Covered balance → PROTEGIDO → variante horneada ward_status (activo)
+        Ward covered = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 0, 64, 0);
+        wardService.depositUpkeep(covered, 100); // basic charges 1 u/interval
+        var coveredDef = WardMenuBuilder.build(builder.build(covered, ownerId));
+        assertEquals("ward_status", coveredDef.menuId());
+        assertEquals("menu.catcher", coveredDef.itemAt(4).iconKey());
+
+        // Balance below one interval charge → GRACIA → variante horneada ward_inactive (apagado)
+        Ward grace = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 200, 64, 200);
+        wardService.addBaseScore(grace, 500); // advanced tier charges 10 u/interval
+        wardService.depositUpkeep(grace, 5);
+        var graceDef = WardMenuBuilder.build(builder.build(grace, ownerId));
+        assertEquals("ward_inactive", graceDef.menuId());
+        assertEquals("menu.catcher", graceDef.itemAt(4).iconKey());
+
+        // Zero balance → EXPIRADO → variante horneada ward_inactive (apagado)
+        Ward expired = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 400, 64, 400);
+        var expiredDef = WardMenuBuilder.build(builder.build(expired, ownerId));
+        assertEquals("ward_inactive", expiredDef.menuId());
+        assertEquals("menu.catcher", expiredDef.itemAt(4).iconKey());
     }
 
     @Test
@@ -590,13 +656,31 @@ class DomainCommandFlowTest {
         MenuDefinition def = CityMenuBuilder.build(vm);
 
         assertEquals("city_overview", def.menuId());
-        assertEquals(27, def.size());
-        assertNotNull(def.itemAt(4));
-        assertNotNull(def.itemAt(22));
-        // Slot 10 (invite) should be active for governor
-        assertNotNull(def.itemAt(10));
-        assertTrue(def.itemAt(10).getAction().isPresent());
-        assertEquals("city.invite", def.itemAt(10).getAction().get().actionId());
+        assertEquals(54, def.size());
+        // Slot 3 (matriz status 3x3 block anchor)
+        assertNotNull(def.itemAt(3));
+        assertNotNull(def.itemAt(13));
+        // Slot 9 (invite block anchor, movido 1 slot a la izquierda)
+        assertNotNull(def.itemAt(9));
+        assertTrue(def.itemAt(9).getAction().isPresent());
+        assertEquals("city.invite", def.itemAt(9).getAction().get().actionId());
+        // Slot 16 (roles block anchor en la ubicación de la bóveda)
+        assertNotNull(def.itemAt(16));
+        assertTrue(def.itemAt(16).getAction().isPresent());
+        assertEquals("city.roles", def.itemAt(16).getAction().get().actionId());
+        // Slot 30 (tesoro 3x3 abajo)
+        assertNotNull(def.itemAt(30));
+        assertTrue(def.itemAt(30).getAction().isPresent());
+        assertEquals("city.bank", def.itemAt(30).getAction().get().actionId());
+        // Fila 5: Slot 36 — Cerrar menú, Slot 37 — Perfil, Slot 38 — Políticas
+        assertEquals("menu.catcher", def.itemAt(36).iconKey());
+        assertTrue(def.itemAt(36).getAction().isPresent());
+        assertEquals("cerrar", def.itemAt(36).getAction().get().actionId());
+        assertEquals("menu.catcher", def.itemAt(37).iconKey());
+        assertTrue(def.itemAt(37).getAction().isPresent());
+        assertEquals("perfil", def.itemAt(37).getAction().get().actionId());
+        assertNotNull(def.itemAt(38));
+        assertNotNull(def.itemAt(44));
     }
 
     @Test
@@ -608,9 +692,13 @@ class DomainCommandFlowTest {
         MenuDefinition def = EstateMenuBuilder.build(vm);
 
         assertEquals("estate_lobby", def.menuId());
-        assertEquals(27, def.size());
-        assertNotNull(def.itemAt(4));
-        assertNotNull(def.itemAt(22));
+        assertEquals(54, def.size());
+        assertNotNull(def.itemAt(13));
+        // Slot 36 — Cerrar menú
+        assertEquals("menu.catcher", def.itemAt(36).iconKey());
+        assertTrue(def.itemAt(36).getAction().isPresent());
+        assertEquals("cerrar", def.itemAt(36).getAction().get().actionId());
+        assertNotNull(def.itemAt(44));
     }
 
     @Test
@@ -623,9 +711,13 @@ class DomainCommandFlowTest {
         MenuDefinition def = EstateMenuBuilder.build(vm);
 
         assertEquals("estate_instance", def.menuId());
-        assertNotNull(def.itemAt(4));
-        // Instance view has fewer items (no join/transfer/start slots)
-        assertEquals(5, def.items().size());
+        assertNotNull(def.itemAt(13));
+        // Instance view: overview 3x2 (6) + profile (1) + back (1) + disband (1) + close (1)
+        // + two 2×2 quarter blocks (invite 4 / leave 4) + 9 separator tiles = 27
+        assertEquals(27, def.items().size());
+        assertEquals("menu.catcher", def.itemAt(39).iconKey());
+        assertTrue(def.itemAt(39).getAction().isPresent());
+        assertEquals("ward.open", def.itemAt(39).getAction().get().actionId());
     }
 
     // ── In-memory repository stubs ───────────────────────────────────────────

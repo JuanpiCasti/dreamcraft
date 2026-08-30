@@ -12,6 +12,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.ChunkSnapshot;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -19,7 +20,10 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +52,15 @@ import java.util.function.Function;
  * ascent instead wipes the counter in the domain — see
  * {@code WardService#addBaseScore}). Documented approximation: chunks that are
  * not loaded are exempt from the count until the next re-scan; worst case
- * radius 16 ≈ 42k block reads, executed once per founding/re-scan only.
+ * radius 80 ≈ 2.6M block reads, executed off-thread over chunk snapshots.
+ *
+ * <p>Reconciliation: {@link #startReconciliationTask(JavaPlugin)} runs a cheap
+ * round-robin re-scan (one Ward per pass, loaded chunks only, chunk snapshots
+ * scanned OFF-thread) that catches any below-tier block whose placement event
+ * never reached {@link #onBlockPlace} (cancelled ordering, Bedrock/Geyser edge
+ * cases, plugins mutating worlds). The counter only ever moves UP here — break
+ * relief stays event-driven — so a missed placement self-heals within one
+ * sweep without risking undercharging from unloaded chunks.
  *
  * <p>Configuration: {@code ward.tier-gated-blocks} maps material → minimum
  * ward-tier key; {@code ward.below-tier-surcharge-units} is the per-block
@@ -66,18 +78,30 @@ public final class WardBlockGateListener implements Listener {
     private final WardItems wardItems;
     /** Persists domain data after counter changes (same hook as other listeners). */
     private final Runnable saveAction;
+    /** Owning plugin: async scan scheduling + logger. Null disables reconciliation. */
+    private final JavaPlugin pluginRef;
 
     public WardBlockGateListener(WardService wardService,
                                  WardTierProvider tierProvider,
                                  ProtectionConfig config,
                                  WardItems wardItems,
                                  Runnable saveAction) {
+        this(wardService, tierProvider, config, wardItems, saveAction, null);
+    }
+
+    public WardBlockGateListener(WardService wardService,
+                                 WardTierProvider tierProvider,
+                                 ProtectionConfig config,
+                                 WardItems wardItems,
+                                 Runnable saveAction,
+                                 JavaPlugin pluginRef) {
         this.wardService = wardService;
         this.tierProvider = tierProvider;
         this.gatedBlocks = config.wardTierGatedBlocks();
         this.surchargeUnits = Math.max(0, config.belowTierSurchargeUnits());
         this.wardItems = wardItems;
         this.saveAction = saveAction;
+        this.pluginRef = pluginRef;
     }
 
     /**
@@ -175,7 +199,14 @@ public final class WardBlockGateListener implements Listener {
                 NamedTextColor.GREEN));
     }
 
-    // ── Backfill → founding seed / tier-descent re-scan ──────────────────────
+    // ── Backfill → founding seed / tier-descent re-scan / reconciliation ─────
+
+    /** Sanity bound for the scan cube side; real radius is capped by ward.max-radius. */
+    private static final int MAX_SCAN_RADIUS = 256;
+    /** Ticks between reconciliation passes (one Ward per pass). */
+    private static final long RECONCILE_PERIOD_TICKS = 100L; // 5s
+    /** Hard cap on snapshots collected per pass (radius 80 ≈ 121 chunks). */
+    private static final int MAX_CHUNKS_PER_SCAN = 1024;
 
     /**
      * Replaces the Ward's {@code belowTierBlocks} counter with a fresh scan of
@@ -188,21 +219,59 @@ public final class WardBlockGateListener implements Listener {
      *       count with what is actually still below-tier in the area.</li>
      * </ul>
      *
+     * <p>The scan is asynchronous: chunk SNAPSHOTS are taken on the main thread
+     * (cheap copies, never loads chunks) and the block-by-block counting runs
+     * off-thread, so large radii never freeze the server. The result is applied
+     * back on the main thread.
+     *
      * <p>Documented approximations:
      * <ul>
      *   <li>Unloaded chunks are exempt from the count — they are never loaded
      *       synchronously; the next re-scan picks them up.</li>
-     *   <li>Worst case radius 16 ≈ 42k block reads, once per founding/re-scan.</li>
      *   <li>A scan finding 0 below-tier blocks leaves the stored counter
      *       untouched (only positive findings replace it).</li>
      * </ul>
      */
     public void seedExistingBelowTierBlocks(Ward ward) {
+        scanWardArea(ward, true);
+    }
+
+    /**
+     * Starts the periodic reconciliation task: every {@link #RECONCILE_PERIOD_TICKS}
+     * it re-scans ONE Ward (round-robin over all Wards) and raises its counter
+     * when the world contains more below-tier gated blocks than accounted for.
+     * This is the safety net for placements whose event never incremented the
+     * counter — including blocks added AFTER the core was founded while some
+     * other plugin swallowed or reordered the placement event.
+     */
+    public void startReconciliationTask(JavaPlugin plugin) {
+        JavaPlugin owner = plugin != null ? plugin : pluginRef;
+        if (owner == null) return; // no plugin context → reconciliation unavailable
+        new BukkitRunnable() {
+            int index = 0;
+
+            @Override
+            public void run() {
+                List<Ward> all = new ArrayList<>(wardService.findAll());
+                if (all.isEmpty()) return;
+                Ward ward = all.get(index % all.size());
+                index = (index + 1) % all.size();
+                scanWardArea(ward, false);
+            }
+        }.runTaskTimer(owner, RECONCILE_PERIOD_TICKS, RECONCILE_PERIOD_TICKS);
+    }
+
+    /**
+     * Shared scan pipeline. {@code authoritative} mode (founding/descent) keeps
+     * the historical replace-with-scan semantics; {@code reconcile} mode is
+     * monotonic upward-only so unloaded chunks can never UNDERCHARGE a Ward.
+     */
+    private void scanWardArea(Ward ward, boolean authoritative) {
         World world = Bukkit.getWorld(ward.worldName());
         if (world == null) return;
 
         int radius = ward.radius();
-        if (radius <= 0 || radius > 64) return; // degenerate/absurd radius guard
+        if (radius <= 0 || radius > MAX_SCAN_RADIUS) return; // degenerate/absurd radius guard
 
         int minX = ward.centerX() - radius, maxX = ward.centerX() + radius;
         int minZ = ward.centerZ() - radius, maxZ = ward.centerZ() + radius;
@@ -210,29 +279,86 @@ public final class WardBlockGateListener implements Listener {
         int maxY = Math.min(world.getMaxHeight() - 1, ward.centerY() + radius);
         if (minY > maxY) return;
 
+        // Doctrine: never load chunks synchronously — snapshot ONLY loaded ones.
+        List<ChunkSnapshot> snapshots = new ArrayList<>();
+        for (int cx = minX >> 4; cx <= maxX >> 4 && snapshots.size() < MAX_CHUNKS_PER_SCAN; cx++) {
+            for (int cz = minZ >> 4; cz <= maxZ >> 4 && snapshots.size() < MAX_CHUNKS_PER_SCAN; cz++) {
+                if (!world.isChunkLoaded(cx, cz)) continue;
+                snapshots.add(world.getChunkAt(cx, cz).getChunkSnapshot(false, false, false));
+            }
+        }
+        if (snapshots.isEmpty()) return;
+
         int wardRank = rankOf(ward.tier());
+
+        // Without a plugin context (legacy constructor) fall back to the
+        // historical synchronous scan; production always wires pluginRef.
+        if (pluginRef == null) {
+            int total = 0;
+            for (ChunkSnapshot snap : snapshots) {
+                total += countBelowTierInSnapshot(snap, minY, maxY, wardRank);
+            }
+            applyScanResult(ward, total, authoritative);
+            return;
+        }
+
+        // Block reads happen OFF-thread: ChunkSnapshot is an immutable copy and
+        // its getBlockType is documented thread-safe. The result hops back to
+        // the main thread before mutating domain state.
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                int total = 0;
+                for (ChunkSnapshot snap : snapshots) {
+                    total += countBelowTierInSnapshot(snap, minY, maxY, wardRank);
+                }
+                final int counted = total;
+                Bukkit.getScheduler().runTask(pluginRef,
+                        () -> applyScanResult(ward, counted, authoritative));
+            }
+        }.runTaskAsynchronously(pluginRef);
+    }
+
+    /**
+     * Counts below-tier gated blocks inside one chunk snapshot, restricted to
+     * the vertical band [minY..maxY]. Pure over immutable data — safe off-thread.
+     */
+    private int countBelowTierInSnapshot(ChunkSnapshot snap, int minY, int maxY, int wardRank) {
         int total = 0;
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                // Doctrine: never load chunks synchronously — skip unloaded ones.
-                if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
-                for (int y = minY; y <= maxY; y++) {
-                    if (isBelowTierGated(world.getBlockAt(x, y, z).getType(),
-                            gatedBlocks, wardRank, this::rankOf)) {
+        for (int y = minY; y <= maxY; y++) {
+            for (int x = 0; x < 16; x++) {
+                for (int z = 0; z < 16; z++) {
+                    if (isBelowTierGated(snap.getBlockType(x, y, z), gatedBlocks, wardRank, this::rankOf)) {
                         total++;
                     }
                 }
             }
         }
+        return total;
+    }
 
-        if (total > 0) {
-            wardService.setBelowTierBlocks(ward, total); // REPLACES, never adds
-            saveAction.run();
+    /**
+     * Main-thread application of a finished scan.
+     * Authoritative scans REPLACE the counter when they find anything (founding/
+     * descent contract); reconciliations only RAISE it (monotonic upward).
+     */
+    private void applyScanResult(Ward ward, int scanned, boolean authoritative) {
+        if (!wardService.findAll().stream().anyMatch(w -> w.id().equals(ward.id()))) return; // dissolved meanwhile
+        int current = ward.belowTierBlocks();
+        boolean apply = authoritative ? scanned > 0 : scanned > current;
+        if (!apply) return;
+
+        wardService.setBelowTierBlocks(ward, scanned);
+        saveAction.run();
+        if (scanned > current) {
+            pluginRef.getLogger().info("[WardGate] " + ward.name()
+                    + ": sobrecosto " + current + " → " + scanned
+                    + " bloque(s) fuera de fase (escaneo).");
             Player owner = Bukkit.getPlayer(ward.ownerId());
             if (owner != null) {
                 owner.sendMessage(Component.text(
-                        "⚠ " + total + " bloque(s) fuera de fase dentro del área: sobrecosto +"
-                                + (surchargeUnits * total) + " u/intervalo.",
+                        "⚠ " + scanned + " bloque(s) fuera de fase dentro del área: sobrecosto +"
+                                + (surchargeUnits * scanned) + " u/intervalo.",
                         NamedTextColor.YELLOW));
             }
         }

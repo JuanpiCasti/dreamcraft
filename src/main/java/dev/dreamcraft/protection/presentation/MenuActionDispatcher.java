@@ -16,6 +16,7 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
@@ -179,9 +180,14 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         String id = action.actionId();
         try {
             switch (id) {
-                case "menu.close" -> handleClose(player);
+                case "menu.close", "cerrar" -> handleClose(player);
+                case "perfil" -> handlePerfil(player);
+                case "city.open" -> handleCityOpen(player, ctx);
+                case "ward.open" -> handleWardOpen(player);
                 case "ward.upgrade" -> handleWardUpgrade(player, ctx);
                 case "ward.toggle_permission" -> handleWardTogglePermission(player, ctx, action);
+                case "ward.permissions" -> openWardPermissions(player, ctx);
+                case "ward.permissions.back" -> handleWardPermissionsBack(player, action);
                 case "ward.annex_city" -> handleWardAnnexCity(player, ctx);
                 case "ward.disband" -> handleWardDisband(player, ctx);
                 case "ward.upkeep_vault" -> handleOpenUpkeepVault(player, ctx);
@@ -192,6 +198,8 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                 case "city.transfer" -> openCityPick(player, ctx, ACT_CITY_TRANSFER);
                 case "city.bank" -> handleOpenCityTreasury(player, ctx);
                 case "city.policy" -> handleCityPolicy(player, ctx, action);
+                case "city.policies" -> openCityPolicies(player, ctx);
+                case "city.policies.back" -> handleCityPoliciesBack(player, action);
                 case "city.delete" -> handleCityDelete(player, ctx);
                 case "estate.invite" -> openEstatePick(player, ctx, ACT_ESTATE_INVITE);
                 case "estate.transfer" -> openEstatePick(player, ctx, ACT_ESTATE_TRANSFER);
@@ -254,6 +262,66 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         return dev.dreamcraft.protection.message.Messages.get().tr(key, fallback, placeholders);
     }
 
+    // ── Cross-menu navigation (interconexión de menús de jugador) ─────────────
+
+    /**
+     * Opens the City menu of the Matriz shown in the ward status (slot 16):
+     * resolves the ward's own city — the one rendered in the icon — instead of
+     * the viewer's membership, so the opened menu always matches the label.
+     */
+    private void handleCityOpen(Player player, MenuContext ctx) {
+        Ward ward = resolveWard(player, ctx);
+        if (ward == null) return;
+        City city = ward.hasCityMembership()
+                ? cityService.findById(ward.cityId()).orElse(null)
+                : null;
+        if (city == null) {
+            feedback(player, msg("menu.city.open-no-city",
+                    "Este Núcleo ya no pertenece a una Matriz."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        var opener = cityMenuOpener;
+        if (opener == null) {
+            feedback(player, msg("menu.cityadmin.menu-unavailable",
+                    "El menú de la Matriz no está disponible."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        scheduleOpener(player, () -> opener.accept(player, city));
+    }
+
+    /**
+     * Opens the viewer's own Ward status menu («Volver al Núcleo» in the City
+     * menu): location lookup first, then the owner's first ward — mirrors
+     * {@code WardCommand.resolveWard} without the UUID-argument branch. The
+     * CityViewModel carries no viewer-ward flag, so the button renders
+     * unconditionally and this handler degrades gracefully when the viewer
+     * owns no ward.
+     */
+    private void handleWardOpen(Player player) {
+        Ward ward = wardService
+                .findAtLocation(player.getWorld().getName(),
+                        player.getLocation().getBlockX(),
+                        player.getLocation().getBlockZ())
+                .or(() -> wardService.findByOwner(player.getUniqueId()).stream().findFirst())
+                .orElse(null);
+        if (ward == null) {
+            feedback(player, msg("menu.ward.none-found",
+                    "No tienes ningún Núcleo."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        var opener = wardMenuOpener;
+        if (opener == null) {
+            feedback(player, msg("menu.wardadmin.menu-unavailable",
+                    "El menú del Núcleo no está disponible."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        scheduleOpener(player, () -> opener.accept(player, ward));
+    }
+
     // ── Ward actions ──────────────────────────────────────────────────────────
 
     /**
@@ -280,12 +348,20 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         Bukkit.getScheduler().runTask(plugin(), () -> {
             Player online = Bukkit.getPlayer(player.getUniqueId());
             if (online == null) return;
-            var holder = dev.dreamcraft.protection.ui.WardUpkeepVaultHolder.create(wardId,
-                    net.kyori.adventure.text.Component.text("⚔ Bóveda de Upkeep — " + wardName,
-                            NamedTextColor.DARK_AQUA));
+            Component title = composeVaultTitle(online, "ward_upkeep_vault", 27, "&8⚔ Bóveda de Upkeep · " + wardName);
+            var holder = dev.dreamcraft.protection.ui.WardUpkeepVaultHolder.create(wardId, title);
             online.openInventory(holder.getInventory());
             playSuccess(online);
         });
+    }
+
+    /** Helper composing HUD background titles for 27-slot vaults (upkeep & treasury). */
+    private Component composeVaultTitle(Player player, String menuId, int size, String legacyTitle) {
+        if (adminMenuProvider instanceof VanillaMenuProvider vmp) {
+            var def = new MenuDefinition(menuId, legacyTitle, size, java.util.List.of());
+            return vmp.composeTitle(def, player.getUniqueId());
+        }
+        return net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(legacyTitle);
     }
 
     /**
@@ -450,7 +526,8 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         }
         wardService.assignWorldGuardRegion(ward, ward.worldGuardRegionId()); // persist
         playSuccess(player);
-        reopenWardMenu(player, ward);
+        // Reopen the permissions sub-menu so the viewer can keep toggling flags.
+        reopenWardPermissions(player, ward.id());
     }
 
     private void handleWardAnnexCity(Player player, MenuContext ctx) {
@@ -544,9 +621,9 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         Bukkit.getScheduler().runTask(plugin(), () -> {
             Player online = Bukkit.getPlayer(player.getUniqueId());
             if (online == null) return;
+            Component title = composeVaultTitle(online, "city_treasury_vault", 27, "&8★ Tesoro de " + cityName);
             var holder = dev.dreamcraft.protection.ui.CityTreasuryVaultHolder.create(cityId,
-                    net.kyori.adventure.text.Component.text("★ Tesoro de " + cityName,
-                            NamedTextColor.GOLD),
+                    title,
                     treasuryStore.get(cityId));
             online.openInventory(holder.getInventory());
             online.sendMessage(CommandMessages.CITY_PREFIX
@@ -578,6 +655,8 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                          : msg("menu.city.policy-off", "Política {policy} desactivada."),
                 "policy", policy.name()), NamedTextColor.GREEN);
         playSuccess(player);
+        // Reopen the policies sub-menu so the viewer can keep toggling flags.
+        reopenCityPolicies(player, city.id());
     }
 
     private void handleCityDelete(Player player, MenuContext ctx) {
@@ -1338,7 +1417,13 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
 
     // ── Ward/City admin GUIs (stateless payload navigation) ──────────────────
 
-    private static final int ADMIN_PAGE_SIZE = 45;
+    /** Entries per admin page: 2×2 quarter blocks use rows 0-3 → 2 bands × 4 columns. */
+    private static final int ADMIN_PAGE_SIZE = 8;
+
+    /** Top-left slot of the {@code index}-th 2×2 admin entry block (rows 0-3, col pairs 0-2-4-6). */
+    private static int adminBlockAnchor(int index) {
+        return (index / 4) * 18 + (index % 4) * 2;
+    }
 
     /** Inline permission gate for every wardadmin.* payload action. */
     private boolean requireWardAdmin(Player player) {
@@ -1425,6 +1510,24 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
     }
 
     /**
+     * Protection-state rule shared with the sync menu: true when the ward's
+     * upkeep no longer covers protection (GRACE/EXPIRED or no calculator).
+     * Wired from the boot sequence via the Ward menu façade's view-model builder.
+     */
+    private java.util.function.Predicate<Ward> unprotectedWards = ward -> false;
+
+    /** Wires the protection-state rule (see {@link #unprotectedWards}). */
+    public void setUnprotectedWards(java.util.function.Predicate<Ward> predicate) {
+        this.unprotectedWards = predicate == null ? ward -> false : predicate;
+    }
+
+    /** Admin icon for a ward row: inactive quarters when orphaned OR unprotected. */
+    private String wardAdminIcon(Ward ward, WardHealth.HealthReport health) {
+        boolean inactive = health.orphan() || unprotectedWards.test(ward);
+        return inactive ? "icon.ward.inactive" : "icon.ward.active";
+    }
+
+    /**
      * Admin overview of EVERY registered Ward — orphaned nuclei first, then
      * alphabetical. Stateless pagination: page/filter travel inside payloads.
      * Layout decision: 45 ítems (slots 0-44), «Anterior» en 45, toggle
@@ -1454,31 +1557,33 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
             Ward ward = row.ward();
             boolean orphan = row.health().orphan();
             List<String> lore = wardAdminLore(ward, row.health());
-            String icon = orphan ? "icon.ward.orphan" : "icon.ward.active";
+            // Orphan/unprotected/suspect entries reuse the inactive quarter art
+            // (gray crossed shield); the pack has no dedicated orphan tiles.
+            String icon = wardAdminIcon(ward, row.health());
             String name = (orphan ? "&c⚠ &f" : "&b&l") + ward.name();
-            items.add(MenuItem.button(i - from, icon, name, lore,
+            items.addAll(MenuItem.block2x2Button(54, adminBlockAnchor(i - from), icon, name, lore,
                     MenuAction.of("wardadmin.detail", ward.id() + ":" + current + ":" + (suspectsOnly ? 1 : 0))));
         }
         String f = suspectsOnly ? "1" : "0";
         if (current > 0) {
-            items.add(MenuItem.button(45, "icon.back", "&e« Anterior",
+            items.add(MenuItem.button(45, "menu.back", "&e« Anterior",
                     List.of("&7Página " + current),
                     MenuAction.of("wardadmin.page", (current - 1) + ":" + f)));
         }
-        items.add(MenuItem.button(49, suspectsOnly ? "icon.ward.orphan" : "icon.members",
+        items.add(MenuItem.button(49, suspectsOnly ? "icon.toggle.on" : "icon.toggle.off",
                 suspectsOnly ? "&c⚠ Solo sospechosos: &aON" : "&⚠ Solo sospechosos: &7OFF",
                 List.of("&7Alterna entre todos los Núcleos y",
                         "&csolo huérfanos / estado desconocido"),
                 MenuAction.of("wardadmin.page", current + ":" + (suspectsOnly ? "0" : "1"))));
         boolean hasNext = to < rows.size();
         if (hasNext) {
-            items.add(MenuItem.button(53, "icon.back", "&eSiguiente »",
+            items.add(MenuItem.button(53, "menu.back", "&eSiguiente »",
                     List.of("&7Página " + (current + 2) + " de " + pages),
                     MenuAction.of("wardadmin.page", (current + 1) + ":" + f)));
-            items.add(MenuItem.button(51, "icon.back", "&c&lCerrar",
+            items.add(MenuItem.button(51, "menu.close", "&c&lCerrar",
                     List.of("&7Cerrar menú"), MenuAction.of("menu.close")));
         } else {
-            items.add(MenuItem.button(53, "icon.back", "&c&lCerrar",
+            items.add(MenuItem.button(53, "menu.close", "&c&lCerrar",
                     List.of("&7Cerrar menú"), MenuAction.of("menu.close")));
         }
 
@@ -1545,21 +1650,22 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         }
         headerLore.add("");
         headerLore.add("&7ID: &8" + ward.id());
-        items.add(MenuItem.display(4, health.orphan() ? "icon.ward.orphan" : "icon.ward.active",
+        items.add(MenuItem.display(4, wardAdminIcon(ward, health),
                 (health.orphan() ? "&c⚠ " : "&b&l") + ward.name(), headerLore));
 
-        items.add(MenuItem.button(11, "icon.ward.active", "&a&lAbrir menú del Núcleo",
+        // 2×2 quarter blocks: open · TP · dissolve; back 45 · close 53.
+        items.addAll(MenuItem.block2x2Button(54, 10, "icon.ward.active", "&a&lAbrir menú del Núcleo",
                 List.of("&7Abre el panel normal del Núcleo",
                         "&7(inspección completa con acciones de owner)."),
                 MenuAction.of("wardadmin.openmenu", ward.id().toString())));
 
-        items.add(MenuItem.button(13, "icon.estate.zone-tp", "&e&lTP al centro",
+        items.addAll(MenuItem.block2x2Button(54, 15, "icon.estate.zone-tp", "&e&lTP al centro",
                 List.of("&7Teletransporta al núcleo:",
                         "&f" + ward.worldName() + " @ " + ward.centerX()
                                 + ", " + ward.centerY() + ", " + ward.centerZ()),
                 MenuAction.of("wardadmin.tp", ward.id().toString())));
 
-        items.add(MenuItem.button(15, "icon.ward.orphan", "&4&lDISOLVER NÚCLEO",
+        items.addAll(MenuItem.block2x2Button(54, 28, "icon.ward.inactive", "&4&lDISOLVER NÚCLEO",
                 List.of("&cElimina la región WG, el registro y",
                         "&cel bloque físico del Núcleo.",
                         "&cEl owner NO recibe el núcleo de vuelta.",
@@ -1567,13 +1673,16 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                         "&4⚠ Acción irreversible — clic para ejecutar"),
                 MenuAction.of("wardadmin.dissolve", ward.id().toString())));
 
-        items.add(MenuItem.button(22, "icon.back", "&e« Volver",
+        items.add(MenuItem.button(45, "menu.back", "&e« Volver",
                 List.of("&7Vuelve a la lista (página " + (page + 1) + ")"),
                 MenuAction.of("wardadmin.page", page + ":" + filter)));
 
+        items.add(MenuItem.button(53, "menu.close", "&c&lCerrar",
+                List.of("&7Cerrar menú"), MenuAction.of("menu.close")));
+
         var def = new MenuDefinition("ward_admin_detail",
                 CommandMessages.tr("menu.title.ward-admin-detail", "&8Admin · Núcleo")
-                        .replace("{name}", ward.name()), 27, items);
+                        .replace("{name}", ward.name()), 54, items);
         menuProviderOpenLater(player, def);
     }
 
@@ -1691,23 +1800,24 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         for (int i = from; i < to; i++) {
             City city = cities.get(i);
             List<String> lore = cityAdminLore(city);
-            items.add(MenuItem.button(i - from, "icon.city.overview", "&6&l" + city.name(), lore,
+            items.addAll(MenuItem.block2x2Button(54, adminBlockAnchor(i - from), "icon.city.overview",
+                    "&6&l" + city.name(), lore,
                     MenuAction.of("cityadmin.detail", city.id() + ":" + current)));
         }
         if (current > 0) {
-            items.add(MenuItem.button(45, "icon.back", "&e« Anterior",
+            items.add(MenuItem.button(45, "menu.back", "&e« Anterior",
                     List.of("&7Página " + current),
                     MenuAction.of("cityadmin.page", String.valueOf(current - 1))));
         }
         boolean hasNext = to < cities.size();
         if (hasNext) {
-            items.add(MenuItem.button(53, "icon.back", "&eSiguiente »",
+            items.add(MenuItem.button(53, "menu.back", "&eSiguiente »",
                     List.of("&7Página " + (current + 2) + " de " + pages),
                     MenuAction.of("cityadmin.page", String.valueOf(current + 1))));
-            items.add(MenuItem.button(51, "icon.back", "&c&lCerrar",
+            items.add(MenuItem.button(51, "menu.close", "&c&lCerrar",
                     List.of("&7Cerrar menú"), MenuAction.of("menu.close")));
         } else {
-            items.add(MenuItem.button(53, "icon.back", "&c&lCerrar",
+            items.add(MenuItem.button(53, "menu.close", "&c&lCerrar",
                     List.of("&7Cerrar menú"), MenuAction.of("menu.close")));
         }
 
@@ -1754,11 +1864,12 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         headerLore.add("&7ID: &8" + city.id());
         items.add(MenuItem.display(4, "icon.city.admin", "&6&l" + city.name(), headerLore));
 
-        items.add(MenuItem.button(11, "icon.city.overview", "&a&lAbrir menú de ciudad",
+        // 2×2 quarter blocks: open city menu · force delete; back 45 · close 53.
+        items.addAll(MenuItem.block2x2Button(54, 10, "icon.city.overview", "&a&lAbrir menú de ciudad",
                 List.of("&7Abre el panel normal de la Matriz."),
                 MenuAction.of("cityadmin.openmenu", city.id().toString())));
 
-        items.add(MenuItem.button(13, "icon.ward.orphan", "&4&lELIMINAR CIUDAD",
+        items.addAll(MenuItem.block2x2Button(54, 15, "icon.ward.inactive", "&4&lELIMINAR CIUDAD",
                 List.of("&cDesanexa TODOS sus Núcleos (pierden el",
                         "&cacceso de los residentes en sus regiones),",
                         "&celimina el registro de la Matriz.",
@@ -1766,13 +1877,16 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                         "&4⚠ Acción irreversible — clic para ejecutar"),
                 MenuAction.of("cityadmin.delete", city.id().toString())));
 
-        items.add(MenuItem.button(22, "icon.back", "&e« Volver",
+        items.add(MenuItem.button(45, "menu.back", "&e« Volver",
                 List.of("&7Vuelve a la lista (página " + (page + 1) + ")"),
                 MenuAction.of("cityadmin.page", String.valueOf(page))));
 
+        items.add(MenuItem.button(53, "menu.close", "&c&lCerrar",
+                List.of("&7Cerrar menú"), MenuAction.of("menu.close")));
+
         var def = new MenuDefinition("city_admin_detail",
                 CommandMessages.tr("menu.title.city-admin-detail", "&8Admin · Ciudad")
-                        .replace("{name}", city.name()), 27, items);
+                        .replace("{name}", city.name()), 54, items);
         menuProviderOpenLater(player, def);
     }
 
@@ -1841,6 +1955,72 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
             MenuContext ctx = new MenuContext(online.getUniqueId(), online.getName(), java.util.Map.of());
             adminMenuProvider.open(def, ctx);
         });
+    }
+
+    /** Opens a built sub-menu next tick carrying entity context (wardId/cityId). */
+    private void openMenuLater(Player player, MenuDefinition def, java.util.Map<String, Object> data) {
+        Bukkit.getScheduler().runTask(plugin(), () -> {
+            Player online = Bukkit.getPlayer(player.getUniqueId());
+            if (online == null || adminMenuProvider == null) return;
+            MenuContext ctx = new MenuContext(online.getUniqueId(), online.getName(), data);
+            adminMenuProvider.open(def, ctx);
+        });
+    }
+
+    // ── Governance sub-menus (políticas / permisos) ───────────────────────────
+
+    /** Opens the Matriz policies sub-menu (each policy togglable individually). */
+    private void openCityPolicies(Player player, MenuContext ctx) {
+        City city = resolveCity(player, ctx);
+        if (city == null) return;
+        openCityPoliciesFor(player, city);
+    }
+
+    /** Re-opens the policies sub-menu after a toggle. */
+    private void reopenCityPolicies(Player player, UUID cityId) {
+        City city = cityService.findById(cityId).orElse(null);
+        if (city == null) return;
+        openCityPoliciesFor(player, city);
+    }
+
+    private void openCityPoliciesFor(Player player, City city) {
+        var def = dev.dreamcraft.protection.presentation.menu.PolicyMenuBuilder
+                .buildCityPolicies(city, player.getUniqueId());
+        openMenuLater(player, def, java.util.Map.of("cityId", city.id()));
+    }
+
+    /** «Volver»: returns to the Matriz overview menu. */
+    private void handleCityPoliciesBack(Player player, MenuAction action) {
+        String[] parts = splitPayload(action.payload());
+        UUID cityId = parts.length > 0 ? parseUuid(parts[0]) : null;
+        if (cityId != null) reopenOriginMenu(player, ORIGIN_CITY, cityId);
+    }
+
+    /** Opens the Núcleo permissions sub-menu (each perm togglable individually). */
+    private void openWardPermissions(Player player, MenuContext ctx) {
+        Ward ward = resolveWard(player, ctx);
+        if (ward == null) return;
+        openWardPermissionsFor(player, ward);
+    }
+
+    /** Re-opens the permissions sub-menu after a toggle. */
+    private void reopenWardPermissions(Player player, UUID wardId) {
+        Ward ward = wardService.findById(wardId).orElse(null);
+        if (ward == null) return;
+        openWardPermissionsFor(player, ward);
+    }
+
+    private void openWardPermissionsFor(Player player, Ward ward) {
+        var def = dev.dreamcraft.protection.presentation.menu.PolicyMenuBuilder
+                .buildWardPermissions(ward, player.getUniqueId());
+        openMenuLater(player, def, java.util.Map.of("wardId", ward.id()));
+    }
+
+    /** «Volver»: returns to the Núcleo/sync menu. */
+    private void handleWardPermissionsBack(Player player, MenuAction action) {
+        String[] parts = splitPayload(action.payload());
+        UUID wardId = parts.length > 0 ? parseUuid(parts[0]) : null;
+        if (wardId != null) reopenOriginMenu(player, ORIGIN_WARD, wardId);
     }
 
 
@@ -1926,6 +2106,16 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
 
     private void handleClose(Player player) {
         player.closeInventory();
+    }
+
+    /** Placeholder until the player profile screen ships: brand feedback only. */
+    private void handlePerfil(Player player) {
+        player.playSound(player.getLocation(),
+                resolveSound("menu.success", Sound.ENTITY_EXPERIENCE_ORB_PICKUP), 0.7f, 1.4f);
+        player.sendMessage(Component.text("[DreamCraft] ", NamedTextColor.DARK_PURPLE)
+                .append(Component.text(
+                        msg("menu.perfil.soon", "Tu perfil estará disponible pronto."),
+                        NamedTextColor.GRAY)));
     }
 
     private Ward resolveWard(Player player, MenuContext ctx) {

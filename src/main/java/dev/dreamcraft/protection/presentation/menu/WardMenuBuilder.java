@@ -4,6 +4,7 @@ import dev.dreamcraft.protection.presentation.MenuAction;
 import dev.dreamcraft.protection.presentation.MenuDefinition;
 import dev.dreamcraft.protection.presentation.MenuItem;
 import dev.dreamcraft.protection.presentation.viewmodel.WardViewModel;
+import dev.dreamcraft.protection.service.UpkeepProjectionCalculator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,9 +32,35 @@ public final class WardMenuBuilder {
     public static MenuDefinition build(WardViewModel vm) {
         List<MenuItem> items = new ArrayList<>();
 
+        // ── Layout ward_status v2 (54 slots = 6 filas de 9) ──
+        // Fila 0-1: Estado/Sync 2×2 {4,5,13,14} (sube 1 slot desde {13,14,22,23}).
+        // Filas 1-2: Bóveda Upkeep 2×2 {9,10,18,19} · Estado 2×2 {4,5,13,14}
+        // centrado · Elevar Fase 2×2 {16,17,25,26}. El upkeep quedó 1 slot a la
+        // izquierda (desde {10,11,19,20}): deja 2 slots de distancia con el sync.
+        // Fila 3: separador (filler).
+        // Fila 4 (anteúltima): Identidad 36 · Permisos 37 · Transferir 39 ·
+        // Matriz 2×2 {40,41,49,50} · Apagar 43 · Cerrar 44. Todos los iconos
+        // 1×1 viven en la anteúltima fila para que no invadan el borde inferior
+        // del panel; el icono de identidad del jugador vive en (36).
+
         // Slot 4 — Ward status display
-        String wardIcon = vm.hasCityMembership() ? "icon.ward.active" : "icon.ward.inactive";
-        items.add(MenuItem.display(4, wardIcon,
+        // Icon reflects real protection, not city membership: active while the
+        // upkeep projection still covers upcoming charges; inactive only on null
+        // projection or GRACIA/EXPIRADO (AVISO/POR_VENCER keep paying → active).
+        var statusProjection = vm.upkeepProjection();
+        boolean unprotected = statusProjection == null
+                || statusProjection.state() == UpkeepProjectionCalculator.State.GRACIA
+                || statusProjection.state() == UpkeepProjectionCalculator.State.EXPIRADO;
+        String wardIcon = unprotected ? "icon.ward.inactive" : "icon.ward.active";
+        // MenuId dinámico: la variante de fondo horneada (ward_status = cristal
+        // activo, ward_inactive = cristal apagado) sigue el estado real de
+        // protección. Cada apertura reconstruye el def y vuelve a guardar su
+        // menuId en VanillaMenuProvider.openMenus, así que el refresco no se
+        // ve afectado por el cambio de id según estado.
+        String menuId = unprotected ? "ward_inactive" : "ward_status";
+        // Slots 3/4/5/12/13/14/21/22/23 (3×3) — Ward status display (9 slots del
+        // cristal central del núcleo, coincidiendo con el layout 3×3 horneado).
+        items.addAll(MenuItem.block3x3Display(54, 3, wardIcon,
                 "&b&l" + vm.name(),
                 List.of(
                         "&7Owner: &f" + vm.ownerName(),
@@ -47,7 +74,23 @@ public final class WardMenuBuilder {
                                 : "&7Sin Matriz"
                 )));
 
-        // Slot 10 — Upkeep vault opener
+        // Slot 36 — Cerrar menú (flecha a la izquierda, lado izquierdo de fila 5)
+        items.add(MenuItem.button(36, "menu.back", "&e« Cerrar",
+                List.of("&7Cerrar menú"),
+                MenuAction.of("cerrar")));
+
+        // Slot 37 — Viewer identity (perfil en fila 5)
+        items.add(MenuItem.button(37, "menu.profile", "&6Perfil — Identidad",
+                List.of("&7Tu identidad y datos de jugador"),
+                MenuAction.of("perfil")));
+
+        // Fila 3 — línea separadora horizontal (menu.line, barra fina del pack)
+        for (int s = 27; s <= 35; s++) {
+            items.add(MenuItem.display(s, "menu.line", " ", List.of()));
+        }
+
+        // Slots 9/10/18/19 (2×2) — Upkeep vault opener (1 slot a la izquierda del
+        // layout anterior, 2 slots de distancia del sync).
         // Lore (≤ 10 lines): protection time by state, consumption, below-tier
         // surcharge (when active), balance, ALL material → time equivalences
         // (two per line to stay compact), action hint.
@@ -86,17 +129,14 @@ public final class WardMenuBuilder {
         upkeepLore.add("");
         if (vm.canDeposit()) {
             upkeepLore.add("&aClic para abrir la bóveda y colocar ítems");
-        } else {
-            upkeepLore.add("&cNo puedes depositar en este Núcleo");
-        }
-        if (vm.canDeposit()) {
-            items.add(MenuItem.button(10, "icon.upkeep", "&a&lBóveda de Upkeep", upkeepLore,
+            items.addAll(MenuItem.block2x2Button(54, 9, "icon.upkeep", "&a&lBóveda de Upkeep", upkeepLore,
                     MenuAction.of("ward.upkeep_vault")));
         } else {
-            items.add(MenuItem.display(10, "icon.upkeep", "&8&lBóveda de Upkeep", upkeepLore));
+            upkeepLore.add("&cNo puedes depositar en este Núcleo");
+            items.addAll(MenuItem.block2x2Display(54, 9, "icon.upkeep", "&8&lBóveda de Upkeep", upkeepLore));
         }
 
-        // Slot 12 — Score / upgrade
+        // Slots 16/17/25/26 (2×2) — Score / upgrade
         List<String> scoreLore = new ArrayList<>();
         scoreLore.add("&7Score base: &f" + vm.baseScore());
         scoreLore.add("&7Tier actual: &b" + vm.tier());
@@ -130,14 +170,14 @@ public final class WardMenuBuilder {
                 scoreLore.add("&7Mejora disponible al siguiente tier");
                 scoreLore.add("&aClic para mejorar");
             }
-            items.add(MenuItem.button(12, "icon.ward.active", "&a&lElevar Fase", scoreLore,
+            items.addAll(MenuItem.block2x2Button(54, 16, "icon.ward.tier", "&a&lElevar Fase", scoreLore,
                     MenuAction.of("ward.upgrade")));
         } else {
             scoreLore.add("&8Tier máximo alcanzado");
-            items.add(MenuItem.display(12, "icon.ward.inactive", "&8&lElevar Fase", scoreLore));
+            items.addAll(MenuItem.block2x2Display(54, 16, "icon.ward.tier", "&8&lElevar Fase", scoreLore));
         }
 
-        // Slot 14 — Permissions toggle
+        // Slot 38 — Permissions (fila 5, icono papel)
         List<String> permLore = new ArrayList<>();
         permLore.add("&7Permisos públicos:");
         vm.permissions().forEach(p -> permLore.add("&7- &f" + p.name()));
@@ -147,54 +187,58 @@ public final class WardMenuBuilder {
         permLore.add(containersPublic
                 ? "&7Contenedores: &aabiertos al público"
                 : "&7Contenedores: &csolo miembros");
+        permLore.add("&aClic para gestionar cada permiso");
         if (vm.canSetPermissions()) {
-            permLore.add("&aClic para alternar PUBLIC_CONTAINERS");
-            items.add(MenuItem.button(14, "icon.members", "&a&lPermisos", permLore,
-                    MenuAction.of("ward.toggle_permission", "PUBLIC_CONTAINERS")));
+            items.add(MenuItem.button(38, "ward.permissions", "&a&lPermisos", permLore,
+                    MenuAction.of("ward.permissions")));
         } else {
             permLore.add("&8Solo el owner puede cambiar permisos");
-            items.add(MenuItem.display(14, "icon.members", "&8&lPermisos", permLore));
+            items.add(MenuItem.display(38, "ward.permissions", "&8&lPermisos", permLore));
         }
 
-        // Slot 16 — City membership
-        if (vm.hasCityMembership()) {
-            items.add(MenuItem.display(16, "icon.city.overview", "&a&lMatriz: " + vm.cityName(),
-                    List.of("&7Núcleo federado a la Matriz", "&7" + vm.cityName())));
-        } else if (vm.canAnnexToCity()) {
-            items.add(MenuItem.button(16, "icon.city.overview", "&a&lFederar a Matriz",
-                    List.of("&7Clic para federar a tu Matriz"),
-                    MenuAction.of("ward.annex_city")));
-        } else {
-            items.add(MenuItem.display(16, "icon.city.overview", "&8&lFederar a Matriz",
-                    List.of("&8Necesitas ser owner y no tener Matriz")));
-        }
-
-        // Slot 19 — Transfer ownership
+        // Slot 39 — Transfer ownership (fila 5, icono personitas)
         if (vm.canTransfer()) {
-            items.add(MenuItem.button(19, "icon.members", "&a&lTransferir",
+            items.add(MenuItem.button(39, "menu.roles", "&a&lTransferir",
                     List.of("&7Clic para transferir ownership"),
                     MenuAction.of("ward.transfer")));
         } else {
-            items.add(MenuItem.display(19, "icon.members", "&8&lTransferir",
+            items.add(MenuItem.display(39, "menu.roles", "&8&lTransferir",
                     List.of("&8Solo el owner puede transferir")));
         }
 
-        // Slot 21 — Disband / delete
+        // Slots 40/41/49/50 (2×2) — City membership
+        if (vm.hasCityMembership()) {
+            items.addAll(MenuItem.block2x2Button(54, 40, "icon.city.overview",
+                    "&a&lMatriz: " + vm.cityName(),
+                    List.of("&7Núcleo federado a la Matriz", "&7" + vm.cityName(),
+                            "&aClic para gestionar la Matriz"),
+                    MenuAction.of("city.open")));
+        } else if (vm.canAnnexToCity()) {
+            items.addAll(MenuItem.block2x2Button(54, 40, "icon.city.overview", "&a&lFederar a Matriz",
+                    List.of("&7Clic para federar a tu Matriz"),
+                    MenuAction.of("ward.annex_city")));
+        } else {
+            items.addAll(MenuItem.block2x2Display(54, 40, "icon.city.overview", "&8&lFederar a Matriz",
+                    List.of("&8Necesitas ser owner y no tener Matriz")));
+        }
+
+        // Slot 43 — Disband / delete (fila 5, escudo inactivo/apagado)
         if (vm.canDisband()) {
-            items.add(MenuItem.button(21, "icon.ward.inactive", "§c§lApagar Núcleo",
+            items.add(MenuItem.button(43, "icon.ward.inactive", "§c§lApagar Núcleo",
                     List.of("&cClic para eliminar este Núcleo", "&cEsta acción es irreversible"),
                     MenuAction.of("ward.disband")));
         } else {
-            items.add(MenuItem.display(21, "icon.ward.inactive", "&8§lApagar Núcleo",
+            items.add(MenuItem.display(43, "icon.ward.inactive", "&8§lApagar Núcleo",
                     List.of("&8Solo el owner puede disolver")));
         }
 
-        // Slot 22 — Close
-        items.add(MenuItem.button(22, "icon.back", "&c&lCerrar",
-                List.of("&7Cerrar menú"),
-                MenuAction.of("menu.close")));
-
-        return new MenuDefinition(MENU_ID, dev.dreamcraft.protection.message.Messages.get()
-                .tr("menu.title.ward", "&8Núcleo &f{name}", "name", vm.name()), 27, items);
+        // Los visuales van horneados en el glifo de fondo (menu.bg.<menuId>);
+        // los ítems quedan como capturadores invisibles de click (menu.catcher).
+        // Todos, incluidos los 4 slots del 2×2 de estado (4/5/13/14): el cristal
+        // central ahora vive en el fondo (3×3 activo/apagado), y el 2×2 solo
+        // aporta hover/lore, sin duplicar arte.
+        items.replaceAll(it -> new MenuItem(it.slot(), "menu.catcher", it.displayName(), it.lore(), it.action(), it.acceptsDeposit()));
+                return new MenuDefinition(menuId, dev.dreamcraft.protection.message.Messages.get()
+                .tr("menu.title.ward", "&8Núcleo &f{name}", "name", vm.name()), 54, items);
     }
 }
