@@ -18,36 +18,55 @@ options:
 icons:
   # Ward — protección / propiedad
   ward.icon:            { material: SHIELD,                   cmd: 41101, fallback: SHIELD }
-  ward.inactive:        { material: CRACKED_STONE_BRICKS,     cmd: 41102 }
-  ward.tier:            { material: NETHER_STAR,              cmd: 41103, fallback: BEACON }
-  ward.score:           { material: EXPERIENCE_BOTTLE,        cmd: 41104 }
+  ward.inactive:        { material: CRACKED_STONE_BRICKS,     cmd: 41102, fallback: CRACKED_STONE_BRICKS }
+  ward.tier:            { material: NETHER_STAR,              cmd: 41103, fallback: NETHER_STAR }
+  ward.score:           { material: EXPERIENCE_BOTTLE,        cmd: 41104, fallback: EXPERIENCE_BOTTLE }
   ward.upkeep:          { material: CHEST,                    cmd: 41105, fallback: CHEST }
-  ward.orphan:          { material: BARRIER,                  cmd: 41106 }
+  ward.permissions:     { material: PAPER,                    cmd: 41415, fallback: REPEATER }
+  ward.transfer:        { material: PLAYER_HEAD,              cmd: 0,     fallback: GOLDEN_HELMET }
+  ward.disband:         { material: PAPER,                    cmd: 41406, fallback: TNT }
+  ward.orphan:          { material: BARRIER,                  cmd: 41106, fallback: BARRIER }
   # City — comunidad / administración
   city.icon:            { material: BEACON,                   cmd: 41201, fallback: BEACON }
-  city.members:         { material: PLAYER_HEAD,              cmd: 0 }
-  city.treasury:        { material: GOLD_BLOCK,               cmd: 41202 }
-  city.score:           { material: EMERALD,                  cmd: 41203 }
-  city.admin:           { material: COMMAND_BLOCK,            cmd: 41204 }
+  city.overview:        { material: BEACON,                   cmd: 41201, fallback: BEACON }
+  city.members:         { material: PLAYER_HEAD,              cmd: 0,     fallback: PLAYER_HEAD }
+  city.treasury:        { material: GOLD_BLOCK,               cmd: 41202, fallback: GOLD_BLOCK }
+  city.score:           { material: EMERALD,                  cmd: 41203, fallback: EXPERIENCE_BOTTLE }
+  city.admin:           { material: COMMAND_BLOCK,            cmd: 41204, fallback: LECTERN }
+  city.policy:          { material: COMMAND_BLOCK,            cmd: 41204, fallback: LECTERN }
+  city.transfer:        { material: PLAYER_HEAD,              cmd: 0,     fallback: GOLDEN_HELMET }
+  city.delete:          { material: PAPER,                    cmd: 41406, fallback: TNT }
+  icon.city.overview:   { material: BEACON,                   cmd: 41201, fallback: BEACON }
   # Estate — aventura / grupo
   estate.icon:          { material: BOOK,                     cmd: 41301, fallback: BOOK }
-  estate.adventure:     { material: ENDER_EYE,                cmd: 41302 }
-  estate.instance:      { material: END_PORTAL_FRAME,         cmd: 41303 }
-  estate.dragon:        { material: DRAGON_HEAD,              cmd: 41304 }
-  estate.zone-tp:       { material: NETHER_STAR,              cmd: 41305 }
+  estate.overview:      { material: BOOK,                     cmd: 41301, fallback: BOOK }
+  estate.adventure:     { material: ENDER_EYE,                cmd: 41302, fallback: ENDER_EYE }
+  estate.instance:      { material: END_PORTAL_FRAME,         cmd: 41303, fallback: END_PORTAL_FRAME }
+  estate.dragon:        { material: DRAGON_HEAD,              cmd: 41304, fallback: ENDER_EYE }
+  estate.zone-tp:       { material: NETHER_STAR,              cmd: 41305, fallback: NETHER_STAR }
+  estate.join:          { material: PAPER,                    cmd: 41545, fallback: ENDER_PEARL }
+  estate.leave:         { material: PAPER,                    cmd: 41417, fallback: IRON_DOOR }
+  estate.transfer:      { material: PLAYER_HEAD,              cmd: 0,     fallback: GOLDEN_HELMET }
+  estate.disband:       { material: PAPER,                    cmd: 41406, fallback: TNT }
   # Nucleus — núcleo colocable (beacon con CMD; al colocar es un beacon real)
   nucleus.icon:         { material: BEACON,                   cmd: 41002, fallback: BEACON }
   # Menú genérico
-  menu.deposit:         { material: LIME_STAINED_GLASS_PANE,  cmd: 41401 }
-  menu.filler:          { material: GRAY_STAINED_GLASS_PANE,  cmd: 0 }
-  menu.back:            { material: ARROW,                    cmd: 41402 }
+  menu.deposit:         { material: LIME_STAINED_GLASS_PANE,  cmd: 41401, fallback: LIME_STAINED_GLASS_PANE }
+  menu.filler:          { material: GRAY_STAINED_GLASS_PANE,  cmd: 0,     fallback: GRAY_STAINED_GLASS_PANE }
+  menu.back:            { material: ARROW,                    cmd: 41402, fallback: ARROW }
+  icon.back:            { material: ARROW,                    cmd: 41402, fallback: ARROW }
   # Sin pack los items caen a materiales vanilla reconocibles; el dispatcher
   # de cada CMD vive en assets/minecraft/items/<material>.json.
-  menu.profile:         { material: PLAYER_HEAD,              cmd: 0,     hide-name: true }
+  menu.profile:         { material: PLAYER_HEAD,              cmd: 0,     fallback: PLAYER_HEAD,             hide-name: true }
   menu.close:           { material: BARRIER,                  cmd: 41404, fallback: BARRIER,                 hide-name: true }
   menu.invite:          { material: EMERALD,                  cmd: 41405, fallback: EMERALD,                 hide-name: true }
-  menu.kick:            { material: PAPER,                    cmd: 41406, fallback: PAPER,                   hide-name: true }
+  menu.kick:            { material: PAPER,                    cmd: 41406, fallback: SHEARS,                  hide-name: true }
   menu.roles:           { material: BOOK,                     cmd: 41407, fallback: BOOK,                    hide-name: true }
+  menu.permissions:     { material: PAPER,                    cmd: 41415, fallback: REPEATER,                hide-name: true }
+  menu.transfer:        { material: PLAYER_HEAD,              cmd: 0,     fallback: GOLDEN_HELMET,           hide-name: true }
+  menu.disband:         { material: PAPER,                    cmd: 41406, fallback: TNT,                     hide-name: true }
+  menu.leave:           { material: PAPER,                    cmd: 41417, fallback: IRON_DOOR,               hide-name: true }
+  menu.join:            { material: PAPER,                    cmd: 41545, fallback: ENDER_PEARL,             hide-name: true }
   menu.members:         { material: PLAYER_HEAD,              cmd: 41408, fallback: PLAYER_HEAD,             hide-name: true }
   menu.confirm:         { material: EMERALD_BLOCK,            cmd: 41409, fallback: EMERALD_BLOCK,           hide-name: true }
   menu.catcher:         { material: PAPER,                    cmd: 41411, fallback: PAPER,                   hide-name: true }
@@ -140,6 +159,7 @@ symbols:
   # Glifos horneados por menú (panel + botones pintados; los ítems son
   # capturadores invisibles menu.catcher)
   menu.bg.ward_status:      { glyph: "\uE130", font: dc.gui }
+  menu.bg.ward_inactive:    { glyph: "\uE134", font: dc.gui }
   menu.bg.city_overview:    { glyph: "\uE131", font: dc.gui }
   menu.bg.estate_lobby:     { glyph: "\uE132", font: dc.gui }
   menu.bg.estate_instance:  { glyph: "\uE133", font: dc.gui }

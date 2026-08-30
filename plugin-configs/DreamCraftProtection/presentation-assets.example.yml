@@ -12,22 +12,43 @@ options:
 icons:
   ward.icon:     { material: SHIELD,              cmd: 41101, fallback: SHIELD }
   ward.inactive: { material: CRACKED_STONE_BRICKS, cmd: 41102 }
-  ward.tier:     { material: NETHER_STAR,         cmd: 41103, fallback: BEACON }
-  ward.orphan:   { material: BARRIER,             cmd: 41106 }
+  ward.tier:     { material: NETHER_STAR,         cmd: 41103, fallback: NETHER_STAR }
+  ward.permissions: { material: PAPER,            cmd: 41415, fallback: REPEATER }
+  ward.transfer: { material: PLAYER_HEAD,         cmd: 0,     fallback: GOLDEN_HELMET }
+  ward.disband:  { material: PAPER,               cmd: 41406, fallback: TNT }
+  ward.orphan:   { material: BARRIER,             cmd: 41106, fallback: BARRIER }
   city.icon:     { material: BEACON,              cmd: 41201, fallback: BEACON }
-  city.treasury: { material: GOLD_BLOCK,          cmd: 41202 }
-  city.admin:    { material: COMMAND_BLOCK,       cmd: 41204 }
+  city.overview: { material: BEACON,              cmd: 41201, fallback: BEACON }
+  city.treasury: { material: GOLD_BLOCK,          cmd: 41202, fallback: GOLD_BLOCK }
+  city.score:    { material: EMERALD,             cmd: 41203, fallback: EXPERIENCE_BOTTLE }
+  city.admin:    { material: COMMAND_BLOCK,       cmd: 41204, fallback: LECTERN }
+  city.policy:   { material: COMMAND_BLOCK,       cmd: 41204, fallback: LECTERN }
+  city.transfer: { material: PLAYER_HEAD,         cmd: 0,     fallback: GOLDEN_HELMET }
+  city.delete:   { material: PAPER,               cmd: 41406, fallback: TNT }
+  icon.city.overview: { material: BEACON,         cmd: 41201, fallback: BEACON }
   estate.icon:   { material: BOOK,                cmd: 41301, fallback: BOOK }
-  estate.dragon: { material: DRAGON_HEAD,         cmd: 41304 }
+  estate.overview: { material: BOOK,              cmd: 41301, fallback: BOOK }
+  estate.dragon: { material: DRAGON_HEAD,         cmd: 41304, fallback: ENDER_EYE }
+  estate.join:   { material: PAPER,               cmd: 41545, fallback: ENDER_PEARL }
+  estate.leave:  { material: PAPER,               cmd: 41417, fallback: IRON_DOOR }
+  estate.transfer: { material: PLAYER_HEAD,       cmd: 0,     fallback: GOLDEN_HELMET }
+  estate.disband: { material: PAPER,              cmd: 41406, fallback: TNT }
   nucleus.icon:  { material: BEACON,              cmd: 41002, fallback: BEACON }
 
-  # Menú genérico — gestión (PAPER+CMD con hide-name; patrón menu.profile)
-  menu.invite:   { material: PAPER,               cmd: 41405, fallback: PAPER, hide-name: true }
-  menu.kick:     { material: PAPER,               cmd: 41406, fallback: PAPER, hide-name: true }
-  menu.roles:    { material: PAPER,               cmd: 41407, fallback: PAPER, hide-name: true }
-  menu.members:  { material: PAPER,               cmd: 41408, fallback: PAPER, hide-name: true }
-  menu.confirm:  { material: PAPER,               cmd: 41409, fallback: PAPER, hide-name: true }
-  menu.line:     { material: PAPER,               cmd: 41410, fallback: PAPER, hide-name: true }
+  # Menú genérico — gestión (con fallbacks diferenciados para vanilla)
+  menu.invite:   { material: EMERALD,             cmd: 41405, fallback: EMERALD,       hide-name: true }
+  menu.kick:     { material: PAPER,               cmd: 41406, fallback: SHEARS,        hide-name: true }
+  menu.roles:    { material: BOOK,                cmd: 41407, fallback: BOOK,          hide-name: true }
+  menu.permissions: { material: PAPER,            cmd: 41415, fallback: REPEATER,      hide-name: true }
+  menu.transfer: { material: PLAYER_HEAD,         cmd: 0,     fallback: GOLDEN_HELMET, hide-name: true }
+  menu.disband:  { material: PAPER,               cmd: 41406, fallback: TNT,           hide-name: true }
+  menu.leave:    { material: PAPER,               cmd: 41417, fallback: IRON_DOOR,     hide-name: true }
+  menu.join:     { material: PAPER,               cmd: 41545, fallback: ENDER_PEARL,   hide-name: true }
+  menu.members:  { material: PLAYER_HEAD,         cmd: 41408, fallback: PLAYER_HEAD,   hide-name: true }
+  menu.close:    { material: BARRIER,             cmd: 41404, fallback: BARRIER,       hide-name: true }
+  menu.confirm:  { material: EMERALD_BLOCK,       cmd: 41409, fallback: EMERALD_BLOCK, hide-name: true }
+  menu.line:     { material: GRAY_STAINED_GLASS_PANE, cmd: 41410, fallback: GRAY_STAINED_GLASS_PANE, hide-name: true }
+  icon.back:     { material: ARROW,               cmd: 41402, fallback: ARROW }
 
   # Cuadrantes 2×2 (botones grandes: 4 tiles tl/tr/bl/br, misma acción; CMDs 41501-41540)
   icon.upkeep.tl:          { material: PAPER, cmd: 41501, fallback: PAPER }

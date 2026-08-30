@@ -46,7 +46,7 @@ services:
       # (repo publico dreamcraft-pack); recalcular SHA1 en cada rebuild.
       RESOURCE_PACK: http://localhost:8081/dreamcraft-resource-pack-dc83d6cb.zip?v=dc83d6cb8c24b47da2241e8e857fbc9670b8dce0
       RESOURCE_PACK_SHA1: dc83d6cb8c24b47da2241e8e857fbc9670b8dce0
-      RESOURCE_PACK_ENFORCE: "true"
+      RESOURCE_PACK_ENFORCE: "false"
       PLUGINS: |
         https://cdn.modrinth.com/data/Lu3KuzdV/versions/Kma0kBsY/CoreProtect-CE-24.0.jar
         https://download.luckperms.net/1668/bukkit/loader/LuckPerms-Bukkit-5.5.81.jar
