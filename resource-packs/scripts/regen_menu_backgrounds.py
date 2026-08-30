@@ -290,34 +290,34 @@ BAKE_LAYOUTS = {
         ("item", "icon.ward.inactive", 44),
     ], 3),
     # estate_lobby (nexo/violeta):
-    #   R0: perfil@8
-    #   R1-2: invitar 2x2@9, resumen 3x2@13 (slots 13..15, 22..24), unirse 2x2@16
+    #   R0: libre
+    #   R1-2: invitar 2x2@9, resumen 3x2@12 (slots 12..14, 21..23), unirse 2x2@16
     #   R3: separador
-    #   R4 (Fila 5): cerrar(flecha violeta)@36, abandonar(puerta)@37, iniciar(dragón) 3x2@39 (slots 39..41, 48..50), transferir@43, disolver(escudo apagado)@44
+    #   R4 (Fila 5): cerrar(flecha violeta)@36, perfil@37, abandonar(puerta)@38, iniciar(dragón) 3x2@39 (slots 39..41, 48..50), transferir@43, disolver(escudo apagado)@44
     "bg_menu_estate_lobby": ("nexo", [
-        ("item", "menu.profile.nexo", 8),
         ("block", "menu.invite", 9),
-        ("block3x2", "icon.estate.overview", 13),
+        ("block3x2", "icon.estate.overview", 12),
         ("block", "icon.estate.join", 16),
         ("item", "menu.back.nexo", 36),
-        ("item", "menu.leave.nexo", 37),
+        ("item", "menu.profile.nexo", 37),
+        ("item", "menu.leave.nexo", 38),
         ("block3x2", "icon.estate.overview", 39),
         ("item", "menu.roles.nexo", 43),
         ("item", "icon.ward.inactive", 44),
     ], 3),
     # estate_instance (nexo/violeta):
-    #   R0: _ _ _ _ _ _ _ P _    perfil@8
-    #   R1-2: I I _ O O O _ b b  invitar@9, resumen 3x2@13, salir@16
+    #   R0: libre
+    #   R1-2: invitar 2x2@9, resumen 3x2@12, salir@16
     #   R3: ─────────────────    separador
-    #   R4: _ _ _ _ v i c _ _    volver@39, cerrar-instancia@40, cerrar@41
+    #   R4: cerrar@36, perfil@37, volver@39, cerrar-instancia@40
     "bg_menu_estate_instance": ("nexo", [
-        ("item", "menu.profile.nexo", 8),
         ("block", "menu.invite", 9),
-        ("block3x2", "icon.estate.overview", 13),
+        ("block3x2", "icon.estate.overview", 12),
         ("block", "icon.back", 16),
+        ("item", "menu.close", 36),
+        ("item", "menu.profile.nexo", 37),
         ("item", "menu.back.nexo", 39),
         ("item", "icon.ward.inactive", 40),
-        ("item", "menu.close", 41),
     ], 3),
 }
 

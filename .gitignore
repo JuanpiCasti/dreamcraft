@@ -2,3 +2,4 @@ data/
 .worktrees/
 /resource-packs/dist/*
 !/resource-packs/dist/.gitkeep
+.opencode/

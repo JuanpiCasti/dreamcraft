@@ -6,6 +6,25 @@
       "command": ["python", "-m", "opencode_vision.server"],
       "enabled": true,
       "timeout": 60000
+    },
+    "docker": {
+      "type": "local",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "-i",
+        "-v",
+        "/var/run/docker.sock:/var/run/docker.sock",
+        "docker/mcp"
+      ],
+      "enabled": true,
+      "timeout": 60000
+    },
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true
     }
   }
 }

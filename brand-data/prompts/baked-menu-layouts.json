@@ -65,24 +65,23 @@
       "separator_row": 3,
       "description": "Estate lobby (Nexo/violeta). Menú de estate con invite, overview y acciones.",
       "visual_grid": [
-        "R0: _ _ _ _ _ _ _ P _",
+        "R0: (libre)",
         "R1: I I _ E E _ I I _",
         "R2: I I _ E E _ I I _",
         "R3: ─────────────────",
-        "R4: B b _ _ E E _ r c",
+        "R4: c P b _ E E _ r d",
         "R5: (libre)"
       ],
       "elements": [
-        { "key": "menu.profile",            "type": "item",  "slot": 7,  "row": 0, "col": 7, "note": "identidad jugador" },
-        { "key": "menu.invite",             "type": "block", "slot": 9,  "row": 1, "col": 1, "note": "invite 2x2" },
-        { "key": "icon.estate.overview",    "type": "block", "slot": 12, "row": 1, "col": 3, "note": "overview estate 2x2" },
-        { "key": "menu.invite",             "type": "block", "slot": 15, "row": 1, "col": 6, "note": "invite 2x2 (zona derecha)" },
-        { "key": "icon.back",               "type": "item",  "slot": 36, "row": 4, "col": 0, "note": "volver (icono)" },
-        { "key": "menu.back",               "type": "item",  "slot": 37, "row": 4, "col": 1, "note": "volver" },
-        { "key": "icon.estate.overview",    "type": "block", "slot": 39, "row": 4, "col": 3, "note": "overview estate 2x2" },
-        { "key": "menu.roles",              "type": "item",  "slot": 42, "row": 4, "col": 6, "note": "permisos" },
-        { "key": "icon.ward.inactive",      "type": "item",  "slot": 43, "row": 4, "col": 7, "note": "inactive/eliminar" },
-        { "key": "menu.close",              "type": "item",  "slot": 44, "row": 4, "col": 8, "note": "cerrar" }
+        { "key": "menu.invite",             "type": "block", "slot": 9,  "row": 1, "col": 0, "note": "invite 2x2" },
+        { "key": "icon.estate.overview",    "type": "block", "slot": 12, "row": 1, "col": 3, "note": "overview estate 3x2" },
+        { "key": "estate.join",             "type": "block", "slot": 16, "row": 1, "col": 7, "note": "join 2x2" },
+        { "key": "menu.close",              "type": "item",  "slot": 36, "row": 4, "col": 0, "note": "cerrar" },
+        { "key": "menu.profile",            "type": "item",  "slot": 37, "row": 4, "col": 1, "note": "identidad jugador" },
+        { "key": "estate.leave",            "type": "item",  "slot": 38, "row": 4, "col": 2, "note": "abandonar" },
+        { "key": "estate.dragon",           "type": "block", "slot": 39, "row": 4, "col": 3, "note": "iniciar 3x2" },
+        { "key": "estate.transfer",         "type": "item",  "slot": 43, "row": 4, "col": 7, "note": "transferir" },
+        { "key": "estate.disband",          "type": "item",  "slot": 44, "row": 4, "col": 8, "note": "disolver" }
       ]
     },
 
@@ -91,21 +90,21 @@
       "separator_row": 3,
       "description": "Estate instance (Nexo/violeta). Vista simplificada con back, inactive y close.",
       "visual_grid": [
-        "R0: _ _ _ _ _ _ _ P _",
+        "R0: (libre)",
         "R1: I I _ E E _ B B _",
         "R2: I I _ E E _ B B _",
         "R3: ─────────────────",
-        "R4: _ _ b i c _ _ _ _",
+        "R4: c P _ v d _ _ _ _",
         "R5: (libre)"
       ],
       "elements": [
-        { "key": "menu.profile",            "type": "item",  "slot": 7,  "row": 0, "col": 7, "note": "identidad jugador" },
-        { "key": "menu.invite",             "type": "block", "slot": 9,  "row": 1, "col": 1, "note": "invite 2x2" },
-        { "key": "icon.estate.overview",    "type": "block", "slot": 12, "row": 1, "col": 3, "note": "overview estate 2x2" },
-        { "key": "icon.back",               "type": "block", "slot": 15, "row": 1, "col": 6, "note": "volver 2x2" },
-        { "key": "menu.back",               "type": "item",  "slot": 38, "row": 4, "col": 2, "note": "volver" },
-        { "key": "icon.ward.inactive",      "type": "item",  "slot": 39, "row": 4, "col": 3, "note": "inactive/eliminar" },
-        { "key": "menu.close",              "type": "item",  "slot": 40, "row": 4, "col": 4, "note": "cerrar" }
+        { "key": "menu.invite",             "type": "block", "slot": 9,  "row": 1, "col": 0, "note": "invite 2x2" },
+        { "key": "icon.estate.overview",    "type": "block", "slot": 12, "row": 1, "col": 3, "note": "overview estate 3x2" },
+        { "key": "estate.leave",            "type": "block", "slot": 16, "row": 1, "col": 7, "note": "leave 2x2" },
+        { "key": "menu.close",              "type": "item",  "slot": 36, "row": 4, "col": 0, "note": "cerrar" },
+        { "key": "menu.profile",            "type": "item",  "slot": 37, "row": 4, "col": 1, "note": "identidad jugador" },
+        { "key": "menu.back.nexo",          "type": "item",  "slot": 39, "row": 4, "col": 3, "note": "volver al nucleo" },
+        { "key": "estate.disband",          "type": "item",  "slot": 40, "row": 4, "col": 4, "note": "cerrar instancia" }
       ]
     }
   }
