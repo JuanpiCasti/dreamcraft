@@ -1,0 +1,249 @@
+# ── Catálogo de mensajes (idioma único: es) ──────────────────────────────────
+# Resolución: plugins/DreamCraftProtection/messages.yml (override del servidor)
+#             → este archivo (default embebido) → fallback en código.
+# Soporta códigos & y placeholders {nombre}.
+#
+# Cada servidor puede re-marcar estos textos sin recompilar: copia este archivo
+# a plugin-configs/DreamCraftProtection/messages.yml y config-sync lo montará.
+
+prefixes:
+  global: "&5[DreamCraft]"
+  ward: "&b[Sincronía]"
+  city: "&b[Ciudad]"
+  estate: "&d[Nexo]"
+  protection: "&3[Protección]"
+
+common:
+  players-only: "&cEste comando solo puede ser usado por jugadores."
+  no-permission: "&cNo tienes permiso para usar este comando."
+  no-permission-action: "&cNo tienes permiso para este comando."
+  unknown-subcommand: "&cSubcomando desconocido: {sub}"
+  error: "&cError: {message}"
+  invalid-amount: "&cCantidad inválida: {amount}"
+  player-not-found: "&cJugador {player} no encontrado o no está en línea."
+  # Lore «El Despertar»: acciones de energía/fase exigen presencia física
+  physical-required: "&cDebes interactuar físicamente con tu Bloque de DreamCraft para esto."
+  physical-hint: "&7Acércate a tu Núcleo o consigue el &benlace remoto VIP&7 (&f/sync tp&7)."
+
+# Feedback específico del lore «El Despertar y la Sincronicidad»
+sync:
+  sintonized: "&aFrecuencia compartida: los constructores ya pueden edificar y usar contenedores."
+  desintonized: "&eFrecuencia cerrada: revocado el acceso público de construcción y contenedores."
+  tp-done: "✦ Sintonización completa: llegada al núcleo."
+  nucleus-not-found: "&cNúcleo no encontrado. Usa <id> o el nombre exacto del Núcleo."
+
+# Primer núcleo gratis (/sync reclamar) — una vez por jugador
+ward:
+  reclamar:
+    ok: "&b✦ &fPrimer núcleo gratis sincronizado. &7Colócalo para despertar tu territorio."
+    ya-reclamado: "&cYa reclamaste tu primer núcleo. El próximo sincronízalo crafteándolo &8(8 diamantes + estrella del Nether)&c."
+    error: "&cLa sincronización falló: intentá de nuevo en unos segundos."
+
+# Ítem físico y títulos de menús — vocabulario del lore
+items:
+  nucleus-name: "&bNúcleo de Sincronía"
+  nucleus-lore:
+    - "&7Colocalo para despertar tu territorio"
+    - "&7La protección se extiende en radio alrededor de este bloque"
+
+help:
+  ward:
+    header: "&b&l✦ Sincronía · DreamCraft ✦"
+    subtitle: "&7Gestiona tu territorio despierto con &f/{cmd.ward}&7."
+    lines:
+      - "&f/sync despertar           &7— Despierta tu Núcleo en tu posición"
+      - "&f/sync reclamar            &7— Recibe tu primer Núcleo gratis &8(una vez)"
+      - "&f/sync info [id]           &7— Fase actual, letargo y coordenadas"
+      - "&f/sync renombrar <nombre>  &7— Renombra tu zona despierta"
+      - "&f/sync sintonizar          &7— Abre la frecuencia a constructores"
+      - "&f/sync expulsar            &7— Cierra la frecuencia compartida"
+      - "&f/sync permisos [p g|r]    &7— Flags públicos detallados"
+      - "&f/sync upkeep deposit <m> <n> &7— Alimenta el núcleo (junto al bloque)"
+      - "&f/sync score add <n>       &7— Suma score de fase (junto al bloque)"
+      - "&f/sync menu [id]           &7— Panel completo &8(VIPs/admins)"
+      - "&f/sync tp                  &7— Salta a tu núcleo &8(VIPs/owner)"
+      - "&f/sync transfer <jugador>  &7— Cede la propiedad del núcleo"
+      - "&f/sync city [annex|leave]  &7— Federarse a una Matriz (ciudad)"
+      - "&f/sync delete [id]         &7— Apaga el núcleo"
+      - "&8Staff: /{cmd.ward} abrir <id|jugador> · /{cmd.ward} dar - /{cmd.protection} recargar"
+    admin:
+      header: "&c&lAdmin:"
+      lines:
+        - "&f/sync admin menu              &7— Panel admin de todos los Núcleos"
+        - "&f/{cmd.ward} admin delete <id|nombre> &7— Disolver por fuerza &8(consola ok)"
+  city:
+    header: "&6&lMatriz de Sincronía"
+    subtitle: "&7Gestiona tu Red — une núcleos bajo una frecuencia común. &f{cmd.ward} city annex"
+    lines:
+      - "&f/{cmd.city} fundar <nombre>     &7— Fundar una Matriz"
+      - "&f/{cmd.city} info [nombre]      &7— Ver información"
+      - "&f/{cmd.city} menu                &7— Abrir menú de la Matriz"
+      - "&f/{cmd.city} annex <nucleoId>    &7— Anexar un Núcleo (&f={cmd.ward} city annex&7)"
+      - "&f/{cmd.city} invite <jugador>    &7— Invitar residente"
+      - "&f/{cmd.city} kick <jugador>      &7— Expulsar residente"
+      - "&f/{cmd.city} roles <jugador> <rol> &7— Asignar rol"
+      - "&f/{cmd.city} bank <deposit|withdraw> <monto> &8(admin)"
+      - "&f/{cmd.city} policy set <politica> <on|off> &7— Cambiar política"
+      - "&f/{cmd.city} transfer <jugador>  &7— Transferir gobernanza"
+      - "&f/{cmd.city} delete              &7— Eliminar la Matriz"
+      - "&7Roles: GOVERNOR, COUNCIL, CITIZEN, ALLY"
+    admin:
+      header: "&c&lAdmin:"
+      lines:
+        - "&f/{cmd.city} admin menu           &7— Panel admin de todas las Matrices"
+        - "&f/{cmd.city} admin delete <nombre> &7— Eliminar por fuerza &8(consola ok)"
+  estate:
+    header: "&d&lNexo de Aventura"
+    subtitle: "&7Zonas de expedición grupal. &f/{cmd.estate} &7≡ &f{cmd.ward} grupo"
+    lines:
+      - "&f/{cmd.estate} create <id>          &7— Crear Nexo"
+      - "&f/{cmd.estate} discover <tipo>      &7— Unirte a la aventura (end, trial_chamber)"
+      - "&f/{cmd.estate} admin create <id> <tipo> [radio|auto] &8(admin)"
+      - "&f/{cmd.estate} admin area <id> [radio]  &8(admin)"
+      - "&f/{cmd.estate} admin reset <id>     &8(admin)"
+      - "&f/{cmd.estate} invite <jugador>     &7— Invitar miembro"
+      - "&f/{cmd.estate} join <id>           &7— Unirse a un Nexo"
+      - "&f/{cmd.estate} leave               &7— Salir del Nexo"
+      - "&f/{cmd.estate} start               &7— Iniciar instancia"
+      - "&f/{cmd.estate} transfer <jugador>   &7— Transferir ownership"
+      - "&f/{cmd.estate} info                &7— Ver información"
+      - "&f/{cmd.estate} menu                &7— Abrir menú del Nexo"
+      - "&f/{cmd.estate} disband             &7— Disolver Nexo"
+  protection:
+    header: "&5&lDreamCraft Protection"
+    subtitle: "&7Gestiona tu Núcleo — misma mecánica que &f/{cmd.ward}&7."
+    lines:
+      - "&f/{cmd.protection} claim       &7— Abrir el menú del Núcleo &8(vips/gobernadores)"
+      - "&f/{cmd.protection} status      &7— Consultar el estado del Núcleo"
+      - "&f/{cmd.protection} rename <nombre> &7— Renombrar"
+      - "&f/{cmd.protection} upkeep [deposit <material> <n>] &7— Mantenimiento"
+      - "&f/{cmd.protection} permissions [perm grant|revoke] &7— Permisos públicos"
+      - "&f/{cmd.protection} upgrade     &7— Mejorar la fase del Núcleo"
+      - "&f/{cmd.protection} transfer <jugador> &7— Transferir ownership"
+      - "&f/{cmd.protection} members     &7— Info de miembros (vía Matriz)"
+      - "&f/{cmd.protection} dissolve    &7— Disolver el Núcleo"
+    admin:
+      header: "&c&lAdmin:"
+      lines:
+        - "&f/{cmd.protection} give        &7— Recibir Baliza de Núcleo"
+        - "&f/{cmd.protection} recargar    &7— Recargar configuración"
+        - "&f/{cmd.protection} recalculate &7— Re-sincronizar la región"
+        - "&f/{cmd.protection} integrations &7— Estado del Integration Registry"
+
+# Menús y feedback (MenuActionDispatcher) — UN solo bloque `menu:`
+# (las claves duplicadas de YAML se pisan entre sí y pierden los títulos).
+menu:
+  # Títulos de menús
+  title.ward: "&8Núcleo &f{name}"
+  title.city: "&8Matriz &f{name}"
+  title.estate-lobby: "&8Nexo &f{name}"
+  title.estate-instance: "&8Instancia &f{name}"
+  title.estate-admin-zones: "&8Zonas de aventura (admin)"
+  # Paneles admin de Núcleos y Matrices (/{cmd.ward} admin menu · /{cmd.city} admin menu)
+  title.ward-admin: "&8Núcleos · Panel admin"
+  title.city-admin: "&8Matrices · Panel admin"
+  title.ward-admin-detail: "&8Admin · {name}"
+  title.city-admin-detail: "&8Admin · {name}"
+  wardadmin.dissolved: "Núcleo {name} apagado."
+  wardadmin.no-core-block: " (sin bloque físico)"
+  wardadmin.tp-done: "✦ Sintonización completa: centro del núcleo."
+  wardadmin.menu-unavailable: "El menú del Núcleo no está disponible."
+  cityadmin.menu-unavailable: "El menú de la Matriz no está disponible."
+  # Estados huérfano y avisos de sobrecosto del panel admin
+  wardadmin.orphan-warning: "&c⚠ HUÉRFANO: revisar o apagar"
+  wardadmin.surcharge: "&6Sobrecosto: &f{blocks} bloque(s) fuera de fase"
+  # Zonas persistentes creadas por admin — no se unen por ID/menú
+  estate.admin-zone: "Esta zona la administra el servidor: creá tu grupo con /{cmd.estate} discover"
+  unknown-action: "&cAcción no reconocida: {action}"
+  internal-error: "Error interno"
+  # Selectores de jugadores (pick.*) — ejecutan la acción desde el propio menú
+  title.pick-player: "&8Seleccionar jugador"
+  title.pick-role: "&8Rol para &f{name}"
+  pick.context-lost: "Contexto del selector perdido."
+  pick.offline: "Ese jugador ya no está en línea."
+  pick.empty: "No hay jugadores disponibles para esta acción."
+  role.GOVERNOR: "Gobernador"
+  role.COUNCIL: "Council"
+  role.CITIZEN: "Ciudadano"
+  role.ALLY: "Aliado"
+  # city — validaciones y feedback del selector (espejo de /{cmd.city})
+  city.residents-role-required: "Necesitás rol Council o superior para gestionar residentes."
+  city.owner-only-roles: "Solo el Gobernador puede asignar roles."
+  city.owner-only-transfer: "Solo el Gobernador puede transferir la Matriz."
+  city.self-transfer: "No puedes transferirte la Matriz a ti mismo."
+  city.invited: "{player} invitado a la Matriz."
+  city.invited-target: "Fuiste invitado a la Matriz {city}."
+  city.already-member: "{player} ya es miembro de la Matriz."
+  city.kicked: "Residente expulsado de la Matriz."
+  city.kick-not-member: "Ese jugador no es miembro de la Matriz."
+  city.cannot-kick-governor: "No puedes expulsar al Gobernador."
+  city.transferred: "Gobernanza de la Matriz transferida a {player}."
+  city.transfer-not-member: "{player} debe ser miembro de la Matriz."
+  city.role-set: "Rol de {player} establecido a {role}."
+  city.role-not-member: "{player} no es miembro de la Matriz."
+  # estate — validaciones y feedback del selector (espejo de /{cmd.estate})
+  estate.owner-only-invite: "Solo el owner puede invitar miembros al Nexo."
+  estate.owner-only-transfer: "Solo el owner puede transferir el Nexo."
+  estate.self-transfer: "No puedes transferirte el Nexo a ti mismo."
+  estate.invited: "{player} invitado al Nexo."
+  estate.invited-target: "Fuiste invitado al Nexo {estate}."
+  estate.already-member-invite: "{player} ya es miembro del Nexo."
+  estate.transferred: "Liderazgo del Nexo transferido a {player}."
+  estate.transfer-not-member: "{player} debe ser miembro del Nexo."
+  # ward — validaciones y feedback del selector (espejo de /{cmd.ward} transfer)
+  ward.owner-only-transfer: "Solo el owner puede transferir el Núcleo."
+  ward.self-transfer: "No puedes transferirte el Núcleo a ti mismo."
+  ward.transferred: "Ownership transferido a {player}."
+  ward.transferred-target: "{player} te transfirió su Núcleo {ward}."
+  # Aviso extra al apagar el propio Núcleo desde el menú (ítem devuelto)
+  ward.disbanded-refund: " Tu Núcleo volvió a tu inventario."
+  # ward
+  ward.deposits-unavailable: "Depósitos no disponibles."
+  ward.cannot-deposit: "No puedes depositar energía en este Núcleo."
+  ward.item-not-accepted: "Ítem no válido para upkeep. Mira los aceptados en el menú."
+  ward.owner-only-upgrade: "Solo el owner puede mejorar el Núcleo."
+  ward.max-tier: "El Núcleo ya está en el tier máximo ({tier})."
+  ward.conflict-radius: "No puedes mejorar: el radio nuevo ({radius}) alcanzaría el Núcleo '{other}' de {owner}."
+  ward.conflict-radius-tier: "No puedes mejorar al tier {tier}: el radio nuevo ({radius}) alcanzaría el Núcleo '{other}' de {owner}."
+  # El prefijo [Sincronía] lo antepone el código — no repetirlo aquí
+  ward.missing-items: "Te faltan ítems para mejorar al tier {tier}:"
+  ward.upgraded: "Mejorado a "
+  ward.owner-only-permissions: "Solo el owner puede cambiar permisos."
+  ward.invalid-permission: "Permiso inválido: {perm}"
+  ward.permission-revoked: "Permiso {perm} revocado."
+  ward.permission-granted: "Permiso {perm} concedido."
+  ward.owner-only-annex: "Solo el owner puede federar el Núcleo."
+  ward.already-in-city: "El Núcleo ya pertenece a una Matriz."
+  ward.not-in-city: "No eres miembro de ninguna ciudad."
+  ward.annexed: "Núcleo federado a la Matriz {city}."
+  ward.owner-only-disband: "Solo el owner puede apagar el Núcleo."
+  ward.disbanded: "Núcleo apagado."
+  ward.context-lost: "Contexto de Núcleo perdido."
+  ward.deposited: "Depositaste "
+  ward.deposited-units: " → +{units} unidades. Balance: {balance}"
+  # city
+  city.treasury-unavailable: "El tesoro no está disponible."
+  city.treasury-role-required: "Requerís rol Council o superior para el tesoro."
+  city.treasury-value-prefix: "Valor actual del tesoro: "
+  city.treasury-value-suffix: " unidades de riqueza"
+  city.owner-only-policy: "Solo el Gobernador puede cambiar políticas."
+  city.invalid-policy: "Política inválida: {policy}"
+  city.policy-on: "Política {policy} activada."
+  city.policy-off: "Política {policy} desactivada."
+  city.owner-only-delete: "Solo el Gobernador puede eliminar la ciudad."
+  city.deleted: "Ciudad {city} eliminada."
+  city.context-lost: "Contexto de Ciudad perdido."
+  # estate — vocabulario del lore: Nexo / instancia
+  estate.already-owner: "Ya eres el owner de este Nexo."
+  estate.already-member: "Ya eres miembro de este Nexo."
+  estate.joined: "Te uniste al Nexo {estate}."
+  estate.owner-cannot-leave: "El owner no puede salir; transfiere o disuelve el Nexo."
+  estate.not-member: "No eres miembro de este Nexo."
+  estate.left: "Saliste del Nexo {estate}."
+  estate.owner-only-start: "Solo el owner puede iniciar la instancia."
+  estate.instance-active: "El Nexo ya tiene una instancia activa."
+  estate.instance-ready: " El End privado está listo con la dragona."
+  estate.started: "Instancia de {estate} iniciada."
+  estate.owner-only-disband: "Solo el owner puede disolver el Nexo."
+  estate.disbanded: "Nexo {estate} disuelto."
+  estate.context-lost: "Contexto de Nexo perdido."

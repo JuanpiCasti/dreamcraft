@@ -5,6 +5,41 @@
     "property": "minecraft:custom_model_data",
     "entries": [
       {
+        "threshold": 41401,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/confirm"
+        }
+      },
+      {
+        "threshold": 41402,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/back"
+        }
+      },
+      {
+        "threshold": 41403,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/profile"
+        }
+      },
+      {
+        "threshold": 41404,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/close"
+        }
+      },
+      {
+        "threshold": 41405,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/invite"
+        }
+      },
+      {
         "threshold": 41406,
         "model": {
           "type": "minecraft:model",
@@ -12,10 +47,73 @@
         }
       },
       {
+        "threshold": 41407,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/roles"
+        }
+      },
+      {
+        "threshold": 41408,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/members"
+        }
+      },
+      {
+        "threshold": 41409,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/confirm"
+        }
+      },
+      {
+        "threshold": 41410,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/line"
+        }
+      },
+      {
         "threshold": 41411,
         "model": {
           "type": "minecraft:model",
           "model": "dreamcraft:item/menu/catcher"
+        }
+      },
+      {
+        "threshold": 41412,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/gear_sync"
+        }
+      },
+      {
+        "threshold": 41413,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/gear_matriz"
+        }
+      },
+      {
+        "threshold": 41414,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/gear_nexo"
+        }
+      },
+      {
+        "threshold": 41415,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/permissions"
+        }
+      },
+      {
+        "threshold": 41417,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/leave_nexo"
         }
       },
       {
@@ -324,6 +422,34 @@
         "model": {
           "type": "minecraft:model",
           "model": "dreamcraft:item/menu/q/zone-tp_br"
+        }
+      },
+      {
+        "threshold": 41545,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/q/unirse_tl"
+        }
+      },
+      {
+        "threshold": 41546,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/q/unirse_tr"
+        }
+      },
+      {
+        "threshold": 41547,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/q/unirse_bl"
+        }
+      },
+      {
+        "threshold": 41548,
+        "model": {
+          "type": "minecraft:model",
+          "model": "dreamcraft:item/menu/q/unirse_br"
         }
       }
     ],

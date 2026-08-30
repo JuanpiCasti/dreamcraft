@@ -1,0 +1,112 @@
+{
+  "_comment": "Layout de menús horneados (baked). Fuente de verdad para el plugin y el resource pack. Cada elemento debe colocarse en el slot exacto indicado para que los catchers coincidan con los iconos pintados en el PNG de fondo.",
+  "grid": {
+    "columns": 9,
+    "rows": 6,
+    "slot_formula": "slot = row * 9 + col",
+    "slot_xy": "x = 8 + 18*col,  y = 26 + 18*row",
+    "block_size": "2x2 = 4 cuadrantes (tl, tr, bl, br), ancla en esquina superior-izquierda",
+    "item_size": "1x1 = 16x16 px, centrado en slot con +1px padding"
+  },
+
+  "menus": {
+    "bg_menu_ward_status": {
+      "theme": "default",
+      "separator_row": 2,
+      "description": "Ward status (Synt/acero). Eje central = C4. U y T en R0-R1, C centrado en C4, profile + permisos en R4.",
+      "visual_grid": [
+        "R0: _ U U _ _ _ T T _",
+        "R1: _ U U _ _ _ T T _",
+        "R2: ─────────────────",
+        "R3: _ _ _ C C _ _ _ _",
+        "R4: _ P R _ _ _ I c _",
+        "R5: (libre)"
+      ],
+      "elements": [
+        { "key": "icon.upkeep",         "type": "block", "slot": 1,  "row": 0, "col": 1, "note": "upkeep 2x2, ocupa C1-C2 R0-R1" },
+        { "key": "icon.ward.tier",      "type": "block", "slot": 6,  "row": 0, "col": 6, "note": "tier/fase 2x2, ocupa C6-C7 R0-R1" },
+        { "key": "icon.city.overview",  "type": "block", "slot": 30, "row": 3, "col": 3, "note": "score base centrado en C4, ocupa C3-C4 R3-R4" },
+        { "key": "menu.profile",        "type": "item",  "slot": 37, "row": 4, "col": 1, "note": "identidad jugador" },
+        { "key": "menu.roles",          "type": "item",  "slot": 38, "row": 4, "col": 2, "note": "permisos" },
+        { "key": "icon.ward.inactive",  "type": "item",  "slot": 42, "row": 4, "col": 6, "note": "eliminar nucleus" },
+        { "key": "menu.close",          "type": "item",  "slot": 43, "row": 4, "col": 7, "note": "cerrar" }
+      ]
+    },
+
+    "bg_menu_city_overview": {
+      "theme": "matriz",
+      "separator_row": 3,
+      "description": "City overview (Matriz/azul). Menú de ciudad con invite, overview, treasury y acciones.",
+      "visual_grid": [
+        "R0: _ _ _ _ _ _ _ P _",
+        "R1: I I _ O O _ T T _",
+        "R2: I I _ O O _ T T _",
+        "R3: ─────────────────",
+        "R4: C b k _ R R _ r c",
+        "R5: (libre)"
+      ],
+      "elements": [
+        { "key": "menu.profile",         "type": "item",  "slot": 7,  "row": 0, "col": 7, "note": "identidad jugador" },
+        { "key": "menu.invite",          "type": "block", "slot": 9,  "row": 1, "col": 1, "note": "invite 2x2" },
+        { "key": "icon.city.overview",   "type": "block", "slot": 12, "row": 1, "col": 3, "note": "overview ciudad 2x2" },
+        { "key": "city.treasury",        "type": "block", "slot": 15, "row": 1, "col": 6, "note": "tesoro 2x2" },
+        { "key": "icon.city.overview",   "type": "item",  "slot": 36, "row": 4, "col": 0, "note": "score/overview item" },
+        { "key": "menu.back",            "type": "item",  "slot": 37, "row": 4, "col": 1, "note": "volver" },
+        { "key": "menu.kick",            "type": "item",  "slot": 38, "row": 4, "col": 2, "note": "expulsar" },
+        { "key": "menu.roles",           "type": "block", "slot": 39, "row": 4, "col": 3, "note": "roles 2x2" },
+        { "key": "menu.roles",           "type": "item",  "slot": 42, "row": 4, "col": 6, "note": "roles item" },
+        { "key": "icon.ward.inactive",   "type": "item",  "slot": 43, "row": 4, "col": 7, "note": "inactive/eliminar" },
+        { "key": "menu.close",           "type": "item",  "slot": 44, "row": 4, "col": 8, "note": "cerrar" }
+      ]
+    },
+
+    "bg_menu_estate_lobby": {
+      "theme": "nexo",
+      "separator_row": 3,
+      "description": "Estate lobby (Nexo/violeta). Menú de estate con invite, overview y acciones.",
+      "visual_grid": [
+        "R0: _ _ _ _ _ _ _ P _",
+        "R1: I I _ E E _ I I _",
+        "R2: I I _ E E _ I I _",
+        "R3: ─────────────────",
+        "R4: B b _ _ E E _ r c",
+        "R5: (libre)"
+      ],
+      "elements": [
+        { "key": "menu.profile",            "type": "item",  "slot": 7,  "row": 0, "col": 7, "note": "identidad jugador" },
+        { "key": "menu.invite",             "type": "block", "slot": 9,  "row": 1, "col": 1, "note": "invite 2x2" },
+        { "key": "icon.estate.overview",    "type": "block", "slot": 12, "row": 1, "col": 3, "note": "overview estate 2x2" },
+        { "key": "menu.invite",             "type": "block", "slot": 15, "row": 1, "col": 6, "note": "invite 2x2 (zona derecha)" },
+        { "key": "icon.back",               "type": "item",  "slot": 36, "row": 4, "col": 0, "note": "volver (icono)" },
+        { "key": "menu.back",               "type": "item",  "slot": 37, "row": 4, "col": 1, "note": "volver" },
+        { "key": "icon.estate.overview",    "type": "block", "slot": 39, "row": 4, "col": 3, "note": "overview estate 2x2" },
+        { "key": "menu.roles",              "type": "item",  "slot": 42, "row": 4, "col": 6, "note": "permisos" },
+        { "key": "icon.ward.inactive",      "type": "item",  "slot": 43, "row": 4, "col": 7, "note": "inactive/eliminar" },
+        { "key": "menu.close",              "type": "item",  "slot": 44, "row": 4, "col": 8, "note": "cerrar" }
+      ]
+    },
+
+    "bg_menu_estate_instance": {
+      "theme": "nexo",
+      "separator_row": 3,
+      "description": "Estate instance (Nexo/violeta). Vista simplificada con back, inactive y close.",
+      "visual_grid": [
+        "R0: _ _ _ _ _ _ _ P _",
+        "R1: I I _ E E _ B B _",
+        "R2: I I _ E E _ B B _",
+        "R3: ─────────────────",
+        "R4: _ _ b i c _ _ _ _",
+        "R5: (libre)"
+      ],
+      "elements": [
+        { "key": "menu.profile",            "type": "item",  "slot": 7,  "row": 0, "col": 7, "note": "identidad jugador" },
+        { "key": "menu.invite",             "type": "block", "slot": 9,  "row": 1, "col": 1, "note": "invite 2x2" },
+        { "key": "icon.estate.overview",    "type": "block", "slot": 12, "row": 1, "col": 3, "note": "overview estate 2x2" },
+        { "key": "icon.back",               "type": "block", "slot": 15, "row": 1, "col": 6, "note": "volver 2x2" },
+        { "key": "menu.back",               "type": "item",  "slot": 38, "row": 4, "col": 2, "note": "volver" },
+        { "key": "icon.ward.inactive",      "type": "item",  "slot": 39, "row": 4, "col": 3, "note": "inactive/eliminar" },
+        { "key": "menu.close",              "type": "item",  "slot": 40, "row": 4, "col": 4, "note": "cerrar" }
+      ]
+    }
+  }
+}

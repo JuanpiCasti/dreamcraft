@@ -13,11 +13,12 @@ BASES = {
     "tesoro": "city/treasury.png",
     "invite": "menu/invite.png",
     "roles": "menu/roles.png",
-    "iniciar": "estate/icon.png",
+    "iniciar": "estate/dragon.png",
     "salir": "menu/back.png",
     "ward": "ward/icon.png",
     "inactive": "ward/inactive.png",
     "zone-tp": "estate/zone-tp.png",
+    "unirse": "menu/join_nexo.png",
 }
 QUADS = {"tl": (0, 0), "tr": (16, 0), "bl": (0, 16), "br": (16, 16)}
 

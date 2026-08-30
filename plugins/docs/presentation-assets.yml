@@ -1,0 +1,159 @@
+# ── presentation-assets.yml · CONTRATO plugin ↔ resource-packs ───────────────
+# Mapa de claves semánticas → assets visuales. El equipo del Resource Pack
+# (worktree resource-packs) desarrolla texturas/modelos apuntando a los cmd
+# aquí definidos SIN tocar el plugin; cada servidor puede remapearlos copiando
+# este archivo a plugin-configs/DreamCraftProtection/presentation-assets.yml.
+#
+# Reglas (MD §9/§23):
+#   - Toda entrada es opcional; lo ausente cae a vanilla sin romper nada.
+#   - "material"  → ítem base vanilla que siempre renderiza.
+#   - "cmd"       → CustomModelData aplicado SOLO si el jugador cargó el pack.
+#   - "fallback"  → material vanilla para jugadores SIN pack (opcional).
+#
+# Convención de claves: <dominio>.<concepto>  (ward.* city.* estate.* menu.*)
+
+options:
+  enabled: true
+
+icons:
+  # Ward — protección / propiedad
+  ward.icon:            { material: SHIELD,                   cmd: 41101, fallback: SHIELD }
+  ward.inactive:        { material: CRACKED_STONE_BRICKS,     cmd: 41102 }
+  ward.tier:            { material: NETHER_STAR,              cmd: 41103, fallback: BEACON }
+  ward.score:           { material: EXPERIENCE_BOTTLE,        cmd: 41104 }
+  ward.upkeep:          { material: CHEST,                    cmd: 41105, fallback: CHEST }
+  ward.orphan:          { material: BARRIER,                  cmd: 41106 }
+  # City — comunidad / administración
+  city.icon:            { material: BEACON,                   cmd: 41201, fallback: BEACON }
+  city.members:         { material: PLAYER_HEAD,              cmd: 0 }
+  city.treasury:        { material: GOLD_BLOCK,               cmd: 41202 }
+  city.score:           { material: EMERALD,                  cmd: 41203 }
+  city.admin:           { material: COMMAND_BLOCK,            cmd: 41204 }
+  icon.city.overview:   { material: BEACON,                   cmd: 41201, fallback: BEACON }
+  # Estate — aventura / grupo
+  estate.icon:          { material: BOOK,                     cmd: 41301, fallback: BOOK }
+  estate.adventure:     { material: ENDER_EYE,                cmd: 41302 }
+  estate.instance:      { material: END_PORTAL_FRAME,         cmd: 41303 }
+  estate.dragon:        { material: DRAGON_HEAD,              cmd: 41304 }
+  estate.zone-tp:       { material: NETHER_STAR,              cmd: 41305 }
+  # Nucleus — núcleo colocable (beacon con CMD; al colocar es un beacon real)
+  nucleus.icon:         { material: BEACON,                   cmd: 41002, fallback: BEACON }
+  # Menú genérico
+  menu.deposit:         { material: LIME_STAINED_GLASS_PANE,  cmd: 41401 }
+  menu.filler:          { material: GRAY_STAINED_GLASS_PANE,  cmd: 0 }
+  menu.back:            { material: ARROW,                    cmd: 41402 }
+  icon.back:            { material: ARROW,                    cmd: 41402, fallback: ARROW }
+  # Sin pack los items caen a materiales vanilla reconocibles; el dispatcher
+  # de cada CMD vive en assets/minecraft/items/<material>.json.
+  menu.profile:         { material: PLAYER_HEAD,              cmd: 0,     hide-name: true }
+  menu.close:           { material: BARRIER,                  cmd: 41404, fallback: BARRIER,                 hide-name: true }
+  menu.invite:          { material: EMERALD,                  cmd: 41405, fallback: EMERALD,                 hide-name: true }
+  menu.kick:            { material: PAPER,                    cmd: 41406, fallback: PAPER,                   hide-name: true }
+  menu.roles:           { material: BOOK,                     cmd: 41407, fallback: BOOK,                    hide-name: true }
+  menu.members:         { material: PLAYER_HEAD,              cmd: 41408, fallback: PLAYER_HEAD,             hide-name: true }
+  menu.confirm:         { material: EMERALD_BLOCK,            cmd: 41409, fallback: EMERALD_BLOCK,           hide-name: true }
+  menu.catcher:         { material: PAPER,                    cmd: 41411, fallback: PAPER,                   hide-name: true }
+  menu.line:            { material: GRAY_STAINED_GLASS_PANE,  cmd: 41410, fallback: GRAY_STAINED_GLASS_PANE, hide-name: true }
+  # Cuadrantes 2×2 — cada botón grande se pinta con 4 tiles (tl/tr/bl/br)
+  # sobre el mismo PAPER; los 4 slots disparan la misma acción. CMDs 41501-41540.
+  icon.upkeep.tl:         { material: PAPER, cmd: 41501, fallback: PAPER }
+  icon.upkeep.tr:         { material: PAPER, cmd: 41502, fallback: PAPER }
+  icon.upkeep.bl:         { material: PAPER, cmd: 41503, fallback: PAPER }
+  icon.upkeep.br:         { material: PAPER, cmd: 41504, fallback: PAPER }
+  icon.ward.tier.tl:      { material: PAPER, cmd: 41505, fallback: PAPER }
+  icon.ward.tier.tr:      { material: PAPER, cmd: 41506, fallback: PAPER }
+  icon.ward.tier.bl:      { material: PAPER, cmd: 41507, fallback: PAPER }
+  icon.ward.tier.br:      { material: PAPER, cmd: 41508, fallback: PAPER }
+  icon.city.overview.tl:  { material: PAPER, cmd: 41509, fallback: PAPER }
+  icon.city.overview.tr:  { material: PAPER, cmd: 41510, fallback: PAPER }
+  icon.city.overview.bl:  { material: PAPER, cmd: 41511, fallback: PAPER }
+  icon.city.overview.br:  { material: PAPER, cmd: 41512, fallback: PAPER }
+  city.treasury.tl:       { material: PAPER, cmd: 41513, fallback: PAPER }
+  city.treasury.tr:       { material: PAPER, cmd: 41514, fallback: PAPER }
+  city.treasury.bl:       { material: PAPER, cmd: 41515, fallback: PAPER }
+  city.treasury.br:       { material: PAPER, cmd: 41516, fallback: PAPER }
+  menu.invite.tl:         { material: PAPER, cmd: 41517, fallback: PAPER }
+  menu.invite.tr:         { material: PAPER, cmd: 41518, fallback: PAPER }
+  menu.invite.bl:         { material: PAPER, cmd: 41519, fallback: PAPER }
+  menu.invite.br:         { material: PAPER, cmd: 41520, fallback: PAPER }
+  menu.roles.tl:          { material: PAPER, cmd: 41521, fallback: PAPER }
+  menu.roles.tr:          { material: PAPER, cmd: 41522, fallback: PAPER }
+  menu.roles.bl:          { material: PAPER, cmd: 41523, fallback: PAPER }
+  menu.roles.br:          { material: PAPER, cmd: 41524, fallback: PAPER }
+  icon.estate.overview.tl: { material: PAPER, cmd: 41525, fallback: PAPER }
+  icon.estate.overview.tr: { material: PAPER, cmd: 41526, fallback: PAPER }
+  icon.estate.overview.bl: { material: PAPER, cmd: 41527, fallback: PAPER }
+  icon.estate.overview.br: { material: PAPER, cmd: 41528, fallback: PAPER }
+  icon.back.tl:           { material: PAPER, cmd: 41529, fallback: PAPER }
+  icon.back.tr:           { material: PAPER, cmd: 41530, fallback: PAPER }
+  icon.back.bl:           { material: PAPER, cmd: 41531, fallback: PAPER }
+  icon.back.br:           { material: PAPER, cmd: 41532, fallback: PAPER }
+  icon.ward.active.tl:    { material: PAPER, cmd: 41533, fallback: PAPER }
+  icon.ward.active.tr:    { material: PAPER, cmd: 41534, fallback: PAPER }
+  icon.ward.active.bl:    { material: PAPER, cmd: 41535, fallback: PAPER }
+  icon.ward.active.br:    { material: PAPER, cmd: 41536, fallback: PAPER }
+  icon.ward.inactive.tl:  { material: PAPER, cmd: 41537, fallback: PAPER }
+  icon.ward.inactive.tr:  { material: PAPER, cmd: 41538, fallback: PAPER }
+  icon.ward.inactive.bl:  { material: PAPER, cmd: 41539, fallback: PAPER }
+  icon.ward.inactive.br:  { material: PAPER, cmd: 41540, fallback: PAPER }
+  icon.estate.zone-tp.tl: { material: PAPER, cmd: 41541, fallback: PAPER }
+  icon.estate.zone-tp.tr: { material: PAPER, cmd: 41542, fallback: PAPER }
+  icon.estate.zone-tp.bl: { material: PAPER, cmd: 41543, fallback: PAPER }
+  icon.estate.zone-tp.br: { material: PAPER, cmd: 41544, fallback: PAPER }
+
+sounds:
+  # Claves vanilla por defecto; el pack podrá sustituirlas por sonidos custom.
+  menu.click: ui.button.click
+  menu.error: block.note_block.bass
+  menu.success: entity.experience_orb.pickup
+
+fonts:
+  # Fuentes del pack (claves Adventure namespace:key). Vacío hasta que el RP las defina.
+  dc.hud: "dreamcraft:hud"
+  dc.gui: "dreamcraft:gui"
+  dc.gothic: "dreamcraft:gothic"
+
+symbols:
+  # Glifos decorativos (barras, marcos) — requieren la fuente asociada.
+  bar.full: "\uE000"
+  bar.empty: "\uE001"
+  # Fondo gráfico del menú: un glifo por tamaño de inventario que cubre el
+  # contenedor vanilla cuando el jugador tiene el pack cargado.
+  menu.bg.9:  { glyph: "\uE100", font: dc.gui }
+  menu.bg.18: { glyph: "\uE101", font: dc.gui }
+  menu.bg.27: { glyph: "\uE102", font: dc.gui }
+  menu.bg.36: { glyph: "\uE103", font: dc.gui }
+  menu.bg.45: { glyph: "\uE104", font: dc.gui }
+  menu.bg.54: { glyph: "\uE105", font: dc.gui }
+  # Familias temáticas por dominio de menú (marco acero=menu.bg.*, azul=matriz,
+  # violeta=nexo). El compositor elige por prefijo del menuId; los admin heredan.
+  menu.bg.matriz.9:  { glyph: "\uE110", font: dc.gui }
+  menu.bg.matriz.18: { glyph: "\uE111", font: dc.gui }
+  menu.bg.matriz.27: { glyph: "\uE112", font: dc.gui }
+  menu.bg.matriz.36: { glyph: "\uE113", font: dc.gui }
+  menu.bg.matriz.45: { glyph: "\uE114", font: dc.gui }
+  menu.bg.matriz.54: { glyph: "\uE115", font: dc.gui }
+  menu.bg.nexo.9:    { glyph: "\uE120", font: dc.gui }
+  menu.bg.nexo.18:   { glyph: "\uE121", font: dc.gui }
+  menu.bg.nexo.27:   { glyph: "\uE122", font: dc.gui }
+  menu.bg.nexo.36:   { glyph: "\uE123", font: dc.gui }
+  menu.bg.nexo.45:   { glyph: "\uE124", font: dc.gui }
+  menu.bg.nexo.54:   { glyph: "\uE125", font: dc.gui }
+  # Glifos horneados por menú (panel + botones pintados; los ítems son
+  # capturadores invisibles menu.catcher)
+  menu.bg.ward_status:      { glyph: "\uE130", font: dc.gui }
+  menu.bg.ward_inactive:    { glyph: "\uE134", font: dc.gui }
+  menu.bg.city_overview:    { glyph: "\uE131", font: dc.gui }
+  menu.bg.estate_lobby:     { glyph: "\uE132", font: dc.gui }
+  menu.bg.estate_instance:  { glyph: "\uE133", font: dc.gui }
+  # violeta=nexo). El compositor elige por prefijo del menuId; los admin heredan.
+  # Glifos de offset para ajustar el anclaje horizontal de los botones.
+  menu.offset.-1: { glyph: "\uEC01", font: dc.gui }
+  menu.offset.-2: { glyph: "\uEC02", font: dc.gui }
+  menu.offset.-4: { glyph: "\uEC04", font: dc.gui }
+  menu.offset.1:  { glyph: "\uEC11", font: dc.gui }
+  menu.offset.2:  { glyph: "\uEC12", font: dc.gui }
+
+particles:
+  # Partículas visuales de estado (nombre del enum Bukkit).
+  ward.active: ENCHANT

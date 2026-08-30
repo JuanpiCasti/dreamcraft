@@ -44,12 +44,12 @@ services:
       # Resource pack (soporte nativo itzg). SHA1 = build actual de dist/.
       # URL temporal de test local (nginx sidecar). PENDIENTE host definitivo
       # (repo publico dreamcraft-pack); recalcular SHA1 en cada rebuild.
-      RESOURCE_PACK: http://localhost:8081/dreamcraft-resource-pack-75a7e29f.zip?v=75a7e29f70770d0b695934fb9db5d524a2c37838
-      RESOURCE_PACK_SHA1: 75a7e29f70770d0b695934fb9db5d524a2c37838
+      RESOURCE_PACK: http://localhost:8081/dreamcraft-resource-pack-dc83d6cb.zip?v=dc83d6cb8c24b47da2241e8e857fbc9670b8dce0
+      RESOURCE_PACK_SHA1: dc83d6cb8c24b47da2241e8e857fbc9670b8dce0
       RESOURCE_PACK_ENFORCE: "true"
       PLUGINS: |
         https://cdn.modrinth.com/data/Lu3KuzdV/versions/Kma0kBsY/CoreProtect-CE-24.0.jar
-        https://download.luckperms.net/1658/bukkit/loader/LuckPerms-Bukkit-5.5.71.jar
+        https://download.luckperms.net/1668/bukkit/loader/LuckPerms-Bukkit-5.5.81.jar
         https://repo.nickuc.com/files/latest/nLogin.jar
         https://cdn.modrinth.com/data/HYKaKraK/versions/h0ncTpUP/packetevents-spigot-2.13.0.jar
         https://github.com/EssentialsX/Essentials/releases/download/2.22.0/EssentialsX-2.22.0.jar

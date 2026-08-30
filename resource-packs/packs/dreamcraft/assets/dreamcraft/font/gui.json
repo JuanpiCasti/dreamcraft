@@ -22,7 +22,7 @@
       "type": "bitmap",
       "file": "dreamcraft:font/gui/bg_27.png",
       "ascent": 21,
-      "height": 79,
+      "height": 85,
       "chars": [
         ""
       ]
@@ -49,7 +49,7 @@
       "type": "bitmap",
       "file": "dreamcraft:font/gui/bg_54.png",
       "ascent": 21,
-      "height": 133,
+      "height": 141,
       "chars": [
         ""
       ]
@@ -76,7 +76,7 @@
       "type": "bitmap",
       "file": "dreamcraft:font/gui/bg_matriz_27.png",
       "ascent": 21,
-      "height": 79,
+      "height": 85,
       "chars": [
         ""
       ]
@@ -103,7 +103,7 @@
       "type": "bitmap",
       "file": "dreamcraft:font/gui/bg_matriz_54.png",
       "ascent": 21,
-      "height": 133,
+      "height": 139,
       "chars": [
         ""
       ]
@@ -130,7 +130,7 @@
       "type": "bitmap",
       "file": "dreamcraft:font/gui/bg_nexo_27.png",
       "ascent": 21,
-      "height": 79,
+      "height": 85,
       "chars": [
         ""
       ]
@@ -157,7 +157,7 @@
       "type": "bitmap",
       "file": "dreamcraft:font/gui/bg_nexo_54.png",
       "ascent": 21,
-      "height": 133,
+      "height": 139,
       "chars": [
         ""
       ]
@@ -187,7 +187,7 @@
       "type": "bitmap",
       "file": "dreamcraft:font/gui/bg_menu_ward_status.png",
       "ascent": 21,
-      "height": 133,
+      "height": 141,
       "chars": [
         ""
       ]
@@ -196,7 +196,7 @@
       "type": "bitmap",
       "file": "dreamcraft:font/gui/bg_menu_city_overview.png",
       "ascent": 21,
-      "height": 133,
+      "height": 139,
       "chars": [
         ""
       ]
@@ -205,7 +205,7 @@
       "type": "bitmap",
       "file": "dreamcraft:font/gui/bg_menu_estate_lobby.png",
       "ascent": 21,
-      "height": 133,
+      "height": 139,
       "chars": [
         ""
       ]
@@ -214,9 +214,18 @@
       "type": "bitmap",
       "file": "dreamcraft:font/gui/bg_menu_estate_instance.png",
       "ascent": 21,
-      "height": 133,
+      "height": 139,
       "chars": [
         ""
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "dreamcraft:font/gui/bg_menu_ward_inactive.png",
+      "ascent": 21,
+      "height": 141,
+      "chars": [
+        ""
       ]
     }
   ]

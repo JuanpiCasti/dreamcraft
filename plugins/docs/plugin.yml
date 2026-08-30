@@ -1,0 +1,78 @@
+name: DreamCraftProtection
+version: 0.1.2
+main: dev.dreamcraft.protection.DreamCraftProtectionPlugin
+api-version: '1.21'
+description: DreamCraft domain system — claims, upkeep, Ward/City/Estate domain, integration layer
+authors: [DreamCraft]
+
+# Hard dependencies (must be present)
+# none — all integrations are optional and detected at startup
+
+# Optional soft-dependencies (loaded before DreamCraftProtection when present)
+softdepend:
+  - WorldGuard
+  - WorldEdit
+  - LuckPerms
+  - CoreProtect
+  - Essentials
+  - Chunky
+  - packetevents
+  - DeluxeMenus
+  - Oraxen
+
+commands:
+  protection:
+    description: Gestiona tu Ward (misma mecánica que /ward)
+    aliases: [prot, claim]
+    usage: /protection [claim|status|rename|upkeep|permissions|upgrade|transfer|members|dissolve|give|reload|recalculate|integrations]
+    permission: dreamcraft.protection.use
+  ward:
+    description: Gestiona tu Núcleo de Sincronía (lore «El Despertar»)
+    aliases: [w]
+    usage: /ward [create|reclamar|info|rename|sintonizar|expulsar|permissions|upkeep|score|menu|tp|city|transfer|delete|abrir|give|admin]
+    permission: dreamcraft.ward.use
+  city:
+    description: Gestiona tu Ciudad
+    aliases: [ciudad]
+    usage: /city [create|annex|invite|kick|roles|bank|policy|menu|info|transfer|delete|admin]
+    permission: dreamcraft.city.use
+  estate:
+    description: Gestiona tu Estate (grupo de aventura)
+    aliases: [grupo]
+    usage: /estate [create|discover|admin|invite|join|leave|start|transfer|info|menu|disband]
+    permission: dreamcraft.estate.use
+
+permissions:
+  dreamcraft.protection.use:
+    description: Acceso a los comandos de protección
+    default: true
+  dreamcraft.protection.admin:
+    description: Comandos administrativos de protección (give, reload, recalculate)
+    default: op
+  dreamcraft.protection.menu:
+    description: Abrir el menú del claim con /protection claim. Conceder al grupo VIP (los gobernadores siempre pueden).
+    default: false
+  dreamcraft.ward.use:
+    description: Acceso a comandos de Ward
+    default: true
+  dreamcraft.ward.admin:
+    description: Administración de Wards (crear/borrar para otros)
+    default: op
+  dreamcraft.ward.menu:
+    description: Abrir el menú del Ward (/ward menu y clic derecho en la baliza). Conceder al grupo VIP.
+    default: false
+  dreamcraft.ward.remote:
+    description: 'Lore «El Despertar»: enlace dimensional remoto — alimentar/mejorar/tp sin estar junto al bloque. Conceder al grupo VIP.'
+    default: false
+  dreamcraft.city.use:
+    description: Acceso a comandos de Ciudad
+    default: true
+  dreamcraft.city.admin:
+    description: Administración de Ciudades
+    default: op
+  dreamcraft.estate.use:
+    description: Acceso a comandos de Estate
+    default: true
+  dreamcraft.integrations.status:
+    description: Ver estado del Integration Registry
+    default: op
