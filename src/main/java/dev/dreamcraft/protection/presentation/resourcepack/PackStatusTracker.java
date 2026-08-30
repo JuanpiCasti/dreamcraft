@@ -54,13 +54,30 @@ public final class PackStatusTracker implements PackState, Listener {
         loaded.put(event.getPlayer().getUniqueId(), ok);
     }
 
+    private final Map<UUID, Boolean> overrides = new ConcurrentHashMap<>();
+
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         loaded.remove(event.getPlayer().getUniqueId());
+        overrides.remove(event.getPlayer().getUniqueId());
+    }
+
+    public void setOverride(UUID playerId, Boolean override) {
+        if (override == null) {
+            overrides.remove(playerId);
+        } else {
+            overrides.put(playerId, override);
+        }
+    }
+
+    public Boolean getOverride(UUID playerId) {
+        return overrides.get(playerId);
     }
 
     @Override
     public boolean has(UUID playerId) {
+        Boolean override = overrides.get(playerId);
+        if (override != null) return override;
         return Boolean.TRUE.equals(loaded.get(playerId));
     }
 

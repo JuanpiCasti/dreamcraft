@@ -31,8 +31,19 @@ public record MenuItem(
         /** Action triggered when this item is clicked. Null for display-only items. */
         MenuAction action,
         /** Whether this slot accepts player items (e.g. deposit slots). */
-        boolean acceptsDeposit
+        boolean acceptsDeposit,
+        /** Logical icon key used when viewer does not have resource pack. */
+        String fallbackKey
 ) {
+    public MenuItem(int slot, String iconKey, String displayName, List<String> lore, MenuAction action, boolean acceptsDeposit) {
+        this(slot, iconKey, displayName, lore, action, acceptsDeposit, null);
+    }
+
+    /** Returns a copy transformed into a catcher while retaining its original iconKey as fallback. */
+    public MenuItem asCatcher() {
+        return new MenuItem(slot, "menu.catcher", displayName, lore, action, acceptsDeposit,
+                fallbackKey != null ? fallbackKey : iconKey);
+    }
     /** Creates a read-only display item. */
     public static MenuItem display(int slot, String iconKey, String displayName, List<String> lore) {
         return new MenuItem(slot, iconKey, displayName, lore, null, false);

@@ -245,7 +245,17 @@ public final class PresentationAssetRegistry implements ResourcePackProvider {
     /** Number of registered icon entries (status output/tests). */
     public int iconCount() { return icons.size(); }
 
-    // ── Viewer-aware render helpers (menu path) ───────────────────────────────
+    /**
+     * Resolves the target Bukkit Material for a key based on viewer resource pack state.
+     */
+    public Material resolveMaterial(String assetKey, boolean viewerHasResourcePack) {
+        IconAsset entry = icons.get(assetKey);
+        if (entry == null) return null;
+        if (viewerHasResourcePack && entry.cmd() > 0) {
+            return entry.material();
+        }
+        return entry.fallback() != null ? entry.fallback() : entry.material();
+    }
 
     /**
      * Applies the asset to a rendered stack when appropriate:
@@ -258,13 +268,18 @@ public final class PresentationAssetRegistry implements ResourcePackProvider {
         IconAsset entry = icons.get(assetKey);
         if (entry == null) return;
         if (viewerHasResourcePack && entry.cmd() > 0) {
+            if (!entry.material().equals(stack.getType())) {
+                stack.setType(entry.material());
+            }
             meta.setCustomModelData(entry.cmd());
             // The CMD texture paints its own label — hide the vanilla item name
             if (entry.hideName()) meta.displayName(net.kyori.adventure.text.Component.space());
             return;
         }
-        if (entry.fallback() != null && !entry.fallback().equals(stack.getType())) {
-            stack.setType(entry.fallback());
+        Material fallback = entry.fallback() != null ? entry.fallback() : entry.material();
+        if (!fallback.equals(stack.getType())) {
+            stack.setType(fallback);
         }
+        meta.setCustomModelData(null);
     }
 }

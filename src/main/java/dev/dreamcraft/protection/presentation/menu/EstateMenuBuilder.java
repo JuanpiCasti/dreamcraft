@@ -37,18 +37,13 @@ public final class EstateMenuBuilder {
         // Filas 4-5: Salir 37 · Volver 46 · Iniciar 2×2 {40,41,49,50} ·
         // Transferir 43 · Disolver 52 · Cerrar 53.
 
-        // Slot 8 — Viewer profile
-        items.add(MenuItem.button(8, "menu.profile", "&6Perfil",
-                List.of("&7Tu identidad y datos de jugador"),
-                MenuAction.of("perfil")));
-
         // Fila 3 — línea separadora horizontal (menu.line, barra fina del pack)
         for (int s = 27; s <= 35; s++) {
             items.add(MenuItem.display(s, "menu.line", " ", List.of()));
         }
 
-        // Slots 13/14/15/22/23/24 (3×2) — main overview display (3 horizontales, 2 verticales)
-        items.addAll(MenuItem.block3x2Display(54, 13, "icon.estate.overview",
+        // Slots 12/13/14/21/22/23 (3×2) — main overview display (3 horizontales, 2 verticales, centrado)
+        items.addAll(MenuItem.block3x2Display(54, 12, "icon.estate.overview",
                 "&d&lGrupo: " + vm.name(),
                 List.of(
                         "&7Owner: &f" + vm.ownerName(),
@@ -72,62 +67,67 @@ public final class EstateMenuBuilder {
 
         // Slots 16/17/25/26 (2×2) — Join
         if (vm.canJoin()) {
-            items.addAll(MenuItem.block2x2Button(54, 16, "icon.estate.join", "&a&lUnirse",
+            items.addAll(MenuItem.block2x2Button(54, 16, "estate.join", "&a&lUnirse",
                     List.of("&7Clic para unirte a esta instancia"),
                     MenuAction.of("estate.join")));
         } else {
-            items.addAll(MenuItem.block2x2Display(54, 16, "icon.estate.join", "&8&lUnirse",
+            items.addAll(MenuItem.block2x2Display(54, 16, "estate.join", "&8&lUnirse",
                     List.of("&8Ya eres miembro")));
         }
 
         // Slots 39/40/41/48/49/50 (3×2) — Start instance (3 slots horizontales, 2 verticales)
         if (vm.canStart()) {
-            items.addAll(MenuItem.block3x2Button(54, 39, "icon.estate.overview", "&a&lIniciar",
+            items.addAll(MenuItem.block3x2Button(54, 39, "estate.dragon", "&a&lIniciar",
                     List.of("&7Clic para iniciar la instancia", "&aDisponible"),
                     MenuAction.of("estate.start")));
         } else {
-            items.addAll(MenuItem.block3x2Display(54, 39, "icon.estate.overview", "&8&lIniciar",
+            items.addAll(MenuItem.block3x2Display(54, 39, "estate.dragon", "&8&lIniciar",
                     List.of("&8Solo el owner puede iniciar")));
         }
 
-        // Slot 36 — Cerrar menú (flecha violeta de nexo a la izquierda)
-        items.add(MenuItem.button(36, "menu.back.nexo", "&e« Cerrar",
+        // ── Fila 5: Botones de acción 1×1 ──
+
+        // Slot 36 — Cerrar menú
+        items.add(MenuItem.button(36, "menu.close", "&e« Cerrar",
                 List.of("&7Cerrar menú"),
                 MenuAction.of("cerrar")));
 
-        // Slot 37 — Abandonar / Salir del grupo (icono puerta con flecha)
+        // Slot 37 — Identidad de jugador (Perfil)
+        items.add(MenuItem.button(37, "menu.profile", "&6Perfil",
+                List.of("&7Tu identidad y datos de jugador"),
+                MenuAction.of("perfil")));
+
+        // Slot 38 — Abandonar / Salir del grupo (icono puerta con flecha)
         if (vm.canLeave()) {
-            items.add(MenuItem.button(37, "menu.leave.nexo", "&c« Abandonar grupo",
+            items.add(MenuItem.button(38, "estate.leave", "&c« Abandonar grupo",
                     List.of("&7Abandonar el grupo actual"),
                     MenuAction.of("estate.leave")));
         } else {
-            items.add(MenuItem.display(37, "menu.leave.nexo", "&8« Abandonar grupo",
+            items.add(MenuItem.display(38, "estate.leave", "&8« Abandonar grupo",
                     List.of("&8No eres miembro")));
         }
 
         // Slot 43 — Transfer (columna derecha)
         if (vm.canTransfer()) {
-            items.add(MenuItem.button(43, "menu.roles", "&a&lTransferir",
+            items.add(MenuItem.button(43, "estate.transfer", "&a&lTransferir",
                     List.of("&7Clic para transferir ownership"),
                     MenuAction.of("estate.transfer")));
         } else {
-            items.add(MenuItem.display(43, "menu.roles", "&8&lTransferir",
+            items.add(MenuItem.display(43, "estate.transfer", "&8&lTransferir",
                     List.of("&8Solo el owner puede transferir")));
         }
 
-        // Slot 44 — Disband (columna derecha, escudo inactivo/apagado)
+        // Slot 44 — Disband (columna derecha, TNT)
         if (vm.canDisband()) {
-            items.add(MenuItem.button(44, "icon.ward.inactive", "&c&lDisolver",
+            items.add(MenuItem.button(44, "estate.disband", "&c&lDisolver",
                     List.of("&cClic para disolver la instancia", "&cAcción irreversible"),
                     MenuAction.of("estate.disband")));
         } else {
-            items.add(MenuItem.display(44, "icon.ward.inactive", "&8&lDisolver",
+            items.add(MenuItem.display(44, "estate.disband", "&8&lDisolver",
                     List.of("&8Solo el owner puede disolver")));
         }
 
-        // Los visuales van horneados en el glifo de fondo (menu.bg.<menuId>);
-        // los ítems quedan como capturadores invisibles de click (menu.catcher).
-        items.replaceAll(it -> new MenuItem(it.slot(), "menu.catcher", it.displayName(), it.lore(), it.action(), it.acceptsDeposit()));
+        items.replaceAll(MenuItem::asCatcher);
         return new MenuDefinition(MENU_ID_LOBBY, dev.dreamcraft.protection.message.Messages.get()
                 .tr("menu.title.estate-lobby", "&8{name.estate} &f{name}", "name", vm.name()), 54, items);
     }
@@ -142,18 +142,13 @@ public final class EstateMenuBuilder {
         // Fila 3: separador (filler).
         // Fila 4: Volver 39 · Cerrar Instancia 40 · Cerrar menú 41 (trío centrado).
 
-        // Slot 8 — Viewer profile
-        items.add(MenuItem.button(8, "menu.profile", "&6Perfil",
-                List.of("&7Tu identidad y datos de jugador"),
-                MenuAction.of("perfil")));
-
         // Fila 3 — línea separadora horizontal (menu.line, barra fina del pack)
         for (int s = 27; s <= 35; s++) {
             items.add(MenuItem.display(s, "menu.line", " ", List.of()));
         }
 
-        // Slots 13/14/15/22/23/24 (3×2) — main overview display (3 horizontales, 2 verticales)
-        items.addAll(MenuItem.block3x2Display(54, 13, "icon.estate.overview",
+        // Slots 12/13/14/21/22/23 (3×2) — main overview display (3 horizontales, 2 verticales, centrado)
+        items.addAll(MenuItem.block3x2Display(54, 12, "icon.estate.overview",
                 "&d&lInstancia: " + vm.name(),
                 List.of(
                         "&7Owner: &f" + vm.ownerName(),
@@ -174,13 +169,25 @@ public final class EstateMenuBuilder {
 
         // Slots 16/17/25/26 (2×2) — Leave instance
         if (vm.canLeave()) {
-            items.addAll(MenuItem.block2x2Button(54, 16, "icon.back", "&e&lSalir",
+            items.addAll(MenuItem.block2x2Button(54, 16, "estate.leave", "&e&lSalir",
                     List.of("&7Clic para salir de la instancia"),
                     MenuAction.of("estate.leave")));
         } else {
-            items.addAll(MenuItem.block2x2Display(54, 16, "icon.back", "&8&lSalir",
+            items.addAll(MenuItem.block2x2Display(54, 16, "estate.leave", "&8&lSalir",
                     List.of("&8No eres miembro")));
         }
+
+        // ── Fila 5: Botones de acción 1×1 ──
+
+        // Slot 36 — Cerrar menú
+        items.add(MenuItem.button(36, "menu.close", "&cCerrar",
+                List.of("&7Cerrar menú"),
+                MenuAction.of("cerrar")));
+
+        // Slot 37 — Identidad de jugador (Perfil)
+        items.add(MenuItem.button(37, "menu.profile", "&6Perfil",
+                List.of("&7Tu identidad y datos de jugador"),
+                MenuAction.of("perfil")));
 
         // Slot 39 — Back to the viewer's Ward status (flecha violeta de nexo)
         items.add(MenuItem.button(39, "menu.back.nexo", "&e« Volver al Núcleo",
@@ -189,22 +196,15 @@ public final class EstateMenuBuilder {
 
         // Slot 40 — Disband instance
         if (vm.canDisband()) {
-            items.add(MenuItem.button(40, "icon.ward.inactive", "&c&lCerrar Instancia",
+            items.add(MenuItem.button(40, "estate.disband", "&c&lCerrar Instancia",
                     List.of("&cClic para cerrar la instancia"),
                     MenuAction.of("estate.disband")));
         } else {
-            items.add(MenuItem.display(40, "icon.ward.inactive", "&8&lCerrar Instancia",
+            items.add(MenuItem.display(40, "estate.disband", "&8&lCerrar Instancia",
                     List.of("&8Solo el owner")));
         }
 
-        // Slot 41 — Close menu
-        items.add(MenuItem.button(41, "menu.close", "&cCerrar",
-                List.of("&7Cerrar menú"),
-                MenuAction.of("cerrar")));
-
-        // Los visuales van horneados en el glifo de fondo (menu.bg.<menuId>);
-        // los ítems quedan como capturadores invisibles de click (menu.catcher).
-        items.replaceAll(it -> new MenuItem(it.slot(), "menu.catcher", it.displayName(), it.lore(), it.action(), it.acceptsDeposit()));
+        items.replaceAll(MenuItem::asCatcher);
         return new MenuDefinition(MENU_ID_INSTANCE, dev.dreamcraft.protection.message.Messages.get().tr("menu.title.estate-instance", "&8Instancia &f{name}", "name", vm.name()), 54, items);
     }
 }

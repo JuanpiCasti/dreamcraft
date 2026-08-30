@@ -175,4 +175,16 @@ class PresentationAssetsTest {
         var registry = PresentationAssetRegistry.fromConfiguration(yaml(CONTRACT));
         assertTrue(registry.symbolRef("menu.bg.54").isEmpty());
     }
+
+    @Test
+    void resolveMaterialDifferentiatesBetweenPackAndViewerWithoutPack() {
+        var registry = PresentationAssetRegistry.fromConfiguration(yaml(CONTRACT));
+        // With pack: SHIELD (since cmd > 0)
+        assertEquals(Material.SHIELD, registry.resolveMaterial("ward.icon", true));
+        // Without pack: fallback BEACON
+        assertEquals(Material.BEACON, registry.resolveMaterial("ward.icon", false));
+        // Without cmd: material PLAYER_HEAD for both
+        assertEquals(Material.PLAYER_HEAD, registry.resolveMaterial("city.members", true));
+        assertEquals(Material.PLAYER_HEAD, registry.resolveMaterial("city.members", false));
+    }
 }

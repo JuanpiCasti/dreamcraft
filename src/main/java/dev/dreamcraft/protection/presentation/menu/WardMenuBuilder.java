@@ -75,7 +75,7 @@ public final class WardMenuBuilder {
                 )));
 
         // Slot 36 — Cerrar menú (flecha a la izquierda, lado izquierdo de fila 5)
-        items.add(MenuItem.button(36, "menu.back", "&e« Cerrar",
+        items.add(MenuItem.button(36, "menu.close", "&e« Cerrar",
                 List.of("&7Cerrar menú"),
                 MenuAction.of("cerrar")));
 
@@ -196,13 +196,13 @@ public final class WardMenuBuilder {
             items.add(MenuItem.display(38, "ward.permissions", "&8&lPermisos", permLore));
         }
 
-        // Slot 39 — Transfer ownership (fila 5, icono personitas)
+        // Slot 39 — Transfer ownership (fila 5, icono casco dorado)
         if (vm.canTransfer()) {
-            items.add(MenuItem.button(39, "menu.roles", "&a&lTransferir",
+            items.add(MenuItem.button(39, "ward.transfer", "&a&lTransferir",
                     List.of("&7Clic para transferir ownership"),
                     MenuAction.of("ward.transfer")));
         } else {
-            items.add(MenuItem.display(39, "menu.roles", "&8&lTransferir",
+            items.add(MenuItem.display(39, "ward.transfer", "&8&lTransferir",
                     List.of("&8Solo el owner puede transferir")));
         }
 
@@ -222,23 +222,18 @@ public final class WardMenuBuilder {
                     List.of("&8Necesitas ser owner y no tener Matriz")));
         }
 
-        // Slot 43 — Disband / delete (fila 5, escudo inactivo/apagado)
+        // Slot 43 — Disband / delete (fila 5, TNT)
         if (vm.canDisband()) {
-            items.add(MenuItem.button(43, "icon.ward.inactive", "§c§lApagar Núcleo",
+            items.add(MenuItem.button(43, "ward.disband", "§c§lApagar Núcleo",
                     List.of("&cClic para eliminar este Núcleo", "&cEsta acción es irreversible"),
                     MenuAction.of("ward.disband")));
         } else {
-            items.add(MenuItem.display(43, "icon.ward.inactive", "&8§lApagar Núcleo",
+            items.add(MenuItem.display(43, "ward.disband", "&8§lApagar Núcleo",
                     List.of("&8Solo el owner puede disolver")));
         }
 
-        // Los visuales van horneados en el glifo de fondo (menu.bg.<menuId>);
-        // los ítems quedan como capturadores invisibles de click (menu.catcher).
-        // Todos, incluidos los 4 slots del 2×2 de estado (4/5/13/14): el cristal
-        // central ahora vive en el fondo (3×3 activo/apagado), y el 2×2 solo
-        // aporta hover/lore, sin duplicar arte.
-        items.replaceAll(it -> new MenuItem(it.slot(), "menu.catcher", it.displayName(), it.lore(), it.action(), it.acceptsDeposit()));
-                return new MenuDefinition(menuId, dev.dreamcraft.protection.message.Messages.get()
+        items.replaceAll(MenuItem::asCatcher);
+        return new MenuDefinition(menuId, dev.dreamcraft.protection.message.Messages.get()
                 .tr("menu.title.ward", "&8Núcleo &f{name}", "name", vm.name()), 54, items);
     }
 }

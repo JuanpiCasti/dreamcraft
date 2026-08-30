@@ -110,7 +110,7 @@ public final class CityMenuBuilder {
         // ── Botones 1×1 en Fila 5 ──
 
         // Slot 36 — Cerrar menú (flecha a la izquierda)
-        items.add(MenuItem.button(36, "menu.back", "&e« Cerrar",
+        items.add(MenuItem.button(36, "menu.close", "&e« Cerrar",
                 List.of("&7Cerrar menú"),
                 MenuAction.of("cerrar")));
 
@@ -119,19 +119,20 @@ public final class CityMenuBuilder {
                 List.of("&7Tu identidad y datos de jugador"),
                 MenuAction.of("perfil")));
 
-        // Slot 38 — Políticas (icono papel)
+        // Slot 38 — Políticas (icono atril)
         List<String> policyLore = new ArrayList<>();
         policyLore.add("&7Políticas activas:");
         for (CityPolicy p : CityPolicy.values()) {
-            policyLore.add((vm.policies().contains(p) ? "&a" : "&8") + " - " + p.name());
+            policyLore.add((vm.policies().contains(p) ? "&a✔ " : "&c✖ ") + "&7" + p.name());
         }
+        policyLore.add("");
         policyLore.add("&aClic para gestionar cada política");
         if (vm.canSetPolicy()) {
-            items.add(MenuItem.button(38, "ward.permissions", "&a&lPolíticas", policyLore,
+            items.add(MenuItem.button(38, "city.policy", "&a&lPolíticas", policyLore,
                     MenuAction.of("city.policies")));
         } else {
             policyLore.add("&8Solo el Gobernador puede cambiar políticas");
-            items.add(MenuItem.display(38, "ward.permissions", "&8&lPolíticas", policyLore));
+            items.add(MenuItem.display(38, "city.policy", "&8&lPolíticas", policyLore));
         }
 
         // Slot 42 — Expulsar Residente
@@ -146,27 +147,25 @@ public final class CityMenuBuilder {
 
         // Slot 43 — Transferir Gobernanza
         if (vm.canTransferGovernor()) {
-            items.add(MenuItem.button(43, "menu.roles", "&a&lTransferir Gobernanza",
+            items.add(MenuItem.button(43, "city.transfer", "&a&lTransferir Gobernanza",
                     List.of("&7Clic para transferir la gobernaduría"),
                     MenuAction.of("city.transfer")));
         } else {
-            items.add(MenuItem.display(43, "menu.roles", "&8&lTransferir Gobernanza",
+            items.add(MenuItem.display(43, "city.transfer", "&8&lTransferir Gobernanza",
                     List.of("&8Solo el Gobernador")));
         }
 
-        // Slot 44 — Eliminar Matriz (escudo inactivo/apagado)
+        // Slot 44 — Eliminar Matriz (TNT)
         if (vm.canDelete()) {
-            items.add(MenuItem.button(44, "icon.ward.inactive", "&c&lEliminar Matriz",
+            items.add(MenuItem.button(44, "city.delete", "&c&lEliminar Matriz",
                     List.of("&cClic para eliminar la Matriz", "&cAcción irreversible"),
                     MenuAction.of("city.delete")));
         } else {
-            items.add(MenuItem.display(44, "icon.ward.inactive", "&8&lEliminar Matriz",
+            items.add(MenuItem.display(44, "city.delete", "&8&lEliminar Matriz",
                     List.of("&8Solo el Gobernador")));
         }
 
-        // Los visuales van horneados en el glifo de fondo (menu.bg.<menuId>);
-        // los ítems quedan como capturadores invisibles de click (menu.catcher).
-        items.replaceAll(it -> new MenuItem(it.slot(), "menu.catcher", it.displayName(), it.lore(), it.action(), it.acceptsDeposit()));
+        items.replaceAll(MenuItem::asCatcher);
         return new MenuDefinition(MENU_ID, dev.dreamcraft.protection.message.Messages.get()
                 .tr("menu.title.city", "&8Matriz &f{name}", "name", vm.name()), 54, items);
     }

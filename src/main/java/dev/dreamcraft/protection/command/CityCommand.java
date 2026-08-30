@@ -116,6 +116,8 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
                         .withAliases(options.aliases("city", "policy")))
                 .register(SubcommandSpec.of("menu", (p, a) -> handleMenu(p))
                         .withAliases(options.aliases("city", "menu")))
+                .register(SubcommandSpec.of("pack", this::handlePackToggle)
+                        .withAliases(options.aliases("city", "pack")))
                 .register(SubcommandSpec.of("info", this::handleInfo)
                         .withAliases(options.aliases("city", "info")))
                 .register(SubcommandSpec.of("transfer", this::handleTransfer)
@@ -493,6 +495,48 @@ public final class CityCommand implements CommandExecutor, TabCompleter {
                     + (lvl.maxed() ? " §8(máximo)" : " §8→ siguiente: " + lvl.nextLevelName()));
         }
         info(player, CITY_PREFIX, "Políticas: " + city.policies());
+        return true;
+    }
+
+    private boolean handlePackToggle(Player player, String[] args) {
+        if (!(menuProvider instanceof dev.dreamcraft.protection.presentation.VanillaMenuProvider vmp)) {
+            info(player, CITY_PREFIX, "§cEl proveedor de menús no admite alternancia.");
+            return true;
+        }
+        var tracker = vmp.getPackTracker();
+        if (tracker == null) {
+            info(player, CITY_PREFIX, "§cEl rastreador de resource pack no está activo.");
+            return true;
+        }
+        if (args.length >= 2) {
+            String arg = args[1].toLowerCase(java.util.Locale.ROOT);
+            if (arg.equals("off") || arg.equals("vanilla") || arg.equals("no") || arg.equals("desactivado")) {
+                tracker.setOverride(player.getUniqueId(), false);
+                info(player, CITY_PREFIX, "§eModo de visualización cambiado a: §cVANILLA (Sin Resource Pack)§e.");
+                info(player, CITY_PREFIX, "§7Abre cualquier menú (/sync, /matriz, /nexo) para ver los iconos nativos.");
+                return true;
+            }
+            if (arg.equals("on") || arg.equals("rp") || arg.equals("si") || arg.equals("activado")) {
+                tracker.setOverride(player.getUniqueId(), true);
+                info(player, CITY_PREFIX, "§eModo de visualización cambiado a: §aRESOURCE PACK (Texturas HD)§e.");
+                info(player, CITY_PREFIX, "§7Abre cualquier menú (/sync, /matriz, /nexo) para ver el diseño del pack.");
+                return true;
+            }
+            if (arg.equals("auto") || arg.equals("reset") || arg.equals("restablecer")) {
+                tracker.setOverride(player.getUniqueId(), null);
+                info(player, CITY_PREFIX, "§eModo de visualización restablecido a: §bAUTOMÁTICO§e.");
+                return true;
+            }
+        }
+        boolean next = !tracker.has(player.getUniqueId());
+        tracker.setOverride(player.getUniqueId(), next);
+        if (next) {
+            info(player, CITY_PREFIX, "§eModo de visualización cambiado a: §aRESOURCE PACK (Texturas HD)§e.");
+            info(player, CITY_PREFIX, "§7Abre cualquier menú (/sync, /matriz, /nexo) para ver el diseño del pack.");
+        } else {
+            info(player, CITY_PREFIX, "§eModo de visualización cambiado a: §cVANILLA (Sin Resource Pack)§e.");
+            info(player, CITY_PREFIX, "§7Abre cualquier menú (/sync, /matriz, /nexo) para ver los iconos nativos.");
+        }
         return true;
     }
 

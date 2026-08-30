@@ -110,4 +110,8 @@ public final class WardMenuFacade {
                 quote.scoreGain(), quote.radiusAfter(), quote.upkeepPerInterval(), costLines,
                 quote.crossingTier());
     }
+
+    public MenuProvider menuProvider() {
+        return menuProvider;
+    }
 }

@@ -41,78 +41,113 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
     /** Default icon resolution map: iconKey → Material name. */
     private static final Map<String, String> DEFAULT_ICON_MAP = Map.ofEntries(
             Map.entry("icon.ward.active",    "SHIELD"),
+            Map.entry("ward.icon",           "SHIELD"),
             Map.entry("icon.ward.inactive",  "CRACKED_STONE_BRICKS"),
+            Map.entry("ward.inactive",       "CRACKED_STONE_BRICKS"),
             Map.entry("icon.ward.orphan",    "BARRIER"),
+            Map.entry("ward.orphan",         "BARRIER"),
             Map.entry("icon.ward.tier",      "NETHER_STAR"),
+            Map.entry("ward.tier",           "NETHER_STAR"),
+            Map.entry("ward.permissions",    "REPEATER"),
+            Map.entry("ward.disband",        "TNT"),
+            Map.entry("ward.transfer",       "GOLDEN_HELMET"),
             // Toggle vanilla del filtro «solo sospechosos» (admin): REDSTONE_TORCH
             // encendida = filtro activo, TORCH apagada = lista completa.
             Map.entry("icon.toggle.on",      "REDSTONE_TORCH"),
             Map.entry("icon.toggle.off",     "TORCH"),
             Map.entry("icon.nucleus",        "BEACON"),
+            Map.entry("nucleus.icon",        "BEACON"),
             Map.entry("icon.upkeep",         "CHEST"),
+            Map.entry("ward.upkeep",         "CHEST"),
             Map.entry("icon.members",        "PLAYER_HEAD"),
-            Map.entry("city.score",          "EMERALD"),
+            Map.entry("city.score",          "EXPERIENCE_BOTTLE"),
             Map.entry("city.treasury",       "GOLD_BLOCK"),
+            Map.entry("city.policy",         "LECTERN"),
+            Map.entry("city.transfer",       "GOLDEN_HELMET"),
+            Map.entry("city.delete",         "TNT"),
             Map.entry("icon.city.overview",  "BEACON"),
+            Map.entry("city.overview",       "BEACON"),
+            Map.entry("city.icon",           "BEACON"),
             Map.entry("icon.city.admin",     "COMMAND_BLOCK"),
+            Map.entry("estate.icon",         "BOOK"),
             Map.entry("icon.estate.overview","BOOK"),
+            Map.entry("estate.overview",     "BOOK"),
+            Map.entry("estate.instance",     "END_PORTAL_FRAME"),
+            Map.entry("estate.adventure",    "ENDER_EYE"),
+            Map.entry("estate.dragon",       "ENDER_EYE"),
             Map.entry("icon.estate.zone-tp", "NETHER_STAR"),
+            Map.entry("estate.zone-tp",      "NETHER_STAR"),
+            Map.entry("estate.join",         "ENDER_PEARL"),
+            Map.entry("estate.leave",        "IRON_DOOR"),
+            Map.entry("estate.transfer",     "GOLDEN_HELMET"),
+            Map.entry("estate.disband",      "TNT"),
+            Map.entry("estate.dissolve",     "TNT"),
             Map.entry("icon.deposit",        "LIME_STAINED_GLASS_PANE"),
+            Map.entry("menu.deposit",        "LIME_STAINED_GLASS_PANE"),
             Map.entry("icon.filler",         "GRAY_STAINED_GLASS_PANE"),
+            Map.entry("menu.filler",         "GRAY_STAINED_GLASS_PANE"),
             Map.entry("icon.back",           "ARROW"),
             Map.entry("menu.back",           "ARROW"),
-            Map.entry("menu.invite",         "PAPER"),
-            Map.entry("menu.kick",           "PAPER"),
-            Map.entry("menu.roles",          "PAPER"),
-            Map.entry("menu.members",        "PAPER"),
-            Map.entry("menu.confirm",        "PAPER"),
+            Map.entry("menu.back.nexo",      "ARROW"),
+            Map.entry("menu.close",          "BARRIER"),
+            Map.entry("menu.invite",         "EMERALD"),
+            Map.entry("menu.kick",           "SHEARS"),
+            Map.entry("menu.roles",          "BOOK"),
+            Map.entry("menu.permissions",    "REPEATER"),
+            Map.entry("menu.transfer",       "GOLDEN_HELMET"),
+            Map.entry("menu.disband",        "TNT"),
+            Map.entry("menu.leave.nexo",     "IRON_DOOR"),
+            Map.entry("menu.profile",        "PLAYER_HEAD"),
+            Map.entry("menu.members",        "PLAYER_HEAD"),
+            Map.entry("menu.confirm",        "EMERALD_BLOCK"),
+            Map.entry("menu.catcher",        "PAPER"),
             // ── 2×2 quarter tiles (pack CMDs 41501-41540): each block shows one
             //    big button split across four slots; same action on all four.
-            Map.entry("icon.upkeep.tl",        "PAPER"),
-            Map.entry("icon.upkeep.tr",        "PAPER"),
-            Map.entry("icon.upkeep.bl",        "PAPER"),
-            Map.entry("icon.upkeep.br",        "PAPER"),
-            Map.entry("icon.ward.tier.tl",     "PAPER"),
-            Map.entry("icon.ward.tier.tr",     "PAPER"),
-            Map.entry("icon.ward.tier.bl",     "PAPER"),
-            Map.entry("icon.ward.tier.br",     "PAPER"),
-            Map.entry("icon.city.overview.tl", "PAPER"),
-            Map.entry("icon.city.overview.tr", "PAPER"),
-            Map.entry("icon.city.overview.bl", "PAPER"),
-            Map.entry("icon.city.overview.br", "PAPER"),
-            Map.entry("city.treasury.tl",      "PAPER"),
-            Map.entry("city.treasury.tr",      "PAPER"),
-            Map.entry("city.treasury.bl",      "PAPER"),
-            Map.entry("city.treasury.br",      "PAPER"),
-            Map.entry("menu.invite.tl",        "PAPER"),
-            Map.entry("menu.invite.tr",        "PAPER"),
-            Map.entry("menu.invite.bl",        "PAPER"),
-            Map.entry("menu.invite.br",        "PAPER"),
-            Map.entry("menu.roles.tl",         "PAPER"),
-            Map.entry("menu.roles.tr",         "PAPER"),
-            Map.entry("menu.roles.bl",         "PAPER"),
-            Map.entry("menu.roles.br",         "PAPER"),
-            Map.entry("icon.estate.overview.tl", "PAPER"),
-            Map.entry("icon.estate.overview.tr", "PAPER"),
-            Map.entry("icon.estate.overview.bl", "PAPER"),
-            Map.entry("icon.estate.overview.br", "PAPER"),
-            Map.entry("icon.back.tl",          "PAPER"),
-            Map.entry("icon.back.tr",          "PAPER"),
-            Map.entry("icon.back.bl",          "PAPER"),
-            Map.entry("icon.back.br",          "PAPER"),
-            Map.entry("icon.ward.active.tl",   "PAPER"),
-            Map.entry("icon.ward.active.tr",   "PAPER"),
-            Map.entry("icon.ward.active.bl",   "PAPER"),
-            Map.entry("icon.ward.active.br",   "PAPER"),
-            Map.entry("icon.ward.inactive.tl", "PAPER"),
-            Map.entry("icon.ward.inactive.tr", "PAPER"),
-            Map.entry("icon.ward.inactive.bl", "PAPER"),
-            Map.entry("icon.ward.inactive.br", "PAPER"),
-            Map.entry("icon.estate.zone-tp.tl", "PAPER"),
-            Map.entry("icon.estate.zone-tp.tr", "PAPER"),
-            Map.entry("icon.estate.zone-tp.bl", "PAPER"),
-            Map.entry("icon.estate.zone-tp.br", "PAPER"),
-            Map.entry("menu.line",           "PAPER")
+            Map.entry("icon.upkeep.tl",        "CHEST"),
+            Map.entry("icon.upkeep.tr",        "CHEST"),
+            Map.entry("icon.upkeep.bl",        "CHEST"),
+            Map.entry("icon.upkeep.br",        "CHEST"),
+            Map.entry("icon.ward.tier.tl",     "NETHER_STAR"),
+            Map.entry("icon.ward.tier.tr",     "NETHER_STAR"),
+            Map.entry("icon.ward.tier.bl",     "NETHER_STAR"),
+            Map.entry("icon.ward.tier.br",     "NETHER_STAR"),
+            Map.entry("icon.city.overview.tl", "BEACON"),
+            Map.entry("icon.city.overview.tr", "BEACON"),
+            Map.entry("icon.city.overview.bl", "BEACON"),
+            Map.entry("icon.city.overview.br", "BEACON"),
+            Map.entry("city.treasury.tl",      "GOLD_BLOCK"),
+            Map.entry("city.treasury.tr",      "GOLD_BLOCK"),
+            Map.entry("city.treasury.bl",      "GOLD_BLOCK"),
+            Map.entry("city.treasury.br",      "GOLD_BLOCK"),
+            Map.entry("menu.invite.tl",        "EMERALD"),
+            Map.entry("menu.invite.tr",        "EMERALD"),
+            Map.entry("menu.invite.bl",        "EMERALD"),
+            Map.entry("menu.invite.br",        "EMERALD"),
+            Map.entry("menu.roles.tl",         "BOOK"),
+            Map.entry("menu.roles.tr",         "BOOK"),
+            Map.entry("menu.roles.bl",         "BOOK"),
+            Map.entry("menu.roles.br",         "BOOK"),
+            Map.entry("icon.estate.overview.tl", "BOOK"),
+            Map.entry("icon.estate.overview.tr", "BOOK"),
+            Map.entry("icon.estate.overview.bl", "BOOK"),
+            Map.entry("icon.estate.overview.br", "BOOK"),
+            Map.entry("icon.back.tl",          "ARROW"),
+            Map.entry("icon.back.tr",          "ARROW"),
+            Map.entry("icon.back.bl",          "ARROW"),
+            Map.entry("icon.back.br",          "ARROW"),
+            Map.entry("icon.ward.active.tl",   "SHIELD"),
+            Map.entry("icon.ward.active.tr",   "SHIELD"),
+            Map.entry("icon.ward.active.bl",   "SHIELD"),
+            Map.entry("icon.ward.active.br",   "SHIELD"),
+            Map.entry("icon.ward.inactive.tl", "CRACKED_STONE_BRICKS"),
+            Map.entry("icon.ward.inactive.tr", "CRACKED_STONE_BRICKS"),
+            Map.entry("icon.ward.inactive.bl", "CRACKED_STONE_BRICKS"),
+            Map.entry("icon.ward.inactive.br", "CRACKED_STONE_BRICKS"),
+            Map.entry("icon.estate.zone-tp.tl", "NETHER_STAR"),
+            Map.entry("icon.estate.zone-tp.tr", "NETHER_STAR"),
+            Map.entry("icon.estate.zone-tp.bl", "NETHER_STAR"),
+            Map.entry("icon.estate.zone-tp.br", "NETHER_STAR"),
+            Map.entry("menu.line",           "GRAY_STAINED_GLASS_PANE")
     );
 
     /**
@@ -186,6 +221,10 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
     /** Installs the per-player pack state used by {@code menus.provider: auto|rp}. */
     public void setPackTracker(dev.dreamcraft.protection.presentation.resourcepack.PackState state) {
         this.packState = state;
+    }
+
+    public dev.dreamcraft.protection.presentation.resourcepack.PackState getPackTracker() {
+        return packState;
     }
 
     /** Enables/disables glyph background titles (config {@code menus.custom-title}). */
@@ -316,7 +355,7 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
         for (int i = 0; i < definition.size(); i++) inv.setItem(i, filler);
         for (MenuItem item : definition.items()) {
             if (item.slot() >= 0 && item.slot() < definition.size()) {
-                inv.setItem(item.slot(), buildItemStack(item, viewerId));
+                inv.setItem(item.slot(), buildItemStack(item, definition.menuId(), viewerId));
             }
         }
     }
@@ -328,8 +367,27 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
                 && state != null && state.has(viewerId);
     }
 
-    private ItemStack buildItemStack(MenuItem item, UUID viewerId) {
-        Material mat = resolveIcon(item.iconKey());
+    private ItemStack buildItemStack(MenuItem item, String menuId, UUID viewerId) {
+        var state = packState;
+        boolean viewerHasPack = state != null && state.has(viewerId);
+
+        String effectiveKey = (!viewerHasPack && item.fallbackKey() != null)
+                ? item.fallbackKey()
+                : item.iconKey();
+
+        Material mat = null;
+        if (assets != null) {
+            mat = assets.resolveMaterial(effectiveKey, viewerHasPack);
+            if (mat == null && effectiveKey != null && effectiveKey.startsWith("icon.")) {
+                String contractKey = CONTRACT_KEY_ALIASES.getOrDefault(effectiveKey,
+                        effectiveKey.substring("icon.".length()));
+                mat = assets.resolveMaterial(contractKey, viewerHasPack);
+            }
+        }
+        if (mat == null) {
+            mat = resolveIcon(effectiveKey);
+        }
+
         ItemStack stack = new ItemStack(mat);
         ItemMeta meta = stack.getItemMeta();
         if (meta == null) return stack;
@@ -340,8 +398,8 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
                     .toList();
             meta.lore(loreLine);
         }
-        applySkullOwner(item.iconKey(), meta);
-        applyAssets(item.iconKey(), stack, meta, viewerId);
+        applySkullOwner(effectiveKey, meta);
+        applyAssets(effectiveKey, stack, meta, viewerId);
         stack.setItemMeta(meta);
         return stack;
     }
