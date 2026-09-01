@@ -1,0 +1,30 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "DreamCraft Bedrock",
+    "description": "DreamCraft Official Bedrock Resource Pack",
+    "uuid": "704cde47-002d-4a04-9ebd-750c37f09fc4",
+    "version": [
+      0,
+      1,
+      5
+    ],
+    "min_engine_version": [
+      1,
+      21,
+      0
+    ]
+  },
+  "modules": [
+    {
+      "description": "DreamCraft Bedrock Resource Pack",
+      "type": "resources",
+      "uuid": "f58b82fa-e95b-42a3-823b-fa10f54e5e87",
+      "version": [
+        0,
+        1,
+        5
+      ]
+    }
+  ]
+}

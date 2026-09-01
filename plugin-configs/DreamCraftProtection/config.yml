@@ -81,6 +81,7 @@ command-names:
 # Assets definidos en presentation-assets.yml (contrato con el equipo del RP).
 menus:
   provider: auto
+  custom-title: true
 
 # ── Nexos de Aventura (End / Trial Chamber) ──────────────────────────────────
 # Banda vertical de sigilo: la región WG y el descubrimiento de zona solo

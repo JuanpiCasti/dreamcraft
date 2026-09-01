@@ -1,0 +1,1584 @@
+{
+  "resource_pack_name": "dreamcraft",
+  "texture_name": "atlas.items",
+  "texture_data": {
+    "dc_item_menu_back": {
+      "textures": "textures/items/menu/back"
+    },
+    "dreamcraft:arrow_41402": {
+      "textures": "textures/items/menu/back"
+    },
+    "dreamcraft.arrow_41402": {
+      "textures": "textures/items/menu/back"
+    },
+    "dreamcraft_arrow_41402": {
+      "textures": "textures/items/menu/back"
+    },
+    "geyser_custom:arrow_41402": {
+      "textures": "textures/items/menu/back"
+    },
+    "geyser_custom.arrow_41402": {
+      "textures": "textures/items/menu/back"
+    },
+    "dc_item_menu_back_nexo": {
+      "textures": "textures/items/menu/back_nexo"
+    },
+    "dreamcraft:arrow_41416": {
+      "textures": "textures/items/menu/back_nexo"
+    },
+    "dreamcraft.arrow_41416": {
+      "textures": "textures/items/menu/back_nexo"
+    },
+    "dreamcraft_arrow_41416": {
+      "textures": "textures/items/menu/back_nexo"
+    },
+    "geyser_custom:arrow_41416": {
+      "textures": "textures/items/menu/back_nexo"
+    },
+    "geyser_custom.arrow_41416": {
+      "textures": "textures/items/menu/back_nexo"
+    },
+    "dc_item_ward_orphan": {
+      "textures": "textures/items/ward/orphan"
+    },
+    "dreamcraft:barrier_41106": {
+      "textures": "textures/items/ward/orphan"
+    },
+    "dreamcraft.barrier_41106": {
+      "textures": "textures/items/ward/orphan"
+    },
+    "dreamcraft_barrier_41106": {
+      "textures": "textures/items/ward/orphan"
+    },
+    "geyser_custom:barrier_41106": {
+      "textures": "textures/items/ward/orphan"
+    },
+    "geyser_custom.barrier_41106": {
+      "textures": "textures/items/ward/orphan"
+    },
+    "dc_item_menu_close": {
+      "textures": "textures/items/menu/close"
+    },
+    "dreamcraft:barrier_41404": {
+      "textures": "textures/items/menu/close"
+    },
+    "dreamcraft.barrier_41404": {
+      "textures": "textures/items/menu/close"
+    },
+    "dreamcraft_barrier_41404": {
+      "textures": "textures/items/menu/close"
+    },
+    "geyser_custom:barrier_41404": {
+      "textures": "textures/items/menu/close"
+    },
+    "geyser_custom.barrier_41404": {
+      "textures": "textures/items/menu/close"
+    },
+    "dc_item_city_icon": {
+      "textures": "textures/items/city/icon"
+    },
+    "dreamcraft:beacon_41201": {
+      "textures": "textures/items/city/icon"
+    },
+    "dreamcraft.beacon_41201": {
+      "textures": "textures/items/city/icon"
+    },
+    "dreamcraft_beacon_41201": {
+      "textures": "textures/items/city/icon"
+    },
+    "geyser_custom:beacon_41201": {
+      "textures": "textures/items/city/icon"
+    },
+    "geyser_custom.beacon_41201": {
+      "textures": "textures/items/city/icon"
+    },
+    "dc_item_estate_icon": {
+      "textures": "textures/items/estate/icon"
+    },
+    "dreamcraft:book_41301": {
+      "textures": "textures/items/estate/icon"
+    },
+    "dreamcraft.book_41301": {
+      "textures": "textures/items/estate/icon"
+    },
+    "dreamcraft_book_41301": {
+      "textures": "textures/items/estate/icon"
+    },
+    "geyser_custom:book_41301": {
+      "textures": "textures/items/estate/icon"
+    },
+    "geyser_custom.book_41301": {
+      "textures": "textures/items/estate/icon"
+    },
+    "dc_item_menu_roles": {
+      "textures": "textures/items/menu/roles"
+    },
+    "dreamcraft:book_41407": {
+      "textures": "textures/items/menu/roles"
+    },
+    "dreamcraft.book_41407": {
+      "textures": "textures/items/menu/roles"
+    },
+    "dreamcraft_book_41407": {
+      "textures": "textures/items/menu/roles"
+    },
+    "geyser_custom:book_41407": {
+      "textures": "textures/items/menu/roles"
+    },
+    "geyser_custom.book_41407": {
+      "textures": "textures/items/menu/roles"
+    },
+    "dc_item_ward_upkeep": {
+      "textures": "textures/items/ward/upkeep"
+    },
+    "dreamcraft:chest_41105": {
+      "textures": "textures/items/ward/upkeep"
+    },
+    "dreamcraft.chest_41105": {
+      "textures": "textures/items/ward/upkeep"
+    },
+    "dreamcraft_chest_41105": {
+      "textures": "textures/items/ward/upkeep"
+    },
+    "geyser_custom:chest_41105": {
+      "textures": "textures/items/ward/upkeep"
+    },
+    "geyser_custom.chest_41105": {
+      "textures": "textures/items/ward/upkeep"
+    },
+    "dc_item_city_admin": {
+      "textures": "textures/items/city/admin"
+    },
+    "dreamcraft:command_block_41204": {
+      "textures": "textures/items/city/admin"
+    },
+    "dreamcraft.command_block_41204": {
+      "textures": "textures/items/city/admin"
+    },
+    "dreamcraft_command_block_41204": {
+      "textures": "textures/items/city/admin"
+    },
+    "geyser_custom:command_block_41204": {
+      "textures": "textures/items/city/admin"
+    },
+    "geyser_custom.command_block_41204": {
+      "textures": "textures/items/city/admin"
+    },
+    "dc_item_ward_inactive": {
+      "textures": "textures/items/ward/inactive"
+    },
+    "dreamcraft:cracked_stone_bricks_41102": {
+      "textures": "textures/items/ward/inactive"
+    },
+    "dreamcraft.cracked_stone_bricks_41102": {
+      "textures": "textures/items/ward/inactive"
+    },
+    "dreamcraft_cracked_stone_bricks_41102": {
+      "textures": "textures/items/ward/inactive"
+    },
+    "geyser_custom:cracked_stone_bricks_41102": {
+      "textures": "textures/items/ward/inactive"
+    },
+    "geyser_custom.cracked_stone_bricks_41102": {
+      "textures": "textures/items/ward/inactive"
+    },
+    "dc_item_estate_dragon": {
+      "textures": "textures/items/estate/dragon"
+    },
+    "dreamcraft:dragon_head_41304": {
+      "textures": "textures/items/estate/dragon"
+    },
+    "dreamcraft.dragon_head_41304": {
+      "textures": "textures/items/estate/dragon"
+    },
+    "dreamcraft_dragon_head_41304": {
+      "textures": "textures/items/estate/dragon"
+    },
+    "geyser_custom:dragon_head_41304": {
+      "textures": "textures/items/estate/dragon"
+    },
+    "geyser_custom.dragon_head_41304": {
+      "textures": "textures/items/estate/dragon"
+    },
+    "dc_item_city_score": {
+      "textures": "textures/items/city/score"
+    },
+    "dreamcraft:emerald_41203": {
+      "textures": "textures/items/city/score"
+    },
+    "dreamcraft.emerald_41203": {
+      "textures": "textures/items/city/score"
+    },
+    "dreamcraft_emerald_41203": {
+      "textures": "textures/items/city/score"
+    },
+    "geyser_custom:emerald_41203": {
+      "textures": "textures/items/city/score"
+    },
+    "geyser_custom.emerald_41203": {
+      "textures": "textures/items/city/score"
+    },
+    "dc_item_menu_invite": {
+      "textures": "textures/items/menu/invite"
+    },
+    "dreamcraft:emerald_41405": {
+      "textures": "textures/items/menu/invite"
+    },
+    "dreamcraft.emerald_41405": {
+      "textures": "textures/items/menu/invite"
+    },
+    "dreamcraft_emerald_41405": {
+      "textures": "textures/items/menu/invite"
+    },
+    "geyser_custom:emerald_41405": {
+      "textures": "textures/items/menu/invite"
+    },
+    "geyser_custom.emerald_41405": {
+      "textures": "textures/items/menu/invite"
+    },
+    "dc_item_menu_confirm": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "dreamcraft:emerald_block_41409": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "dreamcraft.emerald_block_41409": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "dreamcraft_emerald_block_41409": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "geyser_custom:emerald_block_41409": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "geyser_custom.emerald_block_41409": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "dc_item_estate_instance": {
+      "textures": "textures/items/estate/instance"
+    },
+    "dreamcraft:end_portal_frame_41303": {
+      "textures": "textures/items/estate/instance"
+    },
+    "dreamcraft.end_portal_frame_41303": {
+      "textures": "textures/items/estate/instance"
+    },
+    "dreamcraft_end_portal_frame_41303": {
+      "textures": "textures/items/estate/instance"
+    },
+    "geyser_custom:end_portal_frame_41303": {
+      "textures": "textures/items/estate/instance"
+    },
+    "geyser_custom.end_portal_frame_41303": {
+      "textures": "textures/items/estate/instance"
+    },
+    "dc_item_estate_adventure": {
+      "textures": "textures/items/estate/adventure"
+    },
+    "dreamcraft:ender_eye_41302": {
+      "textures": "textures/items/estate/adventure"
+    },
+    "dreamcraft.ender_eye_41302": {
+      "textures": "textures/items/estate/adventure"
+    },
+    "dreamcraft_ender_eye_41302": {
+      "textures": "textures/items/estate/adventure"
+    },
+    "geyser_custom:ender_eye_41302": {
+      "textures": "textures/items/estate/adventure"
+    },
+    "geyser_custom.ender_eye_41302": {
+      "textures": "textures/items/estate/adventure"
+    },
+    "dc_item_ward_score": {
+      "textures": "textures/items/ward/score"
+    },
+    "dreamcraft:experience_bottle_41104": {
+      "textures": "textures/items/ward/score"
+    },
+    "dreamcraft.experience_bottle_41104": {
+      "textures": "textures/items/ward/score"
+    },
+    "dreamcraft_experience_bottle_41104": {
+      "textures": "textures/items/ward/score"
+    },
+    "geyser_custom:experience_bottle_41104": {
+      "textures": "textures/items/ward/score"
+    },
+    "geyser_custom.experience_bottle_41104": {
+      "textures": "textures/items/ward/score"
+    },
+    "dc_item_city_treasury": {
+      "textures": "textures/items/city/treasury"
+    },
+    "dreamcraft:gold_block_41202": {
+      "textures": "textures/items/city/treasury"
+    },
+    "dreamcraft.gold_block_41202": {
+      "textures": "textures/items/city/treasury"
+    },
+    "dreamcraft_gold_block_41202": {
+      "textures": "textures/items/city/treasury"
+    },
+    "geyser_custom:gold_block_41202": {
+      "textures": "textures/items/city/treasury"
+    },
+    "geyser_custom.gold_block_41202": {
+      "textures": "textures/items/city/treasury"
+    },
+    "dc_item_menu_line": {
+      "textures": "textures/items/menu/line"
+    },
+    "dreamcraft:gray_stained_glass_pane_41410": {
+      "textures": "textures/items/menu/line"
+    },
+    "dreamcraft.gray_stained_glass_pane_41410": {
+      "textures": "textures/items/menu/line"
+    },
+    "dreamcraft_gray_stained_glass_pane_41410": {
+      "textures": "textures/items/menu/line"
+    },
+    "geyser_custom:gray_stained_glass_pane_41410": {
+      "textures": "textures/items/menu/line"
+    },
+    "geyser_custom.gray_stained_glass_pane_41410": {
+      "textures": "textures/items/menu/line"
+    },
+    "dc_item_menu_deposit": {
+      "textures": "textures/items/menu/deposit"
+    },
+    "dreamcraft:lime_stained_glass_pane_41401": {
+      "textures": "textures/items/menu/deposit"
+    },
+    "dreamcraft.lime_stained_glass_pane_41401": {
+      "textures": "textures/items/menu/deposit"
+    },
+    "dreamcraft_lime_stained_glass_pane_41401": {
+      "textures": "textures/items/menu/deposit"
+    },
+    "geyser_custom:lime_stained_glass_pane_41401": {
+      "textures": "textures/items/menu/deposit"
+    },
+    "geyser_custom.lime_stained_glass_pane_41401": {
+      "textures": "textures/items/menu/deposit"
+    },
+    "dc_item_ward_tier": {
+      "textures": "textures/items/ward/tier"
+    },
+    "dreamcraft:nether_star_41103": {
+      "textures": "textures/items/ward/tier"
+    },
+    "dreamcraft.nether_star_41103": {
+      "textures": "textures/items/ward/tier"
+    },
+    "dreamcraft_nether_star_41103": {
+      "textures": "textures/items/ward/tier"
+    },
+    "geyser_custom:nether_star_41103": {
+      "textures": "textures/items/ward/tier"
+    },
+    "geyser_custom.nether_star_41103": {
+      "textures": "textures/items/ward/tier"
+    },
+    "dc_item_estate_zone_tp": {
+      "textures": "textures/items/estate/zone-tp"
+    },
+    "dreamcraft:nether_star_41305": {
+      "textures": "textures/items/estate/zone-tp"
+    },
+    "dreamcraft.nether_star_41305": {
+      "textures": "textures/items/estate/zone-tp"
+    },
+    "dreamcraft_nether_star_41305": {
+      "textures": "textures/items/estate/zone-tp"
+    },
+    "geyser_custom:nether_star_41305": {
+      "textures": "textures/items/estate/zone-tp"
+    },
+    "geyser_custom.nether_star_41305": {
+      "textures": "textures/items/estate/zone-tp"
+    },
+    "dc_block_nucleus_face_active": {
+      "textures": "textures/blocks/nucleus_face_active"
+    },
+    "dreamcraft:note_block_41002": {
+      "textures": "textures/blocks/nucleus_face_active"
+    },
+    "dreamcraft.note_block_41002": {
+      "textures": "textures/blocks/nucleus_face_active"
+    },
+    "dreamcraft_note_block_41002": {
+      "textures": "textures/blocks/nucleus_face_active"
+    },
+    "geyser_custom:note_block_41002": {
+      "textures": "textures/blocks/nucleus_face_active"
+    },
+    "geyser_custom.note_block_41002": {
+      "textures": "textures/blocks/nucleus_face_active"
+    },
+    "dreamcraft:paper_41401": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "dreamcraft.paper_41401": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "dreamcraft_paper_41401": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "geyser_custom:paper_41401": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "geyser_custom.paper_41401": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "dreamcraft:paper_41402": {
+      "textures": "textures/items/menu/back"
+    },
+    "dreamcraft.paper_41402": {
+      "textures": "textures/items/menu/back"
+    },
+    "dreamcraft_paper_41402": {
+      "textures": "textures/items/menu/back"
+    },
+    "geyser_custom:paper_41402": {
+      "textures": "textures/items/menu/back"
+    },
+    "geyser_custom.paper_41402": {
+      "textures": "textures/items/menu/back"
+    },
+    "dc_item_menu_profile": {
+      "textures": "textures/items/menu/profile"
+    },
+    "dreamcraft:paper_41403": {
+      "textures": "textures/items/menu/profile"
+    },
+    "dreamcraft.paper_41403": {
+      "textures": "textures/items/menu/profile"
+    },
+    "dreamcraft_paper_41403": {
+      "textures": "textures/items/menu/profile"
+    },
+    "geyser_custom:paper_41403": {
+      "textures": "textures/items/menu/profile"
+    },
+    "geyser_custom.paper_41403": {
+      "textures": "textures/items/menu/profile"
+    },
+    "dreamcraft:paper_41404": {
+      "textures": "textures/items/menu/close"
+    },
+    "dreamcraft.paper_41404": {
+      "textures": "textures/items/menu/close"
+    },
+    "dreamcraft_paper_41404": {
+      "textures": "textures/items/menu/close"
+    },
+    "geyser_custom:paper_41404": {
+      "textures": "textures/items/menu/close"
+    },
+    "geyser_custom.paper_41404": {
+      "textures": "textures/items/menu/close"
+    },
+    "dreamcraft:paper_41405": {
+      "textures": "textures/items/menu/invite"
+    },
+    "dreamcraft.paper_41405": {
+      "textures": "textures/items/menu/invite"
+    },
+    "dreamcraft_paper_41405": {
+      "textures": "textures/items/menu/invite"
+    },
+    "geyser_custom:paper_41405": {
+      "textures": "textures/items/menu/invite"
+    },
+    "geyser_custom.paper_41405": {
+      "textures": "textures/items/menu/invite"
+    },
+    "dc_item_menu_kick": {
+      "textures": "textures/items/menu/kick"
+    },
+    "dreamcraft:paper_41406": {
+      "textures": "textures/items/menu/kick"
+    },
+    "dreamcraft.paper_41406": {
+      "textures": "textures/items/menu/kick"
+    },
+    "dreamcraft_paper_41406": {
+      "textures": "textures/items/menu/kick"
+    },
+    "geyser_custom:paper_41406": {
+      "textures": "textures/items/menu/kick"
+    },
+    "geyser_custom.paper_41406": {
+      "textures": "textures/items/menu/kick"
+    },
+    "dreamcraft:paper_41407": {
+      "textures": "textures/items/menu/roles"
+    },
+    "dreamcraft.paper_41407": {
+      "textures": "textures/items/menu/roles"
+    },
+    "dreamcraft_paper_41407": {
+      "textures": "textures/items/menu/roles"
+    },
+    "geyser_custom:paper_41407": {
+      "textures": "textures/items/menu/roles"
+    },
+    "geyser_custom.paper_41407": {
+      "textures": "textures/items/menu/roles"
+    },
+    "dc_item_menu_members": {
+      "textures": "textures/items/menu/members"
+    },
+    "dreamcraft:paper_41408": {
+      "textures": "textures/items/menu/members"
+    },
+    "dreamcraft.paper_41408": {
+      "textures": "textures/items/menu/members"
+    },
+    "dreamcraft_paper_41408": {
+      "textures": "textures/items/menu/members"
+    },
+    "geyser_custom:paper_41408": {
+      "textures": "textures/items/menu/members"
+    },
+    "geyser_custom.paper_41408": {
+      "textures": "textures/items/menu/members"
+    },
+    "dreamcraft:paper_41409": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "dreamcraft.paper_41409": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "dreamcraft_paper_41409": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "geyser_custom:paper_41409": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "geyser_custom.paper_41409": {
+      "textures": "textures/items/menu/confirm"
+    },
+    "dreamcraft:paper_41410": {
+      "textures": "textures/items/menu/line"
+    },
+    "dreamcraft.paper_41410": {
+      "textures": "textures/items/menu/line"
+    },
+    "dreamcraft_paper_41410": {
+      "textures": "textures/items/menu/line"
+    },
+    "geyser_custom:paper_41410": {
+      "textures": "textures/items/menu/line"
+    },
+    "geyser_custom.paper_41410": {
+      "textures": "textures/items/menu/line"
+    },
+    "dc_item_menu_catcher": {
+      "textures": "textures/items/menu/catcher"
+    },
+    "dreamcraft:paper_41411": {
+      "textures": "textures/items/menu/catcher"
+    },
+    "dreamcraft.paper_41411": {
+      "textures": "textures/items/menu/catcher"
+    },
+    "dreamcraft_paper_41411": {
+      "textures": "textures/items/menu/catcher"
+    },
+    "geyser_custom:paper_41411": {
+      "textures": "textures/items/menu/catcher"
+    },
+    "geyser_custom.paper_41411": {
+      "textures": "textures/items/menu/catcher"
+    },
+    "dc_item_menu_gear_sync": {
+      "textures": "textures/items/menu/gear_sync"
+    },
+    "dreamcraft:paper_41412": {
+      "textures": "textures/items/menu/gear_sync"
+    },
+    "dreamcraft.paper_41412": {
+      "textures": "textures/items/menu/gear_sync"
+    },
+    "dreamcraft_paper_41412": {
+      "textures": "textures/items/menu/gear_sync"
+    },
+    "geyser_custom:paper_41412": {
+      "textures": "textures/items/menu/gear_sync"
+    },
+    "geyser_custom.paper_41412": {
+      "textures": "textures/items/menu/gear_sync"
+    },
+    "dc_item_menu_gear_matriz": {
+      "textures": "textures/items/menu/gear_matriz"
+    },
+    "dreamcraft:paper_41413": {
+      "textures": "textures/items/menu/gear_matriz"
+    },
+    "dreamcraft.paper_41413": {
+      "textures": "textures/items/menu/gear_matriz"
+    },
+    "dreamcraft_paper_41413": {
+      "textures": "textures/items/menu/gear_matriz"
+    },
+    "geyser_custom:paper_41413": {
+      "textures": "textures/items/menu/gear_matriz"
+    },
+    "geyser_custom.paper_41413": {
+      "textures": "textures/items/menu/gear_matriz"
+    },
+    "dc_item_menu_gear_nexo": {
+      "textures": "textures/items/menu/gear_nexo"
+    },
+    "dreamcraft:paper_41414": {
+      "textures": "textures/items/menu/gear_nexo"
+    },
+    "dreamcraft.paper_41414": {
+      "textures": "textures/items/menu/gear_nexo"
+    },
+    "dreamcraft_paper_41414": {
+      "textures": "textures/items/menu/gear_nexo"
+    },
+    "geyser_custom:paper_41414": {
+      "textures": "textures/items/menu/gear_nexo"
+    },
+    "geyser_custom.paper_41414": {
+      "textures": "textures/items/menu/gear_nexo"
+    },
+    "dc_item_menu_permissions": {
+      "textures": "textures/items/menu/permissions"
+    },
+    "dreamcraft:paper_41415": {
+      "textures": "textures/items/menu/permissions"
+    },
+    "dreamcraft.paper_41415": {
+      "textures": "textures/items/menu/permissions"
+    },
+    "dreamcraft_paper_41415": {
+      "textures": "textures/items/menu/permissions"
+    },
+    "geyser_custom:paper_41415": {
+      "textures": "textures/items/menu/permissions"
+    },
+    "geyser_custom.paper_41415": {
+      "textures": "textures/items/menu/permissions"
+    },
+    "dc_item_menu_leave_nexo": {
+      "textures": "textures/items/menu/leave_nexo"
+    },
+    "dreamcraft:paper_41417": {
+      "textures": "textures/items/menu/leave_nexo"
+    },
+    "dreamcraft.paper_41417": {
+      "textures": "textures/items/menu/leave_nexo"
+    },
+    "dreamcraft_paper_41417": {
+      "textures": "textures/items/menu/leave_nexo"
+    },
+    "geyser_custom:paper_41417": {
+      "textures": "textures/items/menu/leave_nexo"
+    },
+    "geyser_custom.paper_41417": {
+      "textures": "textures/items/menu/leave_nexo"
+    },
+    "dc_item_menu_q_upkeep_tl": {
+      "textures": "textures/items/menu/q/upkeep_tl"
+    },
+    "dreamcraft:paper_41501": {
+      "textures": "textures/items/menu/q/upkeep_tl"
+    },
+    "dreamcraft.paper_41501": {
+      "textures": "textures/items/menu/q/upkeep_tl"
+    },
+    "dreamcraft_paper_41501": {
+      "textures": "textures/items/menu/q/upkeep_tl"
+    },
+    "geyser_custom:paper_41501": {
+      "textures": "textures/items/menu/q/upkeep_tl"
+    },
+    "geyser_custom.paper_41501": {
+      "textures": "textures/items/menu/q/upkeep_tl"
+    },
+    "dc_item_menu_q_upkeep_tr": {
+      "textures": "textures/items/menu/q/upkeep_tr"
+    },
+    "dreamcraft:paper_41502": {
+      "textures": "textures/items/menu/q/upkeep_tr"
+    },
+    "dreamcraft.paper_41502": {
+      "textures": "textures/items/menu/q/upkeep_tr"
+    },
+    "dreamcraft_paper_41502": {
+      "textures": "textures/items/menu/q/upkeep_tr"
+    },
+    "geyser_custom:paper_41502": {
+      "textures": "textures/items/menu/q/upkeep_tr"
+    },
+    "geyser_custom.paper_41502": {
+      "textures": "textures/items/menu/q/upkeep_tr"
+    },
+    "dc_item_menu_q_upkeep_bl": {
+      "textures": "textures/items/menu/q/upkeep_bl"
+    },
+    "dreamcraft:paper_41503": {
+      "textures": "textures/items/menu/q/upkeep_bl"
+    },
+    "dreamcraft.paper_41503": {
+      "textures": "textures/items/menu/q/upkeep_bl"
+    },
+    "dreamcraft_paper_41503": {
+      "textures": "textures/items/menu/q/upkeep_bl"
+    },
+    "geyser_custom:paper_41503": {
+      "textures": "textures/items/menu/q/upkeep_bl"
+    },
+    "geyser_custom.paper_41503": {
+      "textures": "textures/items/menu/q/upkeep_bl"
+    },
+    "dc_item_menu_q_upkeep_br": {
+      "textures": "textures/items/menu/q/upkeep_br"
+    },
+    "dreamcraft:paper_41504": {
+      "textures": "textures/items/menu/q/upkeep_br"
+    },
+    "dreamcraft.paper_41504": {
+      "textures": "textures/items/menu/q/upkeep_br"
+    },
+    "dreamcraft_paper_41504": {
+      "textures": "textures/items/menu/q/upkeep_br"
+    },
+    "geyser_custom:paper_41504": {
+      "textures": "textures/items/menu/q/upkeep_br"
+    },
+    "geyser_custom.paper_41504": {
+      "textures": "textures/items/menu/q/upkeep_br"
+    },
+    "dc_item_menu_q_fase_tl": {
+      "textures": "textures/items/menu/q/fase_tl"
+    },
+    "dreamcraft:paper_41505": {
+      "textures": "textures/items/menu/q/fase_tl"
+    },
+    "dreamcraft.paper_41505": {
+      "textures": "textures/items/menu/q/fase_tl"
+    },
+    "dreamcraft_paper_41505": {
+      "textures": "textures/items/menu/q/fase_tl"
+    },
+    "geyser_custom:paper_41505": {
+      "textures": "textures/items/menu/q/fase_tl"
+    },
+    "geyser_custom.paper_41505": {
+      "textures": "textures/items/menu/q/fase_tl"
+    },
+    "dc_item_menu_q_fase_tr": {
+      "textures": "textures/items/menu/q/fase_tr"
+    },
+    "dreamcraft:paper_41506": {
+      "textures": "textures/items/menu/q/fase_tr"
+    },
+    "dreamcraft.paper_41506": {
+      "textures": "textures/items/menu/q/fase_tr"
+    },
+    "dreamcraft_paper_41506": {
+      "textures": "textures/items/menu/q/fase_tr"
+    },
+    "geyser_custom:paper_41506": {
+      "textures": "textures/items/menu/q/fase_tr"
+    },
+    "geyser_custom.paper_41506": {
+      "textures": "textures/items/menu/q/fase_tr"
+    },
+    "dc_item_menu_q_fase_bl": {
+      "textures": "textures/items/menu/q/fase_bl"
+    },
+    "dreamcraft:paper_41507": {
+      "textures": "textures/items/menu/q/fase_bl"
+    },
+    "dreamcraft.paper_41507": {
+      "textures": "textures/items/menu/q/fase_bl"
+    },
+    "dreamcraft_paper_41507": {
+      "textures": "textures/items/menu/q/fase_bl"
+    },
+    "geyser_custom:paper_41507": {
+      "textures": "textures/items/menu/q/fase_bl"
+    },
+    "geyser_custom.paper_41507": {
+      "textures": "textures/items/menu/q/fase_bl"
+    },
+    "dc_item_menu_q_fase_br": {
+      "textures": "textures/items/menu/q/fase_br"
+    },
+    "dreamcraft:paper_41508": {
+      "textures": "textures/items/menu/q/fase_br"
+    },
+    "dreamcraft.paper_41508": {
+      "textures": "textures/items/menu/q/fase_br"
+    },
+    "dreamcraft_paper_41508": {
+      "textures": "textures/items/menu/q/fase_br"
+    },
+    "geyser_custom:paper_41508": {
+      "textures": "textures/items/menu/q/fase_br"
+    },
+    "geyser_custom.paper_41508": {
+      "textures": "textures/items/menu/q/fase_br"
+    },
+    "dc_item_menu_q_matriz_tl": {
+      "textures": "textures/items/menu/q/matriz_tl"
+    },
+    "dreamcraft:paper_41509": {
+      "textures": "textures/items/menu/q/matriz_tl"
+    },
+    "dreamcraft.paper_41509": {
+      "textures": "textures/items/menu/q/matriz_tl"
+    },
+    "dreamcraft_paper_41509": {
+      "textures": "textures/items/menu/q/matriz_tl"
+    },
+    "geyser_custom:paper_41509": {
+      "textures": "textures/items/menu/q/matriz_tl"
+    },
+    "geyser_custom.paper_41509": {
+      "textures": "textures/items/menu/q/matriz_tl"
+    },
+    "dc_item_menu_q_matriz_tr": {
+      "textures": "textures/items/menu/q/matriz_tr"
+    },
+    "dreamcraft:paper_41510": {
+      "textures": "textures/items/menu/q/matriz_tr"
+    },
+    "dreamcraft.paper_41510": {
+      "textures": "textures/items/menu/q/matriz_tr"
+    },
+    "dreamcraft_paper_41510": {
+      "textures": "textures/items/menu/q/matriz_tr"
+    },
+    "geyser_custom:paper_41510": {
+      "textures": "textures/items/menu/q/matriz_tr"
+    },
+    "geyser_custom.paper_41510": {
+      "textures": "textures/items/menu/q/matriz_tr"
+    },
+    "dc_item_menu_q_matriz_bl": {
+      "textures": "textures/items/menu/q/matriz_bl"
+    },
+    "dreamcraft:paper_41511": {
+      "textures": "textures/items/menu/q/matriz_bl"
+    },
+    "dreamcraft.paper_41511": {
+      "textures": "textures/items/menu/q/matriz_bl"
+    },
+    "dreamcraft_paper_41511": {
+      "textures": "textures/items/menu/q/matriz_bl"
+    },
+    "geyser_custom:paper_41511": {
+      "textures": "textures/items/menu/q/matriz_bl"
+    },
+    "geyser_custom.paper_41511": {
+      "textures": "textures/items/menu/q/matriz_bl"
+    },
+    "dc_item_menu_q_matriz_br": {
+      "textures": "textures/items/menu/q/matriz_br"
+    },
+    "dreamcraft:paper_41512": {
+      "textures": "textures/items/menu/q/matriz_br"
+    },
+    "dreamcraft.paper_41512": {
+      "textures": "textures/items/menu/q/matriz_br"
+    },
+    "dreamcraft_paper_41512": {
+      "textures": "textures/items/menu/q/matriz_br"
+    },
+    "geyser_custom:paper_41512": {
+      "textures": "textures/items/menu/q/matriz_br"
+    },
+    "geyser_custom.paper_41512": {
+      "textures": "textures/items/menu/q/matriz_br"
+    },
+    "dc_item_menu_q_tesoro_tl": {
+      "textures": "textures/items/menu/q/tesoro_tl"
+    },
+    "dreamcraft:paper_41513": {
+      "textures": "textures/items/menu/q/tesoro_tl"
+    },
+    "dreamcraft.paper_41513": {
+      "textures": "textures/items/menu/q/tesoro_tl"
+    },
+    "dreamcraft_paper_41513": {
+      "textures": "textures/items/menu/q/tesoro_tl"
+    },
+    "geyser_custom:paper_41513": {
+      "textures": "textures/items/menu/q/tesoro_tl"
+    },
+    "geyser_custom.paper_41513": {
+      "textures": "textures/items/menu/q/tesoro_tl"
+    },
+    "dc_item_menu_q_tesoro_tr": {
+      "textures": "textures/items/menu/q/tesoro_tr"
+    },
+    "dreamcraft:paper_41514": {
+      "textures": "textures/items/menu/q/tesoro_tr"
+    },
+    "dreamcraft.paper_41514": {
+      "textures": "textures/items/menu/q/tesoro_tr"
+    },
+    "dreamcraft_paper_41514": {
+      "textures": "textures/items/menu/q/tesoro_tr"
+    },
+    "geyser_custom:paper_41514": {
+      "textures": "textures/items/menu/q/tesoro_tr"
+    },
+    "geyser_custom.paper_41514": {
+      "textures": "textures/items/menu/q/tesoro_tr"
+    },
+    "dc_item_menu_q_tesoro_bl": {
+      "textures": "textures/items/menu/q/tesoro_bl"
+    },
+    "dreamcraft:paper_41515": {
+      "textures": "textures/items/menu/q/tesoro_bl"
+    },
+    "dreamcraft.paper_41515": {
+      "textures": "textures/items/menu/q/tesoro_bl"
+    },
+    "dreamcraft_paper_41515": {
+      "textures": "textures/items/menu/q/tesoro_bl"
+    },
+    "geyser_custom:paper_41515": {
+      "textures": "textures/items/menu/q/tesoro_bl"
+    },
+    "geyser_custom.paper_41515": {
+      "textures": "textures/items/menu/q/tesoro_bl"
+    },
+    "dc_item_menu_q_tesoro_br": {
+      "textures": "textures/items/menu/q/tesoro_br"
+    },
+    "dreamcraft:paper_41516": {
+      "textures": "textures/items/menu/q/tesoro_br"
+    },
+    "dreamcraft.paper_41516": {
+      "textures": "textures/items/menu/q/tesoro_br"
+    },
+    "dreamcraft_paper_41516": {
+      "textures": "textures/items/menu/q/tesoro_br"
+    },
+    "geyser_custom:paper_41516": {
+      "textures": "textures/items/menu/q/tesoro_br"
+    },
+    "geyser_custom.paper_41516": {
+      "textures": "textures/items/menu/q/tesoro_br"
+    },
+    "dc_item_menu_q_invite_tl": {
+      "textures": "textures/items/menu/q/invite_tl"
+    },
+    "dreamcraft:paper_41517": {
+      "textures": "textures/items/menu/q/invite_tl"
+    },
+    "dreamcraft.paper_41517": {
+      "textures": "textures/items/menu/q/invite_tl"
+    },
+    "dreamcraft_paper_41517": {
+      "textures": "textures/items/menu/q/invite_tl"
+    },
+    "geyser_custom:paper_41517": {
+      "textures": "textures/items/menu/q/invite_tl"
+    },
+    "geyser_custom.paper_41517": {
+      "textures": "textures/items/menu/q/invite_tl"
+    },
+    "dc_item_menu_q_invite_tr": {
+      "textures": "textures/items/menu/q/invite_tr"
+    },
+    "dreamcraft:paper_41518": {
+      "textures": "textures/items/menu/q/invite_tr"
+    },
+    "dreamcraft.paper_41518": {
+      "textures": "textures/items/menu/q/invite_tr"
+    },
+    "dreamcraft_paper_41518": {
+      "textures": "textures/items/menu/q/invite_tr"
+    },
+    "geyser_custom:paper_41518": {
+      "textures": "textures/items/menu/q/invite_tr"
+    },
+    "geyser_custom.paper_41518": {
+      "textures": "textures/items/menu/q/invite_tr"
+    },
+    "dc_item_menu_q_invite_bl": {
+      "textures": "textures/items/menu/q/invite_bl"
+    },
+    "dreamcraft:paper_41519": {
+      "textures": "textures/items/menu/q/invite_bl"
+    },
+    "dreamcraft.paper_41519": {
+      "textures": "textures/items/menu/q/invite_bl"
+    },
+    "dreamcraft_paper_41519": {
+      "textures": "textures/items/menu/q/invite_bl"
+    },
+    "geyser_custom:paper_41519": {
+      "textures": "textures/items/menu/q/invite_bl"
+    },
+    "geyser_custom.paper_41519": {
+      "textures": "textures/items/menu/q/invite_bl"
+    },
+    "dc_item_menu_q_invite_br": {
+      "textures": "textures/items/menu/q/invite_br"
+    },
+    "dreamcraft:paper_41520": {
+      "textures": "textures/items/menu/q/invite_br"
+    },
+    "dreamcraft.paper_41520": {
+      "textures": "textures/items/menu/q/invite_br"
+    },
+    "dreamcraft_paper_41520": {
+      "textures": "textures/items/menu/q/invite_br"
+    },
+    "geyser_custom:paper_41520": {
+      "textures": "textures/items/menu/q/invite_br"
+    },
+    "geyser_custom.paper_41520": {
+      "textures": "textures/items/menu/q/invite_br"
+    },
+    "dc_item_menu_q_roles_tl": {
+      "textures": "textures/items/menu/q/roles_tl"
+    },
+    "dreamcraft:paper_41521": {
+      "textures": "textures/items/menu/q/roles_tl"
+    },
+    "dreamcraft.paper_41521": {
+      "textures": "textures/items/menu/q/roles_tl"
+    },
+    "dreamcraft_paper_41521": {
+      "textures": "textures/items/menu/q/roles_tl"
+    },
+    "geyser_custom:paper_41521": {
+      "textures": "textures/items/menu/q/roles_tl"
+    },
+    "geyser_custom.paper_41521": {
+      "textures": "textures/items/menu/q/roles_tl"
+    },
+    "dc_item_menu_q_roles_tr": {
+      "textures": "textures/items/menu/q/roles_tr"
+    },
+    "dreamcraft:paper_41522": {
+      "textures": "textures/items/menu/q/roles_tr"
+    },
+    "dreamcraft.paper_41522": {
+      "textures": "textures/items/menu/q/roles_tr"
+    },
+    "dreamcraft_paper_41522": {
+      "textures": "textures/items/menu/q/roles_tr"
+    },
+    "geyser_custom:paper_41522": {
+      "textures": "textures/items/menu/q/roles_tr"
+    },
+    "geyser_custom.paper_41522": {
+      "textures": "textures/items/menu/q/roles_tr"
+    },
+    "dc_item_menu_q_roles_bl": {
+      "textures": "textures/items/menu/q/roles_bl"
+    },
+    "dreamcraft:paper_41523": {
+      "textures": "textures/items/menu/q/roles_bl"
+    },
+    "dreamcraft.paper_41523": {
+      "textures": "textures/items/menu/q/roles_bl"
+    },
+    "dreamcraft_paper_41523": {
+      "textures": "textures/items/menu/q/roles_bl"
+    },
+    "geyser_custom:paper_41523": {
+      "textures": "textures/items/menu/q/roles_bl"
+    },
+    "geyser_custom.paper_41523": {
+      "textures": "textures/items/menu/q/roles_bl"
+    },
+    "dc_item_menu_q_roles_br": {
+      "textures": "textures/items/menu/q/roles_br"
+    },
+    "dreamcraft:paper_41524": {
+      "textures": "textures/items/menu/q/roles_br"
+    },
+    "dreamcraft.paper_41524": {
+      "textures": "textures/items/menu/q/roles_br"
+    },
+    "dreamcraft_paper_41524": {
+      "textures": "textures/items/menu/q/roles_br"
+    },
+    "geyser_custom:paper_41524": {
+      "textures": "textures/items/menu/q/roles_br"
+    },
+    "geyser_custom.paper_41524": {
+      "textures": "textures/items/menu/q/roles_br"
+    },
+    "dc_item_menu_q_iniciar_tl": {
+      "textures": "textures/items/menu/q/iniciar_tl"
+    },
+    "dreamcraft:paper_41525": {
+      "textures": "textures/items/menu/q/iniciar_tl"
+    },
+    "dreamcraft.paper_41525": {
+      "textures": "textures/items/menu/q/iniciar_tl"
+    },
+    "dreamcraft_paper_41525": {
+      "textures": "textures/items/menu/q/iniciar_tl"
+    },
+    "geyser_custom:paper_41525": {
+      "textures": "textures/items/menu/q/iniciar_tl"
+    },
+    "geyser_custom.paper_41525": {
+      "textures": "textures/items/menu/q/iniciar_tl"
+    },
+    "dc_item_menu_q_iniciar_tr": {
+      "textures": "textures/items/menu/q/iniciar_tr"
+    },
+    "dreamcraft:paper_41526": {
+      "textures": "textures/items/menu/q/iniciar_tr"
+    },
+    "dreamcraft.paper_41526": {
+      "textures": "textures/items/menu/q/iniciar_tr"
+    },
+    "dreamcraft_paper_41526": {
+      "textures": "textures/items/menu/q/iniciar_tr"
+    },
+    "geyser_custom:paper_41526": {
+      "textures": "textures/items/menu/q/iniciar_tr"
+    },
+    "geyser_custom.paper_41526": {
+      "textures": "textures/items/menu/q/iniciar_tr"
+    },
+    "dc_item_menu_q_iniciar_bl": {
+      "textures": "textures/items/menu/q/iniciar_bl"
+    },
+    "dreamcraft:paper_41527": {
+      "textures": "textures/items/menu/q/iniciar_bl"
+    },
+    "dreamcraft.paper_41527": {
+      "textures": "textures/items/menu/q/iniciar_bl"
+    },
+    "dreamcraft_paper_41527": {
+      "textures": "textures/items/menu/q/iniciar_bl"
+    },
+    "geyser_custom:paper_41527": {
+      "textures": "textures/items/menu/q/iniciar_bl"
+    },
+    "geyser_custom.paper_41527": {
+      "textures": "textures/items/menu/q/iniciar_bl"
+    },
+    "dc_item_menu_q_iniciar_br": {
+      "textures": "textures/items/menu/q/iniciar_br"
+    },
+    "dreamcraft:paper_41528": {
+      "textures": "textures/items/menu/q/iniciar_br"
+    },
+    "dreamcraft.paper_41528": {
+      "textures": "textures/items/menu/q/iniciar_br"
+    },
+    "dreamcraft_paper_41528": {
+      "textures": "textures/items/menu/q/iniciar_br"
+    },
+    "geyser_custom:paper_41528": {
+      "textures": "textures/items/menu/q/iniciar_br"
+    },
+    "geyser_custom.paper_41528": {
+      "textures": "textures/items/menu/q/iniciar_br"
+    },
+    "dc_item_menu_q_salir_tl": {
+      "textures": "textures/items/menu/q/salir_tl"
+    },
+    "dreamcraft:paper_41529": {
+      "textures": "textures/items/menu/q/salir_tl"
+    },
+    "dreamcraft.paper_41529": {
+      "textures": "textures/items/menu/q/salir_tl"
+    },
+    "dreamcraft_paper_41529": {
+      "textures": "textures/items/menu/q/salir_tl"
+    },
+    "geyser_custom:paper_41529": {
+      "textures": "textures/items/menu/q/salir_tl"
+    },
+    "geyser_custom.paper_41529": {
+      "textures": "textures/items/menu/q/salir_tl"
+    },
+    "dc_item_menu_q_salir_tr": {
+      "textures": "textures/items/menu/q/salir_tr"
+    },
+    "dreamcraft:paper_41530": {
+      "textures": "textures/items/menu/q/salir_tr"
+    },
+    "dreamcraft.paper_41530": {
+      "textures": "textures/items/menu/q/salir_tr"
+    },
+    "dreamcraft_paper_41530": {
+      "textures": "textures/items/menu/q/salir_tr"
+    },
+    "geyser_custom:paper_41530": {
+      "textures": "textures/items/menu/q/salir_tr"
+    },
+    "geyser_custom.paper_41530": {
+      "textures": "textures/items/menu/q/salir_tr"
+    },
+    "dc_item_menu_q_salir_bl": {
+      "textures": "textures/items/menu/q/salir_bl"
+    },
+    "dreamcraft:paper_41531": {
+      "textures": "textures/items/menu/q/salir_bl"
+    },
+    "dreamcraft.paper_41531": {
+      "textures": "textures/items/menu/q/salir_bl"
+    },
+    "dreamcraft_paper_41531": {
+      "textures": "textures/items/menu/q/salir_bl"
+    },
+    "geyser_custom:paper_41531": {
+      "textures": "textures/items/menu/q/salir_bl"
+    },
+    "geyser_custom.paper_41531": {
+      "textures": "textures/items/menu/q/salir_bl"
+    },
+    "dc_item_menu_q_salir_br": {
+      "textures": "textures/items/menu/q/salir_br"
+    },
+    "dreamcraft:paper_41532": {
+      "textures": "textures/items/menu/q/salir_br"
+    },
+    "dreamcraft.paper_41532": {
+      "textures": "textures/items/menu/q/salir_br"
+    },
+    "dreamcraft_paper_41532": {
+      "textures": "textures/items/menu/q/salir_br"
+    },
+    "geyser_custom:paper_41532": {
+      "textures": "textures/items/menu/q/salir_br"
+    },
+    "geyser_custom.paper_41532": {
+      "textures": "textures/items/menu/q/salir_br"
+    },
+    "dc_item_menu_q_ward_tl": {
+      "textures": "textures/items/menu/q/ward_tl"
+    },
+    "dreamcraft:paper_41533": {
+      "textures": "textures/items/menu/q/ward_tl"
+    },
+    "dreamcraft.paper_41533": {
+      "textures": "textures/items/menu/q/ward_tl"
+    },
+    "dreamcraft_paper_41533": {
+      "textures": "textures/items/menu/q/ward_tl"
+    },
+    "geyser_custom:paper_41533": {
+      "textures": "textures/items/menu/q/ward_tl"
+    },
+    "geyser_custom.paper_41533": {
+      "textures": "textures/items/menu/q/ward_tl"
+    },
+    "dc_item_menu_q_ward_tr": {
+      "textures": "textures/items/menu/q/ward_tr"
+    },
+    "dreamcraft:paper_41534": {
+      "textures": "textures/items/menu/q/ward_tr"
+    },
+    "dreamcraft.paper_41534": {
+      "textures": "textures/items/menu/q/ward_tr"
+    },
+    "dreamcraft_paper_41534": {
+      "textures": "textures/items/menu/q/ward_tr"
+    },
+    "geyser_custom:paper_41534": {
+      "textures": "textures/items/menu/q/ward_tr"
+    },
+    "geyser_custom.paper_41534": {
+      "textures": "textures/items/menu/q/ward_tr"
+    },
+    "dc_item_menu_q_ward_bl": {
+      "textures": "textures/items/menu/q/ward_bl"
+    },
+    "dreamcraft:paper_41535": {
+      "textures": "textures/items/menu/q/ward_bl"
+    },
+    "dreamcraft.paper_41535": {
+      "textures": "textures/items/menu/q/ward_bl"
+    },
+    "dreamcraft_paper_41535": {
+      "textures": "textures/items/menu/q/ward_bl"
+    },
+    "geyser_custom:paper_41535": {
+      "textures": "textures/items/menu/q/ward_bl"
+    },
+    "geyser_custom.paper_41535": {
+      "textures": "textures/items/menu/q/ward_bl"
+    },
+    "dc_item_menu_q_ward_br": {
+      "textures": "textures/items/menu/q/ward_br"
+    },
+    "dreamcraft:paper_41536": {
+      "textures": "textures/items/menu/q/ward_br"
+    },
+    "dreamcraft.paper_41536": {
+      "textures": "textures/items/menu/q/ward_br"
+    },
+    "dreamcraft_paper_41536": {
+      "textures": "textures/items/menu/q/ward_br"
+    },
+    "geyser_custom:paper_41536": {
+      "textures": "textures/items/menu/q/ward_br"
+    },
+    "geyser_custom.paper_41536": {
+      "textures": "textures/items/menu/q/ward_br"
+    },
+    "dc_item_menu_q_inactive_tl": {
+      "textures": "textures/items/menu/q/inactive_tl"
+    },
+    "dreamcraft:paper_41537": {
+      "textures": "textures/items/menu/q/inactive_tl"
+    },
+    "dreamcraft.paper_41537": {
+      "textures": "textures/items/menu/q/inactive_tl"
+    },
+    "dreamcraft_paper_41537": {
+      "textures": "textures/items/menu/q/inactive_tl"
+    },
+    "geyser_custom:paper_41537": {
+      "textures": "textures/items/menu/q/inactive_tl"
+    },
+    "geyser_custom.paper_41537": {
+      "textures": "textures/items/menu/q/inactive_tl"
+    },
+    "dc_item_menu_q_inactive_tr": {
+      "textures": "textures/items/menu/q/inactive_tr"
+    },
+    "dreamcraft:paper_41538": {
+      "textures": "textures/items/menu/q/inactive_tr"
+    },
+    "dreamcraft.paper_41538": {
+      "textures": "textures/items/menu/q/inactive_tr"
+    },
+    "dreamcraft_paper_41538": {
+      "textures": "textures/items/menu/q/inactive_tr"
+    },
+    "geyser_custom:paper_41538": {
+      "textures": "textures/items/menu/q/inactive_tr"
+    },
+    "geyser_custom.paper_41538": {
+      "textures": "textures/items/menu/q/inactive_tr"
+    },
+    "dc_item_menu_q_inactive_bl": {
+      "textures": "textures/items/menu/q/inactive_bl"
+    },
+    "dreamcraft:paper_41539": {
+      "textures": "textures/items/menu/q/inactive_bl"
+    },
+    "dreamcraft.paper_41539": {
+      "textures": "textures/items/menu/q/inactive_bl"
+    },
+    "dreamcraft_paper_41539": {
+      "textures": "textures/items/menu/q/inactive_bl"
+    },
+    "geyser_custom:paper_41539": {
+      "textures": "textures/items/menu/q/inactive_bl"
+    },
+    "geyser_custom.paper_41539": {
+      "textures": "textures/items/menu/q/inactive_bl"
+    },
+    "dc_item_menu_q_inactive_br": {
+      "textures": "textures/items/menu/q/inactive_br"
+    },
+    "dreamcraft:paper_41540": {
+      "textures": "textures/items/menu/q/inactive_br"
+    },
+    "dreamcraft.paper_41540": {
+      "textures": "textures/items/menu/q/inactive_br"
+    },
+    "dreamcraft_paper_41540": {
+      "textures": "textures/items/menu/q/inactive_br"
+    },
+    "geyser_custom:paper_41540": {
+      "textures": "textures/items/menu/q/inactive_br"
+    },
+    "geyser_custom.paper_41540": {
+      "textures": "textures/items/menu/q/inactive_br"
+    },
+    "dc_item_menu_q_zone_tp_tl": {
+      "textures": "textures/items/menu/q/zone-tp_tl"
+    },
+    "dreamcraft:paper_41541": {
+      "textures": "textures/items/menu/q/zone-tp_tl"
+    },
+    "dreamcraft.paper_41541": {
+      "textures": "textures/items/menu/q/zone-tp_tl"
+    },
+    "dreamcraft_paper_41541": {
+      "textures": "textures/items/menu/q/zone-tp_tl"
+    },
+    "geyser_custom:paper_41541": {
+      "textures": "textures/items/menu/q/zone-tp_tl"
+    },
+    "geyser_custom.paper_41541": {
+      "textures": "textures/items/menu/q/zone-tp_tl"
+    },
+    "dc_item_menu_q_zone_tp_tr": {
+      "textures": "textures/items/menu/q/zone-tp_tr"
+    },
+    "dreamcraft:paper_41542": {
+      "textures": "textures/items/menu/q/zone-tp_tr"
+    },
+    "dreamcraft.paper_41542": {
+      "textures": "textures/items/menu/q/zone-tp_tr"
+    },
+    "dreamcraft_paper_41542": {
+      "textures": "textures/items/menu/q/zone-tp_tr"
+    },
+    "geyser_custom:paper_41542": {
+      "textures": "textures/items/menu/q/zone-tp_tr"
+    },
+    "geyser_custom.paper_41542": {
+      "textures": "textures/items/menu/q/zone-tp_tr"
+    },
+    "dc_item_menu_q_zone_tp_bl": {
+      "textures": "textures/items/menu/q/zone-tp_bl"
+    },
+    "dreamcraft:paper_41543": {
+      "textures": "textures/items/menu/q/zone-tp_bl"
+    },
+    "dreamcraft.paper_41543": {
+      "textures": "textures/items/menu/q/zone-tp_bl"
+    },
+    "dreamcraft_paper_41543": {
+      "textures": "textures/items/menu/q/zone-tp_bl"
+    },
+    "geyser_custom:paper_41543": {
+      "textures": "textures/items/menu/q/zone-tp_bl"
+    },
+    "geyser_custom.paper_41543": {
+      "textures": "textures/items/menu/q/zone-tp_bl"
+    },
+    "dc_item_menu_q_zone_tp_br": {
+      "textures": "textures/items/menu/q/zone-tp_br"
+    },
+    "dreamcraft:paper_41544": {
+      "textures": "textures/items/menu/q/zone-tp_br"
+    },
+    "dreamcraft.paper_41544": {
+      "textures": "textures/items/menu/q/zone-tp_br"
+    },
+    "dreamcraft_paper_41544": {
+      "textures": "textures/items/menu/q/zone-tp_br"
+    },
+    "geyser_custom:paper_41544": {
+      "textures": "textures/items/menu/q/zone-tp_br"
+    },
+    "geyser_custom.paper_41544": {
+      "textures": "textures/items/menu/q/zone-tp_br"
+    },
+    "dc_item_menu_q_unirse_tl": {
+      "textures": "textures/items/menu/q/unirse_tl"
+    },
+    "dreamcraft:paper_41545": {
+      "textures": "textures/items/menu/q/unirse_tl"
+    },
+    "dreamcraft.paper_41545": {
+      "textures": "textures/items/menu/q/unirse_tl"
+    },
+    "dreamcraft_paper_41545": {
+      "textures": "textures/items/menu/q/unirse_tl"
+    },
+    "geyser_custom:paper_41545": {
+      "textures": "textures/items/menu/q/unirse_tl"
+    },
+    "geyser_custom.paper_41545": {
+      "textures": "textures/items/menu/q/unirse_tl"
+    },
+    "dc_item_menu_q_unirse_tr": {
+      "textures": "textures/items/menu/q/unirse_tr"
+    },
+    "dreamcraft:paper_41546": {
+      "textures": "textures/items/menu/q/unirse_tr"
+    },
+    "dreamcraft.paper_41546": {
+      "textures": "textures/items/menu/q/unirse_tr"
+    },
+    "dreamcraft_paper_41546": {
+      "textures": "textures/items/menu/q/unirse_tr"
+    },
+    "geyser_custom:paper_41546": {
+      "textures": "textures/items/menu/q/unirse_tr"
+    },
+    "geyser_custom.paper_41546": {
+      "textures": "textures/items/menu/q/unirse_tr"
+    },
+    "dc_item_menu_q_unirse_bl": {
+      "textures": "textures/items/menu/q/unirse_bl"
+    },
+    "dreamcraft:paper_41547": {
+      "textures": "textures/items/menu/q/unirse_bl"
+    },
+    "dreamcraft.paper_41547": {
+      "textures": "textures/items/menu/q/unirse_bl"
+    },
+    "dreamcraft_paper_41547": {
+      "textures": "textures/items/menu/q/unirse_bl"
+    },
+    "geyser_custom:paper_41547": {
+      "textures": "textures/items/menu/q/unirse_bl"
+    },
+    "geyser_custom.paper_41547": {
+      "textures": "textures/items/menu/q/unirse_bl"
+    },
+    "dc_item_menu_q_unirse_br": {
+      "textures": "textures/items/menu/q/unirse_br"
+    },
+    "dreamcraft:paper_41548": {
+      "textures": "textures/items/menu/q/unirse_br"
+    },
+    "dreamcraft.paper_41548": {
+      "textures": "textures/items/menu/q/unirse_br"
+    },
+    "dreamcraft_paper_41548": {
+      "textures": "textures/items/menu/q/unirse_br"
+    },
+    "geyser_custom:paper_41548": {
+      "textures": "textures/items/menu/q/unirse_br"
+    },
+    "geyser_custom.paper_41548": {
+      "textures": "textures/items/menu/q/unirse_br"
+    },
+    "dreamcraft:player_head_41408": {
+      "textures": "textures/items/menu/members"
+    },
+    "dreamcraft.player_head_41408": {
+      "textures": "textures/items/menu/members"
+    },
+    "dreamcraft_player_head_41408": {
+      "textures": "textures/items/menu/members"
+    },
+    "geyser_custom:player_head_41408": {
+      "textures": "textures/items/menu/members"
+    },
+    "geyser_custom.player_head_41408": {
+      "textures": "textures/items/menu/members"
+    },
+    "dc_item_ward_icon": {
+      "textures": "textures/items/ward/icon"
+    },
+    "dreamcraft:shield_41101": {
+      "textures": "textures/items/ward/icon"
+    },
+    "dreamcraft.shield_41101": {
+      "textures": "textures/items/ward/icon"
+    },
+    "dreamcraft_shield_41101": {
+      "textures": "textures/items/ward/icon"
+    },
+    "geyser_custom:shield_41101": {
+      "textures": "textures/items/ward/icon"
+    },
+    "geyser_custom.shield_41101": {
+      "textures": "textures/items/ward/icon"
+    }
+  }
+}

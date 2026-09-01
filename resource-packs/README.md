@@ -87,17 +87,22 @@ resource-packs/
 
 ## Source And Build Output
 
-- Source lives under `resource-packs/packs/`.
-- Generated archives live under `resource-packs/dist/`.
+- Source lives under `resource-packs/packs/`:
+  - `packs/dreamcraft/`: Java Edition resource pack (`assets/dreamcraft/`, `assets/minecraft/`, `pack.mcmeta`, `pack.png`).
+  - `packs/dreamcraft-bedrock/`: Bedrock Edition resource pack (`manifest.json`, `pack_icon.png`, `textures/`, `blocks.json`, `font/`).
+- Generated archives live under `resource-packs/dist/`:
+  - `dreamcraft-resource-pack.zip`: Java Edition archive (hash `31e5e1012e25c0eb04eee115bcb970567f5ba7dc`).
+  - `dreamcraft-bedrock.mcpack`: Bedrock Edition archive.
 - `dist/` is ignored by Git except for `.gitkeep`.
 
-The intended build output is:
+The intended build outputs are:
 
 ```text
 resource-packs/dist/dreamcraft-resource-pack.zip
+resource-packs/dist/dreamcraft-bedrock.mcpack
 ```
 
-## pack.mcmeta
+## pack.mcmeta (Java)
 
 `pack.mcmeta` exists with `pack_format` 84.
 
@@ -111,6 +116,22 @@ pack_version.resource_major = 84 (minor 0)
 If the server version changes, re-check `version.json` in the new jar and update
 `pack.mcmeta`.
 
+## Bedrock Edition Pack Structure
+
+The Bedrock pack (`packs/dreamcraft-bedrock/`) adapts assets from the Java pack for Bedrock clients:
+- `manifest.json`: declares the resource module with `format_version: 2`, RFC4122 v4 UUIDs, and `min_engine_version: [1, 21, 0]`.
+- `pack_icon.png`: 64×64 brand icon derived from `server-icon.png`.
+- `textures/items/`: 81 item textures organized in `city/`, `estate/`, `menu/` (including 2×2 quadrant tiles `q/`), `nucleus/`, and `ward/`.
+- `textures/item_texture.json`: Bedrock item atlas defining texture shortnames for all custom items.
+- `textures/blocks/` & `textures/terrain_texture.json` & `blocks.json`: Bedrock block atlas and definitions for the custom Nucleus block (`nucleus_face_active`, `nucleus_face_inactive`).
+- `font/glyph_E1.png` & `font/glyph_EC.png`: glyph definition sheets for Unicode blocks `E1` and `EC` to prevent broken character boxes (`[?]` / `???`) on Bedrock clients.
+
+## Geyser Custom Mappings
+
+Located in `plugin-configs/Geyser-Spigot/custom_mappings/` (synced to server via `config-sync`):
+- `dreamcraft_mappings.json`: maps 89 Java `CustomModelData` entries across 21 vanilla items (Paper, Shield, Beacon, Book, Emerald, etc.) to Bedrock custom item identifiers and atlas icons (`format_version: 2`).
+- `dreamcraft_blocks.json`: maps Java `minecraft:note_block` state overrides (`instrument=flute, note=14/15`) to the Bedrock `nucleus_block` (`format_version: 1`).
+
 ## Scripts
 
 Run from the repository root:
@@ -118,8 +139,25 @@ Run from the repository root:
 ```powershell
 .\resource-packs\scripts\validate.ps1
 .\resource-packs\scripts\build.ps1
+.\resource-packs\scripts\build-bedrock.ps1
 .\resource-packs\scripts\clean.ps1
 ```
 
-`validate.ps1` and `build.ps1` intentionally fail if `pack.mcmeta` is missing.
-This prevents producing a resource pack with an uncertain format.
+- `validate.ps1` and `build.ps1` intentionally fail if `pack.mcmeta` or referenced textures/models are missing.
+- `build-bedrock.ps1` validates `manifest.json` and `pack_icon.png` fail-fast, then packages `dist/dreamcraft-bedrock.mcpack` with forward-slash paths.
+
+## Production Distribution
+
+### Java Edition
+- Hosted via HTTP pack server (`http://<host>:8081/dreamcraft-resource-pack-31e5e101.zip`) or GitHub Releases.
+- Configured in `server.properties`:
+  - `resource-pack`: points to the HTTP/Release download URL.
+  - `resource-pack-sha1`: `31e5e1012e25c0eb04eee115bcb970567f5ba7dc`.
+
+### Bedrock Edition
+- Geyser automatically distributes `dreamcraft-bedrock.mcpack` from `plugin-configs/Geyser-Spigot/packs/` (or via remote URL in `resource-pack-urls`).
+- `plugin-configs/Geyser-Spigot/config.yml` settings:
+  - `gameplay.enable-custom-content: true`
+  - `force-resource-packs: true`
+  - `enable-integrated-pack: true`
+

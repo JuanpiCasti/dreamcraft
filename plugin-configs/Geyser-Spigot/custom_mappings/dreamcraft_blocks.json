@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "blocks": {
+    "minecraft:note_block": {
+      "name": "nucleus_block",
+      "display_name": "N\u00facleo de Sincronicidad",
+      "material_instances": {
+        "*": {
+          "texture": "nucleus_face_active",
+          "render_method": "opaque"
+        }
+      },
+      "state_overrides": {
+        "instrument=flute,note=14,powered=false": {
+          "material_instances": {
+            "*": {
+              "texture": "nucleus_face_active",
+              "render_method": "opaque"
+            }
+          }
+        },
+        "instrument=flute,note=15,powered=false": {
+          "material_instances": {
+            "*": {
+              "texture": "nucleus_face_inactive",
+              "render_method": "opaque"
+            }
+          }
+        }
+      }
+    }
+  }
+}

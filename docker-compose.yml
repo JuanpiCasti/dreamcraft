@@ -62,7 +62,7 @@ services:
         https://cdn.modrinth.com/data/TsLS8Py5/versions/wXS6bHiC/SkinsRestorer.jar
         https://cdn.modrinth.com/data/P1OZGk5p/versions/ZH8459B6/ViaVersion-5.11.0.jar
         https://cdn.modrinth.com/data/NpvuJQoq/versions/hYhg2QBT/ViaBackwards-5.11.0.jar
-        https://download.geysermc.org/v2/projects/geyser/versions/2.11.1/builds/1219/downloads/spigot
+        https://download.geysermc.org/v2/projects/geyser/versions/2.11.2/builds/1233/downloads/spigot
         https://cdn.modrinth.com/data/DsxKmIdB/versions/oMsqzDSV/worldguard-extraflagsplus-4.4.3.jar
     volumes:
       # attach the relative directory 'data' to the container's /data path

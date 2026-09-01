@@ -1,0 +1,759 @@
+{
+  "format_version": 2,
+  "items": {
+    "minecraft:arrow": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41402,
+        "bedrock_identifier": "dreamcraft:arrow_41402",
+        "bedrock_options": {
+          "icon": "dc_item_menu_back"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41416,
+        "bedrock_identifier": "dreamcraft:arrow_41416",
+        "bedrock_options": {
+          "icon": "dc_item_menu_back_nexo"
+        }
+      }
+    ],
+    "minecraft:barrier": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41106,
+        "bedrock_identifier": "dreamcraft:barrier_41106",
+        "bedrock_options": {
+          "icon": "dc_item_ward_orphan"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41404,
+        "bedrock_identifier": "dreamcraft:barrier_41404",
+        "bedrock_options": {
+          "icon": "dc_item_menu_close"
+        }
+      }
+    ],
+    "minecraft:beacon": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41201,
+        "bedrock_identifier": "dreamcraft:beacon_41201",
+        "bedrock_options": {
+          "icon": "dc_item_city_icon"
+        }
+      }
+    ],
+    "minecraft:book": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41301,
+        "bedrock_identifier": "dreamcraft:book_41301",
+        "bedrock_options": {
+          "icon": "dc_item_estate_icon"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41407,
+        "bedrock_identifier": "dreamcraft:book_41407",
+        "bedrock_options": {
+          "icon": "dc_item_menu_roles"
+        }
+      }
+    ],
+    "minecraft:chest": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41105,
+        "bedrock_identifier": "dreamcraft:chest_41105",
+        "bedrock_options": {
+          "icon": "dc_item_ward_upkeep"
+        }
+      }
+    ],
+    "minecraft:command_block": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41204,
+        "bedrock_identifier": "dreamcraft:command_block_41204",
+        "bedrock_options": {
+          "icon": "dc_item_city_admin"
+        }
+      }
+    ],
+    "minecraft:cracked_stone_bricks": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41102,
+        "bedrock_identifier": "dreamcraft:cracked_stone_bricks_41102",
+        "bedrock_options": {
+          "icon": "dc_item_ward_inactive"
+        }
+      }
+    ],
+    "minecraft:dragon_head": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41304,
+        "bedrock_identifier": "dreamcraft:dragon_head_41304",
+        "bedrock_options": {
+          "icon": "dc_item_estate_dragon"
+        }
+      }
+    ],
+    "minecraft:emerald": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41203,
+        "bedrock_identifier": "dreamcraft:emerald_41203",
+        "bedrock_options": {
+          "icon": "dc_item_city_score"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41405,
+        "bedrock_identifier": "dreamcraft:emerald_41405",
+        "bedrock_options": {
+          "icon": "dc_item_menu_invite"
+        }
+      }
+    ],
+    "minecraft:emerald_block": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41409,
+        "bedrock_identifier": "dreamcraft:emerald_block_41409",
+        "bedrock_options": {
+          "icon": "dc_item_menu_confirm"
+        }
+      }
+    ],
+    "minecraft:end_portal_frame": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41303,
+        "bedrock_identifier": "dreamcraft:end_portal_frame_41303",
+        "bedrock_options": {
+          "icon": "dc_item_estate_instance"
+        }
+      }
+    ],
+    "minecraft:ender_eye": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41302,
+        "bedrock_identifier": "dreamcraft:ender_eye_41302",
+        "bedrock_options": {
+          "icon": "dc_item_estate_adventure"
+        }
+      }
+    ],
+    "minecraft:experience_bottle": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41104,
+        "bedrock_identifier": "dreamcraft:experience_bottle_41104",
+        "bedrock_options": {
+          "icon": "dc_item_ward_score"
+        }
+      }
+    ],
+    "minecraft:gold_block": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41202,
+        "bedrock_identifier": "dreamcraft:gold_block_41202",
+        "bedrock_options": {
+          "icon": "dc_item_city_treasury"
+        }
+      }
+    ],
+    "minecraft:gray_stained_glass_pane": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41410,
+        "bedrock_identifier": "dreamcraft:gray_stained_glass_pane_41410",
+        "bedrock_options": {
+          "icon": "dc_item_menu_line"
+        }
+      }
+    ],
+    "minecraft:lime_stained_glass_pane": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41401,
+        "bedrock_identifier": "dreamcraft:lime_stained_glass_pane_41401",
+        "bedrock_options": {
+          "icon": "dc_item_menu_deposit"
+        }
+      }
+    ],
+    "minecraft:nether_star": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41103,
+        "bedrock_identifier": "dreamcraft:nether_star_41103",
+        "bedrock_options": {
+          "icon": "dc_item_ward_tier"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41305,
+        "bedrock_identifier": "dreamcraft:nether_star_41305",
+        "bedrock_options": {
+          "icon": "dc_item_estate_zone_tp"
+        }
+      }
+    ],
+    "minecraft:note_block": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41002,
+        "bedrock_identifier": "dreamcraft:note_block_41002",
+        "bedrock_options": {
+          "icon": "dc_block_nucleus_face_active"
+        }
+      }
+    ],
+    "minecraft:paper": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41401,
+        "bedrock_identifier": "dreamcraft:paper_41401",
+        "bedrock_options": {
+          "icon": "dc_item_menu_confirm"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41402,
+        "bedrock_identifier": "dreamcraft:paper_41402",
+        "bedrock_options": {
+          "icon": "dc_item_menu_back"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41403,
+        "bedrock_identifier": "dreamcraft:paper_41403",
+        "bedrock_options": {
+          "icon": "dc_item_menu_profile"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41404,
+        "bedrock_identifier": "dreamcraft:paper_41404",
+        "bedrock_options": {
+          "icon": "dc_item_menu_close"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41405,
+        "bedrock_identifier": "dreamcraft:paper_41405",
+        "bedrock_options": {
+          "icon": "dc_item_menu_invite"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41406,
+        "bedrock_identifier": "dreamcraft:paper_41406",
+        "bedrock_options": {
+          "icon": "dc_item_menu_kick"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41407,
+        "bedrock_identifier": "dreamcraft:paper_41407",
+        "bedrock_options": {
+          "icon": "dc_item_menu_roles"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41408,
+        "bedrock_identifier": "dreamcraft:paper_41408",
+        "bedrock_options": {
+          "icon": "dc_item_menu_members"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41409,
+        "bedrock_identifier": "dreamcraft:paper_41409",
+        "bedrock_options": {
+          "icon": "dc_item_menu_confirm"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41410,
+        "bedrock_identifier": "dreamcraft:paper_41410",
+        "bedrock_options": {
+          "icon": "dc_item_menu_line"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41411,
+        "bedrock_identifier": "dreamcraft:paper_41411",
+        "bedrock_options": {
+          "icon": "dc_item_menu_catcher"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41412,
+        "bedrock_identifier": "dreamcraft:paper_41412",
+        "bedrock_options": {
+          "icon": "dc_item_menu_gear_sync"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41413,
+        "bedrock_identifier": "dreamcraft:paper_41413",
+        "bedrock_options": {
+          "icon": "dc_item_menu_gear_matriz"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41414,
+        "bedrock_identifier": "dreamcraft:paper_41414",
+        "bedrock_options": {
+          "icon": "dc_item_menu_gear_nexo"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41415,
+        "bedrock_identifier": "dreamcraft:paper_41415",
+        "bedrock_options": {
+          "icon": "dc_item_menu_permissions"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41417,
+        "bedrock_identifier": "dreamcraft:paper_41417",
+        "bedrock_options": {
+          "icon": "dc_item_menu_leave_nexo"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41501,
+        "bedrock_identifier": "dreamcraft:paper_41501",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_upkeep_tl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41502,
+        "bedrock_identifier": "dreamcraft:paper_41502",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_upkeep_tr"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41503,
+        "bedrock_identifier": "dreamcraft:paper_41503",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_upkeep_bl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41504,
+        "bedrock_identifier": "dreamcraft:paper_41504",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_upkeep_br"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41505,
+        "bedrock_identifier": "dreamcraft:paper_41505",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_fase_tl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41506,
+        "bedrock_identifier": "dreamcraft:paper_41506",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_fase_tr"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41507,
+        "bedrock_identifier": "dreamcraft:paper_41507",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_fase_bl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41508,
+        "bedrock_identifier": "dreamcraft:paper_41508",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_fase_br"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41509,
+        "bedrock_identifier": "dreamcraft:paper_41509",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_matriz_tl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41510,
+        "bedrock_identifier": "dreamcraft:paper_41510",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_matriz_tr"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41511,
+        "bedrock_identifier": "dreamcraft:paper_41511",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_matriz_bl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41512,
+        "bedrock_identifier": "dreamcraft:paper_41512",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_matriz_br"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41513,
+        "bedrock_identifier": "dreamcraft:paper_41513",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_tesoro_tl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41514,
+        "bedrock_identifier": "dreamcraft:paper_41514",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_tesoro_tr"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41515,
+        "bedrock_identifier": "dreamcraft:paper_41515",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_tesoro_bl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41516,
+        "bedrock_identifier": "dreamcraft:paper_41516",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_tesoro_br"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41517,
+        "bedrock_identifier": "dreamcraft:paper_41517",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_invite_tl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41518,
+        "bedrock_identifier": "dreamcraft:paper_41518",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_invite_tr"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41519,
+        "bedrock_identifier": "dreamcraft:paper_41519",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_invite_bl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41520,
+        "bedrock_identifier": "dreamcraft:paper_41520",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_invite_br"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41521,
+        "bedrock_identifier": "dreamcraft:paper_41521",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_roles_tl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41522,
+        "bedrock_identifier": "dreamcraft:paper_41522",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_roles_tr"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41523,
+        "bedrock_identifier": "dreamcraft:paper_41523",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_roles_bl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41524,
+        "bedrock_identifier": "dreamcraft:paper_41524",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_roles_br"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41525,
+        "bedrock_identifier": "dreamcraft:paper_41525",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_iniciar_tl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41526,
+        "bedrock_identifier": "dreamcraft:paper_41526",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_iniciar_tr"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41527,
+        "bedrock_identifier": "dreamcraft:paper_41527",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_iniciar_bl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41528,
+        "bedrock_identifier": "dreamcraft:paper_41528",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_iniciar_br"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41529,
+        "bedrock_identifier": "dreamcraft:paper_41529",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_salir_tl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41530,
+        "bedrock_identifier": "dreamcraft:paper_41530",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_salir_tr"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41531,
+        "bedrock_identifier": "dreamcraft:paper_41531",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_salir_bl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41532,
+        "bedrock_identifier": "dreamcraft:paper_41532",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_salir_br"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41533,
+        "bedrock_identifier": "dreamcraft:paper_41533",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_ward_tl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41534,
+        "bedrock_identifier": "dreamcraft:paper_41534",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_ward_tr"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41535,
+        "bedrock_identifier": "dreamcraft:paper_41535",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_ward_bl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41536,
+        "bedrock_identifier": "dreamcraft:paper_41536",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_ward_br"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41537,
+        "bedrock_identifier": "dreamcraft:paper_41537",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_inactive_tl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41538,
+        "bedrock_identifier": "dreamcraft:paper_41538",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_inactive_tr"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41539,
+        "bedrock_identifier": "dreamcraft:paper_41539",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_inactive_bl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41540,
+        "bedrock_identifier": "dreamcraft:paper_41540",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_inactive_br"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41541,
+        "bedrock_identifier": "dreamcraft:paper_41541",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_zone_tp_tl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41542,
+        "bedrock_identifier": "dreamcraft:paper_41542",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_zone_tp_tr"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41543,
+        "bedrock_identifier": "dreamcraft:paper_41543",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_zone_tp_bl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41544,
+        "bedrock_identifier": "dreamcraft:paper_41544",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_zone_tp_br"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41545,
+        "bedrock_identifier": "dreamcraft:paper_41545",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_unirse_tl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41546,
+        "bedrock_identifier": "dreamcraft:paper_41546",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_unirse_tr"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41547,
+        "bedrock_identifier": "dreamcraft:paper_41547",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_unirse_bl"
+        }
+      },
+      {
+        "type": "legacy",
+        "custom_model_data": 41548,
+        "bedrock_identifier": "dreamcraft:paper_41548",
+        "bedrock_options": {
+          "icon": "dc_item_menu_q_unirse_br"
+        }
+      }
+    ],
+    "minecraft:player_head": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41408,
+        "bedrock_identifier": "dreamcraft:player_head_41408",
+        "bedrock_options": {
+          "icon": "dc_item_menu_members"
+        }
+      }
+    ],
+    "minecraft:shield": [
+      {
+        "type": "legacy",
+        "custom_model_data": 41101,
+        "bedrock_identifier": "dreamcraft:shield_41101",
+        "bedrock_options": {
+          "icon": "dc_item_ward_icon"
+        }
+      }
+    ]
+  }
+}

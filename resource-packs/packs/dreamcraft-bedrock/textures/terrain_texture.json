@@ -1,0 +1,12 @@
+{
+  "resource_pack_name": "dreamcraft",
+  "texture_name": "atlas.terrain",
+  "texture_data": {
+    "nucleus_face_active": {
+      "textures": "textures/blocks/nucleus_face_active"
+    },
+    "nucleus_face_inactive": {
+      "textures": "textures/blocks/nucleus_face_inactive"
+    }
+  }
+}
