@@ -1,0 +1,294 @@
+####################################################################################################
+# +----------------------------------------------------------------------------------------------+ #
+# |                                          __             _                                    | #
+# |                                 _ __   / /  ___   __ _(_)_ __                                | #
+# |                                | '_ \ / /  / _ \ / _` | | '_ \                               | #
+# |                                | | | / /__| (_) | (_| | | | | |                              | #
+# |                                |_| |_\____/\___/ \__, |_|_| |_|                              | #
+# |                                                    |___/                                     | #
+# |                                                                                              | #
+# |                      A practical, secure and friendly authentication plugin                  | #
+# |                                                                                              | #
+# |                                © 2026 - Powered by nickuc.com                                | #
+# |                                                                                              | #
+# |                                                                                              | #
+# |  For a better understanding of this file see our documentation:                              | #
+# |   ==> https://docs.nickuc.com/nlogin/                                                        | #
+# |                                                                                              | #
+# |  New options are not automatically added in this file. Default values are used               | #
+# |  if an option is not found.                                                                  | #
+# +----------------------------------------------------------------------------------------------+ #
+
+# Set the version of the file.
+language-version: 2
+
+# Set the language of the plugin
+language-file: "messages_en.yml"
+
+# Database settings.
+database:
+  # Sets the type of database used.
+  type: SQLite
+
+  remote:
+    # Defines MariaDB/MySQL information.
+    hostname: "localhost:3306"
+    database: "nLogin"
+    username: "root"
+    password: ""
+
+    # Set the connection properties.
+    properties:
+      useUnicode: true
+      characterEncoding: "utf8"
+
+  # Defines the connection pool settings.
+  pool-settings:
+    maximum-pool-size: 10
+    minimum-idle: 10
+    maximum-lifetime: 1800000 # 30 minutes
+    connection-timeout: 5000 # 5 seconds
+
+  table:
+    account:
+      # Sets the name of the nLogin accounts table.
+      table-name: "nlogin"
+
+      # Sets the name of the columns.
+      columns:
+        ai: "ai"
+        last-name: "last_name"
+        unique-id: "unique_id"
+        mojang-id: "mojang_id"
+        bedrock-id: "bedrock_id"
+        password: "password"
+        premium: "premium"
+        last-ip: "last_ip"
+        last-seen: "last_seen"
+        creation-date: "creation_date"
+        email: "email"
+        discord: "discord"
+        settings: "settings"
+
+    data:
+      # Sets the name of the nLogin data table.
+      table-name: "nlogin_data"
+
+      # Sets the name of the columns.
+      columns:
+        id: "id"
+        key: "key"
+        value: "value"
+
+# Messaging service settings
+redis:
+  # Defines Redis information.
+  enable: false
+  hostname: localhost
+  username: ""
+  password: ""
+  ssl: false
+
+# Limbo settings.
+# - Limbo is the player information protection system.
+limbo:
+  # Sets the time to wait for player information to be hidden.
+  delay: 0
+
+  # Defines whether the limbo should hide the players' information.
+  hide-player-stats: true
+
+  # Sets whether items should be hidden before logging in.
+  hide-player-inventory: true
+
+  # Sets whether other players should be hidden before logging in.
+  hide-unauthenticated-players: true
+
+  # Defines whether the movement should be locked before authenticating.
+  block-player-movement: true
+
+  # Defines whether the blinding effect will be added before logging in.
+  use-blindness-effect: false
+
+  # Sets whether the player will be teleported to a safe position upon entering.
+  highest-block-location: false
+
+  unrestricted:
+    # Defines the nicknames that will skip the authentication process.
+    nicknames:
+
+# General security settings.
+security:
+  # Sets the time for a player to authenticate (in seconds).
+  auth-timeout: 90
+
+  # Sets whether high-risk nLogin commands will be disabled in-game.
+  force-console-usage: true
+
+  nickname:
+    # Set the regex for nickname validation.
+    validation-regex: '([a-zA-Z0-9_]{3,16})'
+
+    kick-unregistered:
+      # Defines whether unregistered players should be blocked.
+      enable: false
+
+      bypass:
+        premium: false
+        bedrock: false
+        ips: []
+
+  ip:
+    # Sets whether the plugin should ignore the "This player is already online" check if the IP is the same as the one registered.
+    bypass-online-check-with-same-ip: true
+
+    limit:
+      # Sets whether the per-IP account limiter should be used.
+      enable: true
+
+      # Sets the maximum number of records per IP address.
+      max: 3
+
+      # Defines whether the IP limiter should block accounts from entering the server.
+      prevent-login: false
+
+      bypass:
+        registered: true
+        premium: true
+        bedrock: true
+        ips:
+        - '127.0.0.1'
+        - 'localhost'
+
+  passwords:
+    # Sets the minimum password size.
+    small: 5
+
+    # Sets maximum password size.
+    large: 32
+
+    secure:
+      # Defines whether password strength validations should be performed.
+      enable: false
+
+      # Defines whether registered players should be required to update their passwords if their passwords do not meet the secure password pattern.
+      enforce: false
+
+      # Defines the pattern used to classify a password as secure.
+      secure-regex: '(?=\S*\d)(?=\S*[A-Z])(?=\S*[a-z])(?=\S*[!@#$%^&*?])\S*$'
+
+  bruteforce:
+    # Sets the maximum number of incorrect attempts a player can make.
+    max-auth-tries: 1
+
+    punish:
+      # Defines whether brute-force attacks will be punished automatically.
+      enable: true
+
+      # Sets the punishment time for a suspected brute force attack (in minutes).
+      duration: 15
+
+  hashing:
+    # Defines the hashing algorithm used.
+    algorithm: BCRYPT2A
+
+    bcrypt:
+      rounds: 10
+
+    pbkdf2:
+      iterations: 10000
+      algorithm: "HmacSHA512"
+
+    argon2:
+      iterations: 5
+      memory: 32
+      parallelism: 1
+
+# User Interface settings.
+ui:
+  # Defines the operating mode for the dialogs.
+  show-dialogs: AFTER_LOGIN
+
+  # Sets whether on-screen messages will be sent.
+  use-title-bar: true
+
+  # Sets whether messages in actionbars will be sent.
+  use-action-bar: true
+
+  # Sets whether the time remaining message will be sent.
+  use-action-bar-timer: true
+
+  # Sets whether sound effects will be sent.
+  use-sounds: true
+
+  # Defines whether chat messages will be disabled until authentication is complete.
+  remove-chat-messages: true
+
+  # Sets whether the join message will be removed.
+  remove-join-message: false
+
+  # Define whether the nLogin language should be adapted to the Minecraft language.
+  language-by-client: false
+
+# Command settings.
+commands:
+  # Defines the list of commands to be executed after registering.
+  after-register:
+
+  # Defines the list of commands to be executed after authenticating.
+  # FIX 0.1.2: tras autenticarse, se devuelve al jugador a su ultima ubicacion
+  # usando el comando /back de Essentials (un comando de jugador ejecutado con
+  # delay para dejar terminar el proceso de login). No se altera el comportamiento
+  # de spawn/login existente.
+  after-login:
+  - "@delay 10 back"
+
+  # Sets the list of allowed commands before authenticating.
+  allowed-commands:
+  #- "/loginstaff"
+
+  changepass:
+    enable: true
+    commands: [changepass, changepassword]
+    description: Command to change the registered password.
+    permission: null
+  discord:
+    enable: true
+    commands: [discord]
+    description: Command to control 2FA using Discord accounts.
+    permission: nlogin.command.discord
+  email:
+    enable: true
+    commands: [email]
+    description: Command to control 2FA using email accounts.
+    permission: nlogin.command.email
+  login:
+    enable: true
+    commands: [login, l, log]
+    description: Command to login on the server.
+    permission: null
+  offline:
+    enable: true
+    commands: [offline, cracked]
+    description: Command to mark your account as offline.
+    permission: null
+  premium:
+    enable: true
+    commands: [premium]
+    description: Command to mark your account as premium.
+    permission: null
+  recover:
+    enable: true
+    commands: [recover]
+    description: Command to recover access of registered accounts.
+    permission: null
+  register:
+    enable: true
+    commands: [register, reg]
+    description: Command to register an account.
+    permission: null
+  unregister:
+    enable: false
+    commands: [unregister]
+    description: Command to unregister.
+    permission: null
