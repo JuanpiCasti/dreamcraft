@@ -175,8 +175,19 @@ public record ProtectionConfig(
         }
         if (wardUpkeepMaterials.isEmpty()) {
             // Defaults for servers whose config.yml predates this section
+            wardUpkeepMaterials.put(Material.NETHERITE_BLOCK, 1024);
+            wardUpkeepMaterials.put(Material.DIAMOND_BLOCK, 576);
+            wardUpkeepMaterials.put(Material.EMERALD_BLOCK, 432);
+            wardUpkeepMaterials.put(Material.ENCHANTED_GOLDEN_APPLE, 512);
+            wardUpkeepMaterials.put(Material.GOLDEN_APPLE, 128);
+            wardUpkeepMaterials.put(Material.GOLD_BLOCK, 144);
+            wardUpkeepMaterials.put(Material.IRON_BLOCK, 72);
             wardUpkeepMaterials.put(Material.DIAMOND, 64);
             wardUpkeepMaterials.put(Material.EMERALD, 48);
+            wardUpkeepMaterials.put(Material.COPPER_BLOCK, 36);
+            wardUpkeepMaterials.put(Material.LAPIS_BLOCK, 36);
+            wardUpkeepMaterials.put(Material.REDSTONE_BLOCK, 36);
+            wardUpkeepMaterials.put(Material.COAL_BLOCK, 18);
             wardUpkeepMaterials.put(Material.GOLD_INGOT, 16);
             wardUpkeepMaterials.put(Material.IRON_INGOT, 8);
             wardUpkeepMaterials.put(Material.COAL, 2);

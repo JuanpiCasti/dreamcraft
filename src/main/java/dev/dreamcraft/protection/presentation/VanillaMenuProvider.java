@@ -234,6 +234,9 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
 
     /** Composes title component (HD background glyph if pack loaded, or plain text). */
     public Component composeTitle(MenuDefinition definition, UUID viewerId) {
+        if (BedrockBridge.isBedrockPlayer(viewerId)) {
+            return LEGACY.deserialize(definition.title());
+        }
         return customTitles
                 ? dev.dreamcraft.protection.presentation.resourcepack.MenuTitleComposer
                         .compose(assets, packState, definition, viewerId)
@@ -371,9 +374,29 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
         var state = packState;
         boolean viewerHasPack = state != null && state.has(viewerId);
 
-        String effectiveKey = (!viewerHasPack && item.fallbackKey() != null)
-                ? item.fallbackKey()
-                : item.iconKey();
+        boolean isBedrock = BedrockBridge.isBedrockPlayer(viewerId);
+        String effectiveKey;
+        if (!isBedrock) {
+            effectiveKey = (!viewerHasPack && item.fallbackKey() != null)
+                    ? item.fallbackKey()
+                    : item.iconKey();
+        } else {
+            effectiveKey = item.iconKey();
+            if ("menu.catcher".equals(effectiveKey)) {
+                int slot = item.slot();
+                if (slot == 3 || slot == 4 || slot == 5 || slot == 12 || slot == 14 || slot == 21 || slot == 22 || slot == 23
+                        || slot == 30 || slot == 31 || slot == 32 || slot == 39 || slot == 41 || slot == 48 || slot == 49 || slot == 50) {
+                    if (item.action() == null) {
+                        return new ItemStack(Material.AIR);
+                    }
+                }
+                if (item.fallbackKey() != null) {
+                    effectiveKey = item.fallbackKey();
+                }
+            } else if (!viewerHasPack && item.fallbackKey() != null) {
+                effectiveKey = item.fallbackKey();
+            }
+        }
 
         Material mat = null;
         if (assets != null) {
@@ -445,6 +468,10 @@ public class VanillaMenuProvider implements MenuProvider, Listener {
             stack.setItemMeta(meta);
         }
         return stack;
+    }
+
+    private boolean hasBakedBackground(String menuId) {
+        return assets != null && assets.symbolRef("menu.bg." + menuId).isPresent();
     }
 
     /**

@@ -68,9 +68,17 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
     /** Admin overview GUI opener (/ward admin menu); wired by the plugin to the dispatcher. */
     private java.util.function.Consumer<Player> adminMenuOpener = player -> { };
 
+    /** Optional wiring: visual & protection refresh when upkeep is deposited or drained via commands. */
+    private java.util.function.Consumer<Ward> coreVisualRefresh = ward -> { };
+
     /** Optional wiring: world re-scan applied right after /ward found creates the Ward. */
     public void setFoundingSeeder(java.util.function.Consumer<Ward> foundingSeeder) {
         this.foundingSeeder = foundingSeeder != null ? foundingSeeder : ward -> { };
+    }
+
+    /** Wires the core-block visual & protection refresher. */
+    public void setCoreVisualRefresh(java.util.function.Consumer<Ward> refresher) {
+        this.coreVisualRefresh = refresher != null ? refresher : ward -> { };
     }
 
     /** Wires the admin wards GUI opener (stateless overview at page 0). */
@@ -137,6 +145,10 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
                         .withAliases(options.aliases("ward", "sintonizar")))
                 .register(SubcommandSpec.of("expulsar", this::handleExpulsar)
                         .withAliases(options.aliases("ward", "expulsar")))
+                .register(SubcommandSpec.of("invite", this::handleInvite)
+                        .withAliases(mergeAliases("ward", "invite", "invitar", "add")))
+                .register(SubcommandSpec.of("kick", this::handleKickMember)
+                        .withAliases(mergeAliases("ward", "kick", "remove", "remover", "quitar")))
                 .register(SubcommandSpec.of("transfer", this::handleTransfer)
                         .withAliases(options.aliases("ward", "transfer")))
                 .register(SubcommandSpec.of("permissions", this::handlePermissions)
@@ -155,6 +167,14 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
                         .withAliases(options.aliases("ward", "abrir")))
                 .register(SubcommandSpec.admin("give", (p, a) -> handleGive(p))
                         .withAliases(options.aliases("ward", "give")));
+    }
+
+    private List<String> mergeAliases(String root, String sub, String... defaults) {
+        List<String> result = new ArrayList<>(List.of(defaults));
+        for (String a : options.aliases(root, sub)) {
+            if (!result.contains(a)) result.add(a);
+        }
+        return result;
     }
 
     @Override
@@ -458,6 +478,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
             consumed += use;
             remaining -= use;
         }
+        coreVisualRefresh.accept(ward);
         if (consumed == 0) {
             warn(player, WARD_PREFIX, "No llevas materiales aceptados. Aceptados: "
                     + acceptedMaterialsList());
@@ -763,6 +784,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
             }
             upkeepService.consumeFromInventory(player, material, amount);
             var receipt = upkeepService.deposit(ward, player, material, amount);
+            coreVisualRefresh.accept(ward);
             ok(player, WARD_PREFIX, "Depositaste " + receipt.amount() + "x §f"
                     + upkeepService.displayName(receipt.material()) + "§a → +"
                     + receipt.unitsCredited() + " unidades. Balance: §f" + receipt.newBalance());
@@ -777,6 +799,7 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
             try {
                 int units = Integer.parseInt(args[2]);
                 wardService.depositUpkeep(ward, units);
+                coreVisualRefresh.accept(ward);
                 ok(player, WARD_PREFIX, "Acreditadas " + units + " unidades. Balance: " + ward.upkeepBalance());
             } catch (NumberFormatException e) {
                 error(player, WARD_PREFIX, "Cantidad inválida: " + args[2]);
@@ -828,6 +851,85 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
         wardService.transferOwnership(ward, target.getUniqueId(), OwnerType.PLAYER);
         worldGuardAdapter.syncOwner(ward);
         ok(player, WARD_PREFIX, "Núcleo transferido a " + target.getName() + ".");
+        return true;
+    }
+
+    /** /ward invite <jugador> [id] — adds an online player to the protection zone as trusted member. */
+    private boolean handleInvite(Player player, String[] args) {
+        if (args.length < 2) {
+            error(player, WARD_PREFIX, CommandNames.cmd("ward", "invite <jugador>"));
+            return true;
+        }
+        Ward ward = resolveWard(player, args);
+        if (ward == null) return true;
+        if (!ward.ownerId().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
+            error(player, WARD_PREFIX, "Solo el owner puede invitar miembros al Núcleo.");
+            return true;
+        }
+        Player target = Bukkit.getPlayerExact(args[1]);
+        if (target == null) {
+            error(player, WARD_PREFIX, "Jugador " + args[1] + " no encontrado o no está en línea.");
+            return true;
+        }
+        if (target.getUniqueId().equals(ward.ownerId())) {
+            error(player, WARD_PREFIX, "El owner ya tiene acceso total al Núcleo.");
+            return true;
+        }
+        if (wardService.addMember(ward, target.getUniqueId())) {
+            dev.dreamcraft.protection.service.WardAccessSync.project(ward, cityService, worldGuardAdapter);
+            ok(player, WARD_PREFIX, target.getName() + " agregado a la zona protegida.");
+            target.sendMessage(CommandMessages.prefixed("protection",
+                    "Fuiste agregado a la zona protegida del Núcleo §f" + ward.name() + "§a.",
+                    NamedTextColor.GREEN));
+        } else {
+            error(player, WARD_PREFIX, target.getName() + " ya es miembro de este Núcleo.");
+        }
+        return true;
+    }
+
+    /** /ward kick <jugador> [id] — removes a member from the protection zone. */
+    private boolean handleKickMember(Player player, String[] args) {
+        if (args.length < 2) {
+            error(player, WARD_PREFIX, CommandNames.cmd("ward", "kick <jugador>"));
+            return true;
+        }
+        Ward ward = resolveWard(player, args);
+        if (ward == null) return true;
+        if (!ward.ownerId().equals(player.getUniqueId()) && !player.hasPermission(ADMIN_PERM)) {
+            error(player, WARD_PREFIX, "Solo el owner puede expulsar miembros del Núcleo.");
+            return true;
+        }
+        UUID targetId = null;
+        String targetName = args[1];
+        Player target = Bukkit.getPlayerExact(args[1]);
+        if (target != null) {
+            targetId = target.getUniqueId();
+            targetName = target.getName();
+        } else {
+            for (UUID m : ward.members()) {
+                String resolved = CommandMessages.resolveName(m);
+                if (resolved.equalsIgnoreCase(args[1])) {
+                    targetId = m;
+                    targetName = resolved;
+                    break;
+                }
+            }
+        }
+        if (targetId == null || !ward.isMember(targetId)) {
+            error(player, WARD_PREFIX, targetName + " no es miembro de este Núcleo.");
+            return true;
+        }
+        if (wardService.removeMember(ward, targetId)) {
+            dev.dreamcraft.protection.service.WardAccessSync.project(ward, cityService, worldGuardAdapter);
+            ok(player, WARD_PREFIX, targetName + " expulsado de la zona protegida.");
+            if (target != null) {
+                target.sendMessage(CommandMessages.prefixed("protection",
+                        "Fuiste expulsado de la zona protegida del Núcleo §f" + ward.name() + "§c.",
+                        NamedTextColor.RED));
+            }
+        } else {
+            error(player, WARD_PREFIX, "No se pudo expulsar al jugador.");
+        }
         return true;
     }
 
@@ -996,7 +1098,17 @@ public final class WardCommand implements CommandExecutor, TabCompleter {
                 return completions;
             }
             switch (sub) {
-                case "transfer" -> filter(onlinePlayers(args[1]), args[1]).forEach(completions::add);
+                case "transfer", "invite" -> filter(onlinePlayers(args[1]), args[1]).forEach(completions::add);
+                case "kick" -> {
+                    if (sender instanceof Player p) {
+                        for (Ward w : wardService.findByOwner(p.getUniqueId())) {
+                            for (UUID m : w.members()) {
+                                completions.add(CommandMessages.resolveName(m));
+                            }
+                        }
+                    }
+                    filter(completions, args[1]);
+                }
                 case "permissions" -> {
                     for (WardPermission p : WardPermission.values()) completions.add(p.name().toLowerCase());
                     filter(completions, args[1]);

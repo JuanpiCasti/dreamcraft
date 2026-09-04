@@ -160,6 +160,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
 
     /** Pending action tokens carried inside {@code pick.*} payloads. */
     private static final String ACT_WARD_TRANSFER = "ward.transfer";
+    private static final String ACT_WARD_INVITE = "ward.invite";
     private static final String ACT_CITY_INVITE = "city.invite";
     private static final String ACT_CITY_KICK = "city.kick";
     private static final String ACT_CITY_ROLES = "city.roles";
@@ -191,7 +192,8 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                 case "ward.annex_city" -> handleWardAnnexCity(player, ctx);
                 case "ward.disband" -> handleWardDisband(player, ctx);
                 case "ward.upkeep_vault" -> handleOpenUpkeepVault(player, ctx);
-                case "ward.transfer" -> openWardPick(player, ctx);
+                case "ward.transfer" -> openWardPick(player, ctx, ACT_WARD_TRANSFER);
+                case "ward.invite" -> openWardPick(player, ctx, ACT_WARD_INVITE);
                 case "city.invite" -> openCityPick(player, ctx, ACT_CITY_INVITE);
                 case "city.kick" -> openCityPick(player, ctx, ACT_CITY_KICK);
                 case "city.roles" -> openCityPick(player, ctx, ACT_CITY_ROLES);
@@ -790,17 +792,19 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
      * input is intentionally out of scope for this iteration.
      */
 
-    /** Opens the online-player picker to choose the new Ward owner. */
-    private void openWardPick(Player player, MenuContext ctx) {
+    /** Opens the online-player picker for ward owner transfer or inviting members. */
+    private void openWardPick(Player player, MenuContext ctx, String action) {
         Ward ward = resolveWard(player, ctx);
         if (ward == null) return;
         if (!ward.ownerId().equals(player.getUniqueId())) {
-            feedback(player, msg("menu.ward.owner-only-transfer",
-                    "Solo el owner puede transferir el Ward."), NamedTextColor.RED);
+            boolean invite = ACT_WARD_INVITE.equals(action);
+            feedback(player, msg(invite ? "menu.ward.owner-only-invite" : "menu.ward.owner-only-transfer",
+                    invite ? "Solo el owner puede invitar miembros al Ward." : "Solo el owner puede transferir el Ward."),
+                    NamedTextColor.RED);
             playError(player);
             return;
         }
-        openPlayerPickLater(player, ACT_WARD_TRANSFER, ORIGIN_WARD, ward.id(), 0);
+        openPlayerPickLater(player, action, ORIGIN_WARD, ward.id(), 0);
     }
 
     /** Opens the online-player picker for a pending city action. */
@@ -859,6 +863,7 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
         if (!validateAuthority(player, act, origin, entityId)) return;
         switch (act) {
             case ACT_WARD_TRANSFER -> executeWardTransfer(player, entityId, targetId);
+            case ACT_WARD_INVITE -> executeWardInvite(player, entityId, targetId, origin);
             case ACT_CITY_INVITE -> executeCityInvite(player, entityId, targetId, origin);
             case ACT_CITY_KICK -> executeCityKick(player, entityId, targetId, origin);
             case ACT_CITY_TRANSFER -> executeCityTransfer(player, entityId, targetId, origin);
@@ -997,6 +1002,41 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                         "player", player.getName(), "ward", ward.name()), NamedTextColor.GREEN));
         playSuccess(player);
         player.closeInventory();
+    }
+
+    /** Adds the picked online player as a direct trusted member of the Ward. */
+    private void executeWardInvite(Player player, UUID wardId, UUID targetId, String origin) {
+        Ward ward = wardService.findById(wardId).orElse(null);
+        if (ward == null) {
+            contextLost(player);
+            return;
+        }
+        if (!ward.ownerId().equals(player.getUniqueId())) {
+            feedback(player, msg("menu.ward.owner-only-invite",
+                    "Solo el owner puede invitar miembros al Ward."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        Player target = Bukkit.getPlayer(targetId);
+        if (target == null) {
+            feedback(player, msg("menu.pick.offline", "Ese jugador ya no está en línea."), NamedTextColor.RED);
+            playError(player);
+            return;
+        }
+        if (wardService.addMember(ward, targetId)) {
+            dev.dreamcraft.protection.service.WardAccessSync.project(ward, cityService, worldGuardAdapter);
+            feedback(player, msg("menu.ward.invited", "{player} agregado a la zona protegida del Ward.",
+                    "player", target.getName()), NamedTextColor.GREEN);
+            target.sendMessage(CommandMessages.prefixed("protection",
+                    msg("menu.ward.invited-target", "Fuiste agregado a la zona protegida del Ward {ward}.",
+                            "ward", ward.name()), NamedTextColor.GREEN));
+            playSuccess(player);
+            reopenOriginMenu(player, origin, ward.id());
+        } else {
+            feedback(player, msg("menu.ward.already-member", "{player} ya es miembro de este Ward.",
+                    "player", target.getName()), NamedTextColor.YELLOW);
+            playError(player);
+        }
     }
 
     /** Mirrors CityCommand.handleInvite: Council+, online target, WG re-projection. */
@@ -1186,8 +1226,10 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
                     yield false;
                 }
                 if (!ward.ownerId().equals(player.getUniqueId())) {
-                    feedback(player, msg("menu.ward.owner-only-transfer",
-                            "Solo el owner puede transferir el Ward."), NamedTextColor.RED);
+                    boolean invite = ACT_WARD_INVITE.equals(action);
+                    feedback(player, msg(invite ? "menu.ward.owner-only-invite" : "menu.ward.owner-only-transfer",
+                            invite ? "Solo el owner puede invitar miembros al Ward." : "Solo el owner puede transferir el Ward."),
+                            NamedTextColor.RED);
                     playError(player);
                     yield false;
                 }
@@ -1290,6 +1332,15 @@ public final class MenuActionDispatcher implements BiConsumer<MenuContext, MenuA
             case ACT_WARD_TRANSFER -> {
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     if (!p.getUniqueId().equals(viewer.getUniqueId())) out.add(candidateOf(p));
+                }
+            }
+            case ACT_WARD_INVITE -> {
+                Ward ward = wardService.findById(entityId).orElse(null);
+                if (ward == null) return out;
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    UUID id = p.getUniqueId();
+                    if (id.equals(viewer.getUniqueId()) || id.equals(ward.ownerId()) || ward.isMember(id)) continue;
+                    out.add(candidateOf(p));
                 }
             }
             case ACT_CITY_INVITE -> {

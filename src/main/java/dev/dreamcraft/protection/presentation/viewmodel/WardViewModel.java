@@ -34,6 +34,7 @@ public record WardViewModel(
         int centerY,
         int centerZ,
         Set<WardPermission> permissions,
+        Set<UUID> members,
         boolean hasCityMembership,
         WardUpgradePreview upgradePreview,
         /** Pre-formatted lines describing accepted upkeep materials, e.g. "Diamante ×64 u". */
@@ -46,6 +47,7 @@ public record WardViewModel(
         boolean canSetPermissions,
         boolean canAnnexToCity,
         boolean canDisband,
+        boolean canInvite,
         /** Pre-computed upkeep time projection (state + remaining time + material
          *  equivalences); null when the calculator was not wired upstream. */
         UpkeepProjectionCalculator.Projection upkeepProjection,
@@ -87,8 +89,8 @@ public record WardViewModel(
     ) {
         this(id, name, worldName, ownerId, ownerName, ownerType, cityId, cityName,
                 baseScore, tier, radius, upkeepBalance, nextUpkeepAt,
-                centerX, centerY, centerZ, permissions, hasCityMembership, upgradePreview,
+                centerX, centerY, centerZ, permissions, Set.of(), hasCityMembership, upgradePreview,
                 upkeepMaterials, canUpgrade, canDeposit, canManage, canTransfer,
-                canSetPermissions, canAnnexToCity, canDisband, null, 0, 0);
+                canSetPermissions, canAnnexToCity, canDisband, canManage, null, 0, 0);
     }
 }

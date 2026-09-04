@@ -287,6 +287,30 @@ public final class WardService {
     }
 
     /**
+     * Adds a direct trusted member to a Ward.
+     * Returns true if added, false if already member or owner.
+     */
+    public boolean addMember(Ward ward, UUID playerId) {
+        if (ward.addMember(playerId)) {
+            wardRepository.save(ward);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Removes a direct member from a Ward.
+     * Returns true if removed, false if not found.
+     */
+    public boolean removeMember(Ward ward, UUID playerId) {
+        if (ward.removeMember(playerId)) {
+            wardRepository.save(ward);
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Transfers ownership of a Ward to a new owner.
      */
     public void transferOwnership(Ward ward, UUID newOwnerId, OwnerType newOwnerType) {

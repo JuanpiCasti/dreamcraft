@@ -69,6 +69,14 @@ public interface WorldGuardAdapter {
     void setPublicContainerAccess(Ward ward, boolean allowed);
 
     /**
+     * Enables or suspends the region's protection based on upkeep status.
+     * When active=false (unprotected / upkeep <= 0), PASSTHROUGH=ALLOW so outsiders
+     * can build/break/interact freely. When active=true, PASSTHROUGH is removed
+     * so normal ownership protection is enforced.
+     */
+    void setProtectionActive(Ward ward, boolean active);
+
+    /**
      * Returns true if this adapter is operational (WorldGuard present and compatible).
      */
     boolean isAvailable();

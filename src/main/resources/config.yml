@@ -96,8 +96,19 @@ ward:
   # Ítems aceptados como upkeep del Ward y su valor en unidades por ítem.
   # Se depositan en el slot de upkeep del menú del Ward (o /ward upkeep deposit).
   upkeep-materials:
+    NETHERITE_BLOCK: 1024
+    DIAMOND_BLOCK: 576
+    EMERALD_BLOCK: 432
+    ENCHANTED_GOLDEN_APPLE: 512
+    GOLDEN_APPLE: 128
+    GOLD_BLOCK: 144
+    IRON_BLOCK: 72
     DIAMOND: 64
     EMERALD: 48
+    COPPER_BLOCK: 36
+    LAPIS_BLOCK: 36
+    REDSTONE_BLOCK: 36
+    COAL_BLOCK: 18
     GOLD_INGOT: 16
     IRON_INGOT: 8
     COAL: 2

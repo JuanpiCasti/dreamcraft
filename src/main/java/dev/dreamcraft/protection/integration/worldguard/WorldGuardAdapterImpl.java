@@ -5,6 +5,7 @@ import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.domains.DefaultDomain;
 import com.sk89q.worldguard.protection.flags.Flags;
+import com.sk89q.worldguard.protection.flags.RegionGroup;
 import com.sk89q.worldguard.protection.flags.StateFlag;
 import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
@@ -63,8 +64,14 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
             region.setOwners(ownerDomain);
 
             // Containers (chests, barrels, furnaces, ...) stay closed for outsiders.
-            // Owners and WG members are exempt from region flags, so they keep full access.
+            // Owners and WG members are exempt via RegionGroup.NON_MEMBERS.
             region.setFlag(Flags.CHEST_ACCESS, StateFlag.State.DENY);
+            region.setFlag(Flags.CHEST_ACCESS.getRegionGroupFlag(), RegionGroup.NON_MEMBERS);
+
+            // Upkeep-driven protection: start suspended (passthrough) if upkeepBalance <= 0
+            if (ward.upkeepBalance() <= 0) {
+                region.setFlag(Flags.PASSTHROUGH, StateFlag.State.ALLOW);
+            }
 
             rm.addRegion(region);
             return regionId;
@@ -158,10 +165,31 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
         try {
             ProtectedRegion region = getRegion(ward);
             if (region == null) return;
-            region.setFlag(Flags.CHEST_ACCESS,
-                    allowed ? StateFlag.State.ALLOW : StateFlag.State.DENY);
+            if (allowed) {
+                region.setFlag(Flags.CHEST_ACCESS, StateFlag.State.ALLOW);
+                region.setFlag(Flags.CHEST_ACCESS.getRegionGroupFlag(), RegionGroup.ALL);
+            } else {
+                region.setFlag(Flags.CHEST_ACCESS, StateFlag.State.DENY);
+                region.setFlag(Flags.CHEST_ACCESS.getRegionGroupFlag(), RegionGroup.NON_MEMBERS);
+            }
         } catch (Exception e) {
             logger.warning("[WorldGuard] setPublicContainerAccess failed for ward " + ward.id() + ": " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void setProtectionActive(Ward ward, boolean active) {
+        if (!isAvailable() || ward.worldGuardRegionId() == null) return;
+        try {
+            ProtectedRegion region = getRegion(ward);
+            if (region == null) return;
+            if (active) {
+                region.setFlag(Flags.PASSTHROUGH, null);
+            } else {
+                region.setFlag(Flags.PASSTHROUGH, StateFlag.State.ALLOW);
+            }
+        } catch (Exception e) {
+            logger.warning("[WorldGuard] setProtectionActive failed for ward " + ward.id() + ": " + e.getMessage());
         }
     }
 
@@ -240,6 +268,7 @@ public final class WorldGuardAdapterImpl implements WorldGuardAdapter {
             region.setMembers(members);
             region.setPriority(10); // above default claims so the adventure zone stays intact
             region.setFlag(Flags.CHEST_ACCESS, StateFlag.State.DENY);
+            region.setFlag(Flags.CHEST_ACCESS.getRegionGroupFlag(), RegionGroup.NON_MEMBERS);
 
             rm.addRegion(region);
             return regionId;

@@ -318,6 +318,11 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         // Core visual: flips the note block's powered state (active/inactive cube)
         var wardCoreVisual = new dev.dreamcraft.protection.service.WardCoreVisual(
                 wardMenuFacade.viewModelBuilder()::isUnprotected, protectionConfig.wardMaterial());
+        java.util.function.Consumer<dev.dreamcraft.protection.domain.model.Ward> wardProtectionRefresh = ward -> {
+            wardCoreVisual.refresh(ward);
+            boolean active = !wardMenuFacade.viewModelBuilder().isUnprotected(ward);
+            worldGuardAdapter.setProtectionActive(ward, active);
+        };
         WardItemListener wardItemListener = new WardItemListener(
                 wardItems(),
                 wardService,
@@ -330,8 +335,11 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
         wardItemListener.setCoreVisualRefresh(ward ->
                 // 1 tick después: vanilla finaliza el estado del note block
                 // tras el evento y pisaría lo aplicado inline.
-                org.bukkit.Bukkit.getScheduler().runTask(this,
-                        () -> wardCoreVisual.applyMagicState(ward)));
+                org.bukkit.Bukkit.getScheduler().runTask(this, () -> {
+                    wardCoreVisual.applyMagicState(ward);
+                    boolean active = !wardMenuFacade.viewModelBuilder().isUnprotected(ward);
+                    worldGuardAdapter.setProtectionActive(ward, active);
+                }));
         pm.registerEvents(wardItemListener, this);
 
         // 7d. Ward upkeep tick + region entry action bar
@@ -340,7 +348,7 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                         wardService, tierProvider, wardRepository,
                         protectionConfig.upkeepInterval(),
                         protectionConfig.belowTierSurchargeUnits(), this);
-        upkeepTick.setCoreVisualRefresh(wardCoreVisual::refresh);
+        upkeepTick.setCoreVisualRefresh(wardProtectionRefresh);
         upkeepTick.register();
         pm.registerEvents(new dev.dreamcraft.protection.listener.WardRegionListener(wardService), this);
 
@@ -356,8 +364,14 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
                                 .map(dev.dreamcraft.protection.domain.model.WardTier::upkeepPerInterval)
                                 .orElse(1),
                         protectionConfig.belowTierSurchargeUnits());
-        upkeepVaultListener.setCoreVisualRefresh(wardCoreVisual::refresh);
+        upkeepVaultListener.setCoreVisualRefresh(wardProtectionRefresh);
         pm.registerEvents(upkeepVaultListener, this);
+
+        // Wire commands to refresh protection state on upkeep deposit
+        wardExecutor.setCoreVisualRefresh(wardProtectionRefresh);
+
+        // Sincroniza el estado de protección WorldGuard según el upkeep en el arranque
+        syncWardProtectionStates(wardMenuFacade);
 
         // 7f. City treasury vault — persists contents when the vault inventory closes
         pm.registerEvents(new dev.dreamcraft.protection.listener.CityTreasuryVaultListener(
@@ -444,9 +458,8 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
     }
 
     /**
-     * Re-applies the chest-access flag to every Ward region: deny by default,
-     * allow when PUBLIC_CONTAINERS is granted. Fixes regions created before
-     * container protection existed (they had no flags at all).
+     * Re-applies the chest-access flag and ensures member domains are synchronized
+     * with WorldGuard on boot (protects against restart/reconnect state drifts).
      */
     private void migrateContainerFlags() {
         if (!worldGuardAdapter.isAvailable() || wardService == null) return;
@@ -455,10 +468,32 @@ public final class DreamCraftProtectionPlugin extends JavaPlugin {
             if (ward.worldGuardRegionId() == null) continue;
             worldGuardAdapter.setPublicContainerAccess(ward, ward.hasPermission(
                     dev.dreamcraft.protection.domain.model.WardPermission.PUBLIC_CONTAINERS));
+            // Synchronize members (both direct ward members and city residents)
+            dev.dreamcraft.protection.service.WardAccessSync.project(ward, cityService, worldGuardAdapter);
             applied++;
         }
         if (applied > 0) {
-            getLogger().info("[DreamCraft] chest-access sincronizado en " + applied + " región(es) de Ward.");
+            getLogger().info("[DreamCraft] chest-access y miembros sincronizados en " + applied + " región(es) de Ward.");
+        }
+    }
+
+    /**
+     * Sincroniza el estado de protección en WorldGuard según el upkeep de cada Ward:
+     * Si no tiene upkeep (o está en gracia/expirado), se suspende la protección (PASSTHROUGH=ALLOW).
+     * Si tiene upkeep cargado, se activa la protección normal.
+     */
+    private void syncWardProtectionStates(dev.dreamcraft.protection.command.WardMenuFacade wardMenuFacade) {
+        if (!worldGuardAdapter.isAvailable() || wardService == null || wardMenuFacade == null) return;
+        int active = 0;
+        int suspended = 0;
+        for (dev.dreamcraft.protection.domain.model.Ward ward : wardService.findAll()) {
+            if (ward.worldGuardRegionId() == null) continue;
+            boolean isProtected = !wardMenuFacade.viewModelBuilder().isUnprotected(ward);
+            worldGuardAdapter.setProtectionActive(ward, isProtected);
+            if (isProtected) active++; else suspended++;
+        }
+        if (active > 0 || suspended > 0) {
+            getLogger().info("[DreamCraft] Protección sincronizada por upkeep: " + active + " activa(s), " + suspended + " suspendida(s).");
         }
     }
 

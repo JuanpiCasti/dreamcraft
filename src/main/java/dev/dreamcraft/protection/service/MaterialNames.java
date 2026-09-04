@@ -41,6 +41,13 @@ public final class MaterialNames {
         m.put("IRON_BLOCK", "Bloque de Hierro");
         m.put("DIAMOND_BLOCK", "Bloque de Diamante");
         m.put("EMERALD_BLOCK", "Bloque de Esmeralda");
+        m.put("NETHERITE_BLOCK", "Bloque de Netherite");
+        m.put("COPPER_BLOCK", "Bloque de Cobre");
+        m.put("COAL_BLOCK", "Bloque de Carbón");
+        m.put("REDSTONE_BLOCK", "Bloque de Redstone");
+        m.put("LAPIS_BLOCK", "Bloque de Lapislázuli");
+        m.put("GOLDEN_APPLE", "Manzana Dorada");
+        m.put("ENCHANTED_GOLDEN_APPLE", "Manzana Dorada Encantada");
         return m;
     }
 }

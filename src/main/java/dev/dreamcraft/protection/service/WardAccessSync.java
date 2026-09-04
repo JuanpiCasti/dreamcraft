@@ -33,7 +33,7 @@ public final class WardAccessSync {
      */
     public static void project(Ward ward, CityService cityService, WorldGuardAdapter worldGuard) {
         if (worldGuard == null || !worldGuard.isAvailable()) return;
-        Set<UUID> expected = new HashSet<>();
+        Set<UUID> expected = new HashSet<>(ward.members());
         if (ward.hasCityMembership()) {
             cityService.findById(ward.cityId())
                     .ifPresent(city -> expected.addAll(city.members().keySet()));

@@ -146,6 +146,7 @@ public final class WardViewModelBuilder {
                 ward.centerY(),
                 ward.centerZ(),
                 ward.permissions(),
+                ward.members(),
                 hasCity,
                 preview,
                 upkeepMaterialLines,
@@ -156,6 +157,7 @@ public final class WardViewModelBuilder {
                 isOwner,         // canSetPermissions
                 isOwner && !hasCity, // canAnnexToCity — owner with no city
                 isOwner,         // canDisband
+                isOwner,         // canInvite
                 projection,
                 ward.belowTierBlocks(),
                 surcharge

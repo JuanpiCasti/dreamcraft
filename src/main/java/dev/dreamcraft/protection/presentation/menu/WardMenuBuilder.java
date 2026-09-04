@@ -222,6 +222,22 @@ public final class WardMenuBuilder {
                     List.of("&8Necesitas ser owner y no tener Matriz")));
         }
 
+        // Slot 42 — Invitar/Gestionar miembros (fila 5, icono 1x1 azul persona +)
+        List<String> memberLore = new ArrayList<>();
+        memberLore.add("&7Agrega amigos a tu zona protegida.");
+        memberLore.add("&7Miembros actuales: &f" + vm.members().size());
+        memberLore.add("&aPodrán construir y abrir cofres.");
+        if (vm.canInvite()) {
+            memberLore.add("");
+            memberLore.add("&aClic para gestionar miembros");
+            items.add(MenuItem.button(42, "menu.invite", "&a&lInvitar Jugador", memberLore,
+                    MenuAction.of("ward.invite")));
+        } else {
+            memberLore.add("");
+            memberLore.add("&8Solo el owner puede invitar miembros");
+            items.add(MenuItem.display(42, "menu.invite", "&8&lInvitar Jugador", memberLore));
+        }
+
         // Slot 43 — Disband / delete (fila 5, TNT)
         if (vm.canDisband()) {
             items.add(MenuItem.button(43, "ward.disband", "§c§lApagar Núcleo",

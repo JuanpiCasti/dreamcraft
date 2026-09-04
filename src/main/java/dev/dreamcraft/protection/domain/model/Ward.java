@@ -2,6 +2,7 @@ package dev.dreamcraft.protection.domain.model;
 
 import java.time.Instant;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -43,6 +44,8 @@ public final class Ward {
     /** Opaque reference to the WorldGuard region managed by the integration layer. */
     private String worldGuardRegionId;
     private final Set<WardPermission> permissions;
+    /** Member UUIDs granted direct trusted access to this Ward without a city. */
+    private final Set<UUID> members;
     /**
      * Gated blocks placed while the Ward tier was below the required rank
      * (tier-gated-blocks). Each unit adds a recurring upkeep surcharge per
@@ -71,6 +74,32 @@ public final class Ward {
             String worldGuardRegionId,
             Set<WardPermission> permissions
     ) {
+        this(id, name, worldName, ownerId, ownerType, cityId, baseScore, tier, radius,
+                upkeepBalance, createdAt, lastUpkeepAt, nextUpkeepAt, centerX, centerY, centerZ,
+                worldGuardRegionId, permissions, new HashSet<>());
+    }
+
+    public Ward(
+            UUID id,
+            String name,
+            String worldName,
+            UUID ownerId,
+            OwnerType ownerType,
+            UUID cityId,
+            int baseScore,
+            String tier,
+            int radius,
+            int upkeepBalance,
+            Instant createdAt,
+            Instant lastUpkeepAt,
+            Instant nextUpkeepAt,
+            int centerX,
+            int centerY,
+            int centerZ,
+            String worldGuardRegionId,
+            Set<WardPermission> permissions,
+            Set<UUID> members
+    ) {
         this.id = id;
         this.name = name != null && !name.isBlank() ? name : "Ward";
         this.worldName = worldName;
@@ -91,6 +120,7 @@ public final class Ward {
         this.permissions = permissions != null ? EnumSet.copyOf(permissions.isEmpty()
                 ? EnumSet.noneOf(WardPermission.class) : permissions)
                 : EnumSet.noneOf(WardPermission.class);
+        this.members = members != null ? new HashSet<>(members) : new HashSet<>();
     }
 
     // ── Accessors ─────────────────────────────────────────────────────────────
@@ -114,6 +144,7 @@ public final class Ward {
     public int centerZ() { return centerZ; }
     public String worldGuardRegionId() { return worldGuardRegionId; }
     public Set<WardPermission> permissions() { return permissions; }
+    public Set<UUID> members() { return members; }
     public int belowTierBlocks() { return belowTierBlocks; }
 
     // ── Mutators ──────────────────────────────────────────────────────────────
@@ -135,6 +166,20 @@ public final class Ward {
     public void grantPermission(WardPermission permission) { permissions.add(permission); }
     public void revokePermission(WardPermission permission) { permissions.remove(permission); }
     public boolean hasPermission(WardPermission permission) { return permissions.contains(permission); }
+
+    public boolean addMember(UUID playerId) {
+        if (playerId == null || playerId.equals(ownerId)) return false;
+        return members.add(playerId);
+    }
+
+    public boolean removeMember(UUID playerId) {
+        if (playerId == null) return false;
+        return members.remove(playerId);
+    }
+
+    public boolean isMember(UUID playerId) {
+        return playerId != null && members.contains(playerId);
+    }
 
     /** True if this Ward belongs to a City. */
     public boolean hasCityMembership() { return cityId != null; }

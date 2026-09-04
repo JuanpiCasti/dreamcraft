@@ -76,7 +76,45 @@ class DomainCommandFlowTest {
     }
 
     @Test
-    void wardScoreIncreaseRecalculatesTierAndRadius() {
+    void wardDirectMemberFlow() {
+        Ward ward = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 10, 64, 20);
+        UUID friend1 = UUID.randomUUID();
+        UUID friend2 = UUID.randomUUID();
+
+        // Adding member succeeds
+        assertTrue(wardService.addMember(ward, friend1));
+        assertTrue(ward.isMember(friend1));
+        assertTrue(ward.members().contains(friend1));
+
+        // Adding duplicate fails
+        assertFalse(wardService.addMember(ward, friend1));
+
+        // Adding owner fails
+        assertFalse(wardService.addMember(ward, ownerId));
+
+        // Add second friend
+        assertTrue(wardService.addMember(ward, friend2));
+        assertEquals(2, ward.members().size());
+
+        // Removing friend1 succeeds
+        assertTrue(wardService.removeMember(ward, friend1));
+        assertFalse(ward.isMember(friend1));
+        assertEquals(1, ward.members().size());
+
+        // Check viewmodel reflection
+        var builder = new WardViewModelBuilder(new TestWardTierProvider(), uuid -> "Owner");
+        WardViewModel vm = builder.build(ward, ownerId);
+        assertTrue(vm.canInvite());
+        assertEquals(1, vm.members().size());
+        assertTrue(vm.members().contains(friend2));
+
+        // Non-owner viewmodel cannot invite
+        WardViewModel nonOwnerVm = builder.build(ward, friend2);
+        assertFalse(nonOwnerVm.canInvite());
+    }
+
+    @Test
+    void wardScoreElevationRecalculatesTierAndRadius() {
         Ward ward = wardService.createWard(ownerId, OwnerType.PLAYER, null, "world", 0, 64, 0);
         wardService.addBaseScore(ward, 100); // crosses into "reinforced" tier
         assertEquals(100, ward.baseScore());
@@ -537,9 +575,9 @@ class DomainCommandFlowTest {
 
         MenuDefinition def = WardMenuBuilder.build(vm);
 
-        // 35 items: close(36) + perfil(37) + permisos(38)/transfer(39)/disband(43) singles
+        // 36 items: close(36) + perfil(37) + permisos(38)/transfer(39)/invite(42)/disband(43) singles
         // + upkeep 2x2 (4) + fase 2x2 (4) + matriz 2x2 (4) + 9 separator tiles + 9 status tiles (3x3)
-        assertEquals(35, def.items().size());
+        assertEquals(36, def.items().size());
         // Fila 5: Close en slot 36 (flecha a la izquierda)
         assertTrue(def.itemAt(36).getAction().isPresent());
         assertEquals("cerrar", def.itemAt(36).getAction().get().actionId());
@@ -552,6 +590,9 @@ class DomainCommandFlowTest {
         // Transferir en slot 39 (personitas)
         assertNotNull(def.itemAt(39));
         assertEquals("ward.transfer", def.itemAt(39).getAction().get().actionId());
+        // Invitar en slot 42 (persona +)
+        assertNotNull(def.itemAt(42));
+        assertEquals("ward.invite", def.itemAt(42).getAction().get().actionId());
         // Disband en slot 43 (engranaje)
         assertNotNull(def.itemAt(43));
         assertEquals("ward.disband", def.itemAt(43).getAction().get().actionId());

@@ -1,136 +1,88 @@
-protection:
-  enabled: true
-  default-radius: 16
-  default-build-radius: 16
-  allow-overlap: false
-  vertical-mode: full
-  require-wardrobe: true
-  wardrobe-material: LODESTONE
-  inventory-size: 27
+# ── Upkeep general ──────────────────────────────────────────────────────────
+# Intervalo al que los Wards consumen unidades de upkeep (también usa el tick).
+upkeep:
+  interval: 24h
 
 # ── Personalización de subcomandos por servidor ─────────────────────────────
-# aliases se añaden al tab-complete y al dispatch; enabled: false oculta el
-# subcomando. El renombre del comando raíz (/ward → /parcela) se hace con el
-# commands.yml del servidor (ver docs/COMMANDS.md y commands.example.yml).
-# ── Personalización de subcomandos · Lore «El Despertar y la Sincronicidad» ──
-# Raíces: /sync ≡ /ward, /nexo ≡ /estate (vía commands.yml del servidor).
-# Los aliases añaden el vocabulario del lore al dispatch y al tab-complete;
-# enabled: false oculta un subcomando en este servidor.
+# Cada subcomando acepta "aliases" (se añaden al tab-complete y al dispatch)
+# y "enabled" (false = el subcomando responde como desconocido).
+# El renombre del COMANDO RAÍZ (/ward → /parcela) se hace con commands.yml
+# del servidor: ver docs/COMMANDS.md.
 commands:
   ward:
     subcommands:
       create:
-        aliases: [despertar]        # /sync despertar
+        aliases: []
       reclamar:
-        aliases: []                 # /sync reclamar — primer núcleo gratis (una vez)
-      rename:
-        aliases: [renombrar]        # /sync renombrar <nombre>
-      info:
-        aliases: [estado]
-      permissions:
-        aliases: [permisos]
-      upkeep:
-        aliases: [alimentar]        # /sync alimentar deposit <mat> <n>
+        aliases: []
       menu:
-        aliases: [nucleo]
-      tp:
         aliases: []
-      abrir:
-        aliases: []
-      sintonizar:
-        aliases: []
-      expulsar:
-        aliases: []
-      give:
-        aliases: [dar]              # /sync dar
-      score:
-        aliases: [fase]             # /sync fase add <n>
-      delete:
-        aliases: [apagar]
+      # menu:
+      #   enabled: false   # ejemplo: ocultar /ward menu en servidores sin VIP
   city:
     subcommands:
       create:
-        aliases: [fundar]
-      annex:
-        aliases: [federar]
-      info:
         aliases: []
   estate:
     subcommands:
       discover:
         aliases: []
-      create:
-        aliases: []
   protection:
     subcommands:
       claim:
         aliases: []
-      reload:
-        aliases: [recargar]         # /protection recargar
-      recalculate:
-        aliases: []
 
-# Nombres visibles de las raíces (coherencia con commands.yml del servidor).
+# ── Nombres visibles de las raíces (adaptación por servidor) ────────────────
+# Por defecto el plugin usa sus raíces canónicas. Si tu servidor las renombra
+# vía commands.yml (p. ej. sync: ward $1-), decláralo aquí para que TODOS los
+# textos, menús y sugerencias usen ese término:
+#
+# command-names:
+#   ward: sync
+#   city: matriz
+#   estate: nexo
 command-names:
-  ward: sync
-  city: matriz
-  estate: nexo
-  protection: proteccion
+  ward: ward
+  city: city
+  estate: estate
+  protection: protection
 
-# Presentación: auto = CMD solo con pack cargado; vanilla = sin CMD; rp = forzar.
-# Assets definidos en presentation-assets.yml (contrato con el equipo del RP).
+# ── Presentación de menús ───────────────────────────────────────────────────
+# provider:
+#   vanilla — GUIs vanilla puras, nunca aplica CustomModelData.
+#   rp      — aplica CMD del contrato presentation-assets.yml a todos
+#             (servidores que exigen el resource pack).
+#   auto    — CMD solo para jugadores con el pack cargado; el resto ve los
+#             materiales vanilla configurados como fallback.
+# Los assets (iconos/sonidos/fuentes/símbolos/partículas) se definen en
+# presentation-assets.yml — contrato con el equipo del resource pack.
 menus:
   provider: auto
-
-# ── Nexos de Aventura (End / Trial Chamber) ──────────────────────────────────
-# Banda vertical de sigilo: la región WG y el descubrimiento de zona solo
-# aplican entre anclaY - band-below y anclaY + band-above. Un jugador en
-# superficie NO detecta la stronghold/cámara inferior (sin mensajes, sin estate
-# automático, sin protección sobre construcciones ajenas).
-estate-instances:
-  enabled: true
-  world-prefix: dc_end_
-  default-area-radius: 32
-  band-below: 16
-  band-above: 48
-  # Preservación de estructura: ores, frames, vaults y spawners son
-  # indestructibles dentro del nexo — ningún grupo agota la stronghold.
-  protect-structure: true
-  # Regeneración de zona: las modificaciones de los aventureros (colocados,
-  # bloques rotos, cubetas) se registran en zone-edits/ y se revierten al
-  # cerrar el nexo (portal de salida / reset) — chunks prístinos para todos.
-  regenerate-zone: true
-
-upkeep:
-  interval: 24h
-  warning-threshold: 24h
-  expiring-threshold: 6h
-  grace-period: 24h
-  destruction-delay: 48h
-  resource-material: DIAMOND
-  units-per-item: 64
-
-members:
-  default-max: 8
-
-claim:
-  owner-transfer: true
-  abandoned-after: 7d
+  # Títulos-glifo del resource pack como fondo gráfico de los menús (false = título vanilla).
+  custom-title: true
 
 # Bloque especial que crea un Ward al colocarlo.
 # La protección del Ward es un radio alrededor de este bloque (su centro).
-# NOTE_BLOCK con estado mágico (instrument=flute,note=14,powered=false) para que el resource
+# LODESTONE (bloque completo, sin estados de orientación) para que el resource
 # pack pueda darle aspecto propio de cubo sin tocar el beacon vanilla.
 ward:
-  material: NOTE_BLOCK
+  material: LODESTONE
   item-id: dreamcraft:ward_beacon
   custom-model-data: 41002
   # Puntos de score que suma cada mejora desde el menú del Ward
   score-per-upgrade: 100
 
+  # Techo DURO del radio de protección de UN núcleo (todos los tiers).
+  # La fórmula del tier nunca supera este valor aunque el score siga creciendo;
+  # Wards creados antes del techo se re-escalan al arrancar (región WG incluida).
+  max-radius: 80
+
   # ── Receta de crafteo del Núcleo ──
-  # Resultado = ítem TAGGEADO (mismo que reclamar/give). enabled: false → sin
-  # receta: el núcleo solo entra por /sync reclamar, /sync dar o drops.
+  # El resultado es el ítem TAGGEADO (mismo que reclamar/give): lo crafteado
+  # funda Ward exactamente igual. shape: 1-3 filas de 1-3 símbolos (' ' = vacío);
+  # cada símbolo debe tener su material en ingredients.
+  # enabled: false → no se registra receta (el Núcleo solo entra por /ward
+  # reclamar, /ward give o drops).
   recipe:
     enabled: true
     shape:
@@ -141,11 +93,116 @@ ward:
       D: DIAMOND
       N: NETHER_STAR
 
-  # Sobrecosto de upkeep por bloque gated (tier-gated-blocks) colocado con
-  # tier inferior al requerido: en vez de denegar, cada bloque suma unidades
-  # de mantenimiento recurrentes por intervalo. Romper el bloque reduce el
-  # contador. El Núcleo fundador está exento.
+  # Ítems aceptados como upkeep del Ward y su valor en unidades por ítem.
+  # Se depositan en el slot de upkeep del menú del Ward (o /ward upkeep deposit).
+  upkeep-materials:
+    NETHERITE_BLOCK: 1024
+    DIAMOND_BLOCK: 576
+    EMERALD_BLOCK: 432
+    ENCHANTED_GOLDEN_APPLE: 512
+    GOLDEN_APPLE: 128
+    GOLD_BLOCK: 144
+    IRON_BLOCK: 72
+    DIAMOND: 64
+    EMERALD: 48
+    COPPER_BLOCK: 36
+    LAPIS_BLOCK: 36
+    REDSTONE_BLOCK: 36
+    COAL_BLOCK: 18
+    GOLD_INGOT: 16
+    IRON_INGOT: 8
+    COAL: 2
+
+  # Bloques que requieren un tier mínimo del Ward para poder colocarse dentro.
+  # La clave es el material; el valor es la clave del ward-tier mínimo requerido.
+  # Un Ward recién fundado (basic) no puede colocar estos bloques hasta subir de rango.
+  tier-gated-blocks:
+    ENCHANTING_TABLE: reinforced
+    BREWING_STAND: reinforced
+    ANVIL: reinforced
+    SMITHING_TABLE: reinforced
+    LECTERN: reinforced
+    BEACON: advanced
+    CONDUIT: advanced
+    RESPAWN_ANCHOR: advanced
+
+  # Sobrecosto de upkeep por bloque gated colocado con tier inferior al
+  # requerido. En vez de denegar la colocación, cada unidad suma unidades de
+  # mantenimiento RECURRENTES por intervalo (se acumula por bloque colocado;
+  # romper el bloque reduce el contador). El ítem fundador está exento.
   below-tier-surcharge-units: 2
+
+# ── Instancias de aventura para Estates (End / Trial Chamber) ───────────────
+# Los estates de tipo END obtienen un mundo End PRIVADO por grupo:
+#   - El portal del área del estate solo acepta ojos de miembros del estate.
+#   - Al cruzarlo se entra a una instancia propia con dragona fresca.
+#   - Al salir el último miembro se borra el mundo: el mapa vuelve a su estado
+#     previo al jefe y la próxima dragona reaparece automáticamente.
+# Los estates de tipo TRIAL_CHAMBER limitan vaults/spawners a sus miembros.
+estate-instances:
+  enabled: true
+  # Prefijo de los mundos instanciados (dc_end_<id8>)
+  world-prefix: dc_end_
+  # Radio por defecto del área al crear un estate admin sin radio explícito
+  default-area-radius: 32
+  # ── Banda vertical (sigilo) ──
+  # La región WG y el descubrimiento de zona solo aplican entre
+  #   anclaY - band-below  y  anclaY + band-above.
+  # Así un jugador en superficie NO detecta la stronghold/cámara que pasa por
+  # debajo: sin mensajes, sin estate automático y sin protección sobre su base.
+  # Si la estructura sobresale hacia arriba, sube band-above; para re-anclar
+  # zonas legacy usa /nexo admin area <id>.
+  band-below: 16
+  band-above: 48
+  # Preservación de estructura: ores, frames, vaults y spawners son
+  # indestructibles dentro del nexo — ningún grupo agota la stronghold.
+  protect-structure: true
+  # Regeneración de zona: las modificaciones de los aventureros (colocados,
+  # bloques rotos, cubetas) se registran en zone-edits/ y se revierten al
+  # cerrar el nexo (portal de salida / reset) — chunks prístinos para todos.
+  regenerate-zone: true
+  # Radio de escaneo alrededor del ancla del área para resetear ojos del portal
+  frame-scan-radius: 24
+  # Segundos entre que sale el último miembro y se reinicia el mundo de la instancia
+  reset-delay-seconds: 10
+  # Radio (en chunks) alrededor del centro de la isla que se mantiene cargado
+  # mientras la instancia vive. La IA de vuelo de la dragona solo corre en
+  # chunks entity-ticking: fuera del radio de simulación de los jugadores se
+  # congela en el aire. ±10 chunks ≈ toda la arena de combate (island + anillo).
+  arena-force-radius-chunks: 10
+  # Reiniciar los ojos del portal de entrada tras el primer ingreso del grupo
+  # (da tiempo a que el equipo cruce antes de cerrar el portal para el próximo grupo)
+  reset-portal-on-first-enter: true
+  portal-reset-delay-seconds: 30
+
+# Niveles de Ciudad — calculados, no se depositan ítems.
+# El nivel se resuelve como el más alto cuyos 3 requisitos se cumplen:
+#   min-wards   — wards anexados a la ciudad
+#   min-members — habitantes (miembros) de la ciudad
+#   min-wealth  — riqueza = suma del baseScore de los wards anexados
+#                 (proxy de "objetos caros": cada mejora de ward suma score)
+city-levels:
+  levels:
+    aldea:
+      display-name: Aldea
+      min-wards: 0
+      min-members: 0
+      min-wealth: 0
+    pueblo:
+      display-name: Pueblo
+      min-wards: 1
+      min-members: 3
+      min-wealth: 100
+    ciudad:
+      display-name: Ciudad
+      min-wards: 3
+      min-members: 6
+      min-wealth: 400
+    metropoli:
+      display-name: Metrópoli
+      min-wards: 6
+      min-members: 12
+      min-wealth: 1200
 
 # Costo en ítems para mejorar el Ward a cada tier destino.
 # La clave es el tier DESTINO de la mejora. Si un tier no está listado, mejorarlo a ese tier es gratis.
@@ -163,39 +220,9 @@ ward-upgrade-costs:
     - material: NETHERITE_INGOT
       amount: 1
 
-resource-pack:
-  enabled: true
-  optional: true
-  fallback-vanilla: true
-  custom-model-data: 41001
-  item-id: dreamcraft:protection_wardrobe
-
-tiers:
-  basic:
-    radius: 12
-    build-radius: 12
-    max-members: 4
-  advanced:
-    radius: 16
-    build-radius: 16
-    max-members: 8
-  fortress:
-    radius: 24
-    build-radius: 24
-    max-members: 12
-  clan:
-    radius: 32
-    build-radius: 24
-    max-members: 20
-  domain:
-    radius: 48
-    build-radius: 32
-    max-members: 30
-
-# Ward tiers — DreamCraft domain tier system for Wards.
-# These are SEPARATE from the protection "tiers" above (which govern claim
-# radius/build-radius/max-members). Ward tiers govern score→tier→radius
-# progression and upkeep cost per interval for the /ward command.
+# Ward tiers — sistema de progresión score→tier→radio y costo de upkeep por intervalo.
+#
+# El radio efectivo NUNCA supera ward.max-radius (techo duro por núcleo).
 #
 # Fields per tier:
 #   min-base-score   — lowest score that qualifies for this tier
@@ -215,30 +242,11 @@ ward-tiers:
     min-base-score: 100
     max-base-score: 499
     base-radius: 32
-    radius-per-score: 0.1
+    radius-per-score: 0.06
     upkeep-per-interval: 3
   advanced:
     min-base-score: 500
     max-base-score: 2147483647
     base-radius: 64
-    radius-per-score: 0.1
+    radius-per-score: 0.02
     upkeep-per-interval: 10
-
-building-cost:
-  categories:
-    light:
-      base-cost: 1
-    basic:
-      base-cost: 1
-    reinforced:
-      base-cost: 3
-    advanced:
-      base-cost: 10
-    special:
-      base-cost: 15
-  overrides:
-    OBSIDIAN: reinforced
-    CRYING_OBSIDIAN: advanced
-    IRON_BLOCK: advanced
-    DIAMOND_BLOCK: special
-    NETHERITE_BLOCK: special

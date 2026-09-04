@@ -140,6 +140,12 @@ public final class YamlWardRepository implements WardRepository {
             WardPermission perm = parsePermission(p);
             if (perm != null) permissions.add(perm);
         }
+        Set<UUID> members = new HashSet<>();
+        for (String m : s.getStringList("members")) {
+            try {
+                if (m != null && !m.isBlank()) members.add(UUID.fromString(m.trim()));
+            } catch (IllegalArgumentException ignored) {}
+        }
         String cityIdRaw = s.getString("city-id");
         return new Ward(
                 UUID.fromString(key),
@@ -159,7 +165,8 @@ public final class YamlWardRepository implements WardRepository {
                 s.getInt("center-y"),
                 s.getInt("center-z"),
                 s.getString("wg-region-id"),
-                permissions
+                permissions,
+                members
         );
     }
 
@@ -210,5 +217,6 @@ public final class YamlWardRepository implements WardRepository {
         s.set("wg-region-id", w.worldGuardRegionId());
         s.set("below-tier-blocks", w.belowTierBlocks());
         s.set("permissions", w.permissions().stream().map(Enum::name).toList());
+        s.set("members", w.members().stream().map(UUID::toString).toList());
     }
 }
